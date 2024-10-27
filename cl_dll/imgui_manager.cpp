@@ -716,7 +716,7 @@ void CImguiManager::DrawChapter()
 
 void CImguiManager::DrawSpeeds()
 {
-	if (!gBSPRenderer.m_pCvarSpeeds)
+	if (!gBSPRenderer.m_pCvarSpeeds || gBSPRenderer.m_pCvarSpeeds->value <= 0 )
 		return;
 
 	if (!gParticleEngine.m_pCvarParticleDebug)
