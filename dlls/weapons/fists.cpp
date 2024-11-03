@@ -235,9 +235,23 @@ void CPipewrench::DoAttack()
 		break;
 	case ATTACK_LMB_BIG:
 		SendWeaponAnim( ANIM_FISTS_LEFTEND ); // left hand punch
+		switch( RANDOM_LONG( 1, 4 ) )
+		{
+		case 1: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick1.wav", 1, ATTN_NORM ); break;
+		case 2: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick2.wav", 1, ATTN_NORM ); break;
+		case 3: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick3.wav", 1, ATTN_NORM ); break;
+		case 4: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick4.wav", 1, ATTN_NORM ); break;
+		}
 		break;
 	case ATTACK_RMB_BIG:
 		SendWeaponAnim( ANIM_FISTS_RIGHTEND ); // right hand punch
+		switch( RANDOM_LONG( 1, 4 ) )
+		{
+		case 1: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick1.wav", 1, ATTN_NORM ); break;
+		case 2: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick2.wav", 1, ATTN_NORM ); break;
+		case 3: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick3.wav", 1, ATTN_NORM ); break;
+		case 4: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "player/pl_kick4.wav", 1, ATTN_NORM ); break;
+		}
 		break;
 	}
 

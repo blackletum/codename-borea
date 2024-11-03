@@ -1269,11 +1269,58 @@ void ClientPrecache()
 	PRECACHE_SOUND("common/bodysplat.wav");
 
 // player pain sounds
+	// Aynekko - new sounds for TLG
+	// generic pain
+	PRECACHE_SOUND("player/pl_pain1.wav");
 	PRECACHE_SOUND("player/pl_pain2.wav");
+	PRECACHE_SOUND("player/pl_pain3.wav");
 	PRECACHE_SOUND("player/pl_pain4.wav");
 	PRECACHE_SOUND("player/pl_pain5.wav");
-	PRECACHE_SOUND("player/pl_pain6.wav");
-	PRECACHE_SOUND("player/pl_pain7.wav");
+	PRECACHE_SOUND( "player/pl_pain6.wav" );
+	PRECACHE_SOUND( "player/pl_pain7.wav" );
+	PRECACHE_SOUND( "player/pl_pain8.wav" );
+	// fire damage from molotovs
+	PRECACHE_SOUND( "player/pl_burn1.wav" );
+	PRECACHE_SOUND( "player/pl_burn2.wav" );
+	PRECACHE_SOUND( "player/pl_burn3.wav" );
+	PRECACHE_SOUND( "player/pl_burn4.wav" );
+	// drowning
+	PRECACHE_SOUND( "player/pl_drown1.wav" );
+	PRECACHE_SOUND( "player/pl_drown2.wav" );
+	PRECACHE_SOUND( "player/pl_drown3.wav" );
+	PRECACHE_SOUND( "player/pl_drown4.wav" );
+	// hit by spider spit
+	PRECACHE_SOUND( "player/pl_poison1.wav" );
+	PRECACHE_SOUND( "player/pl_poison2.wav" );
+	PRECACHE_SOUND( "player/pl_poison3.wav" );
+	PRECACHE_SOUND( "player/pl_poison4.wav" );
+	// using climbing ability
+	PRECACHE_SOUND( "player/pl_climb1.wav" );
+	PRECACHE_SOUND( "player/pl_climb2.wav" );
+	PRECACHE_SOUND( "player/pl_climb3.wav" );
+	PRECACHE_SOUND( "player/pl_climb4.wav" );
+	// generic death
+	PRECACHE_SOUND( "player/pl_die1.wav" );
+	PRECACHE_SOUND( "player/pl_die2.wav" );
+	PRECACHE_SOUND( "player/pl_die3.wav" );
+	PRECACHE_SOUND( "player/pl_die4.wav" );
+	PRECACHE_SOUND( "player/pl_die5.wav" );
+	PRECACHE_SOUND( "player/pl_die6.wav" );
+	// shock damage
+	PRECACHE_SOUND( "player/pl_zap1.wav" );
+	PRECACHE_SOUND( "player/pl_zap2.wav" );
+	PRECACHE_SOUND( "player/pl_zap3.wav" );
+	PRECACHE_SOUND( "player/pl_zap4.wav" );
+	// fall damage
+	PRECACHE_SOUND( "player/pl_fallpain1.wav" );
+	PRECACHE_SOUND( "player/pl_fallpain2.wav" );
+	PRECACHE_SOUND( "player/pl_fallpain3.wav" );
+	PRECACHE_SOUND( "player/pl_fallpain4.wav" );
+	// jumping kick and melee power attacks
+	PRECACHE_SOUND( "player/pl_kick1.wav" );
+	PRECACHE_SOUND( "player/pl_kick2.wav" );
+	PRECACHE_SOUND( "player/pl_kick3.wav" );
+	PRECACHE_SOUND( "player/pl_kick4.wav" );
 
 	PRECACHE_MODEL("models/player.mdl");
 	PRECACHE_MODEL( "models/v_kick.mdl" );

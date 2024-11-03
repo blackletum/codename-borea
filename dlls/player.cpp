@@ -75,6 +75,7 @@ int gEvilImpulse101;
 BOOL g_markFrameBounds = 0; //LRC
 extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
 
+float next_voice_time = 0;
 
 BOOL gInitHUD = TRUE;
 
@@ -272,6 +273,9 @@ LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
 void CBasePlayer :: Pain()
 {
+	// Aynekko
+	return;
+	/*
 	float	flRndSound;//sound randomizer
 
 	flRndSound = RANDOM_FLOAT ( 0 , 1 );
@@ -282,6 +286,7 @@ void CBasePlayer :: Pain()
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM);
 	else
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM);
+		*/
 }
 
 /*
@@ -380,18 +385,14 @@ void CBasePlayer :: DeathSound()
 	}
 	*/
 
-	// temporarily using pain sounds for death sounds
-	switch (RANDOM_LONG(1,5))
+	switch( RANDOM_LONG( 1, 6 ) )
 	{
-	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM);
-		break;
-	case 2:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM);
-		break;
-	case 3:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM);
-		break;
+	case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_die1.wav", 1, ATTN_NORM ); break;
+	case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_die2.wav", 1, ATTN_NORM ); break;
+	case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_die3.wav", 1, ATTN_NORM ); break;
+	case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_die4.wav", 1, ATTN_NORM ); break;
+	case 5: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_die5.wav", 1, ATTN_NORM ); break;
+	case 6: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_die6.wav", 1, ATTN_NORM ); break;
 	}
 
 	// play one of the suit death alarms
@@ -581,6 +582,75 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		WRITE_LONG( 5 );   // eventflags (priority and flags)
 	MESSAGE_END();
 
+
+	// Aynekko - damage voices
+	if( next_voice_time < gpGlobals->time )
+	{
+		if( bitsDamageType & DMG_BURN ) // molotov/fire
+		{
+			switch( RANDOM_LONG( 1, 4 ) )
+			{
+			case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_burn1.wav", 1, ATTN_NORM ); break;
+			case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_burn2.wav", 1, ATTN_NORM ); break;
+			case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_burn3.wav", 1, ATTN_NORM ); break;
+			case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_burn4.wav", 1, ATTN_NORM ); break;
+			}
+
+			next_voice_time = gpGlobals->time + 2.5f;
+		}
+		else if( bitsDamageType & DMG_POISON ) // spider
+		{
+			switch( RANDOM_LONG( 1, 4 ) )
+			{
+			case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_poison1.wav", 1, ATTN_NORM ); break;
+			case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_poison2.wav", 1, ATTN_NORM ); break;
+			case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_poison3.wav", 1, ATTN_NORM ); break;
+			case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_poison4.wav", 1, ATTN_NORM ); break;
+			}
+
+			next_voice_time = gpGlobals->time + 1.0f;
+		}
+		else if( bitsDamageType & DMG_SHOCK || bitsDamageType & DMG_SONIC ) // shock
+		{
+			switch( RANDOM_LONG( 1, 4 ) )
+			{
+			case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_zap1.wav", 1, ATTN_NORM ); break;
+			case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_zap2.wav", 1, ATTN_NORM ); break;
+			case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_zap3.wav", 1, ATTN_NORM ); break;
+			case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_zap4.wav", 1, ATTN_NORM ); break;
+			}
+
+			next_voice_time = gpGlobals->time + 2.5f;
+		}
+		else if( bitsDamageType & DMG_DROWN ) // drowning
+		{
+			switch( RANDOM_LONG( 1, 4 ) )
+			{
+			case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_drown1.wav", 1, ATTN_NORM ); break;
+			case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_drown2.wav", 1, ATTN_NORM ); break;
+			case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_drown3.wav", 1, ATTN_NORM ); break;
+			case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_drown4.wav", 1, ATTN_NORM ); break;
+			}
+
+			next_voice_time = gpGlobals->time + 0.75f;
+		}
+		else // generic pain
+		{
+			switch( RANDOM_LONG( 1, 8 ) )
+			{
+			case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain1.wav", 1, ATTN_NORM ); break;
+			case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain2.wav", 1, ATTN_NORM ); break;
+			case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain3.wav", 1, ATTN_NORM ); break;
+			case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain4.wav", 1, ATTN_NORM ); break;
+			case 5: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM ); break;
+			case 6: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM ); break;
+			case 7: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM ); break;
+			case 8: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_pain8.wav", 1, ATTN_NORM ); break;
+			}
+
+			next_voice_time = gpGlobals->time + RANDOM_FLOAT( 2.0f, 3.0f );
+		}
+	}
 
 	// how bad is it, doc?
 
@@ -2128,6 +2198,9 @@ void CBasePlayer::UpdateStatusBar()
 
 void CBasePlayer::PreThink()
 {
+	if( next_voice_time > gpGlobals->time + 5.0f ) // Aynekko - in case of saverestore or else, since we are using a static float
+		next_voice_time = 0;
+
 	int buttonsChanged = (m_afButtonLast ^ pev->button);	// These buttons have changed this frame
 
 	// Debounced button codes for pressed/released
@@ -3111,6 +3184,14 @@ void CBasePlayer::PostThink()
 			{
 				TakeDamage(VARS(eoNullEntity), VARS(eoNullEntity), flFallDamage, DMG_FALL );
 				pev->punchangle.x = 0;
+				// Aynekko - sounds
+				switch( RANDOM_LONG( 1, 4 ) )
+				{
+				case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_fallpain1.wav", 1, ATTN_NORM ); break;
+				case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_fallpain2.wav", 1, ATTN_NORM ); break;
+				case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_fallpain3.wav", 1, ATTN_NORM ); break;
+				case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_fallpain4.wav", 1, ATTN_NORM ); break;
+				}
 			}
 		}
 
@@ -4759,7 +4840,13 @@ void CBasePlayer::ItemPostFrame()
 				WRITE_BYTE( 1 );
 				MESSAGE_END();
 
-				EMIT_SOUND( edict(), CHAN_WEAPON, "weapons/melee_kick.wav", 1, ATTN_NORM );
+				switch( RANDOM_LONG( 1, 4 ) )
+				{
+				case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick1.wav", 1, ATTN_NORM ); break;
+				case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick2.wav", 1, ATTN_NORM ); break;
+				case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick3.wav", 1, ATTN_NORM ); break;
+				case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick4.wav", 1, ATTN_NORM ); break;
+				}
 			}
 		}
 		else if( KickStage == 2 )
@@ -5423,7 +5510,7 @@ void CBasePlayer :: UpdateClientData()
 
 
 	int idx = 0;
-	if( pObject && !(pObject->pev->flags & FL_MONSTER) )
+	if( pObject )//&& !(pObject->pev->flags & FL_MONSTER) )
 	{
 		idx = pObject->entindex();
 	}
@@ -6557,6 +6644,18 @@ void CBasePlayer::ClimbingPhysics()
 	// climbing stage 1
 	if (isClimbing)
 	{
+		if( next_voice_time < gpGlobals->time )
+		{
+			switch( RANDOM_LONG( 1, 4 ) )
+			{
+			case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_climb1.wav", 1, ATTN_NORM ); break;
+			case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_climb2.wav", 1, ATTN_NORM ); break;
+			case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_climb3.wav", 1, ATTN_NORM ); break;
+			case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_climb4.wav", 1, ATTN_NORM ); break;
+			}
+			next_voice_time = gpGlobals->time + 1.0f;
+		}
+		
 		pev->movetype = MOVETYPE_FLY;
 
 		// starts climbing
