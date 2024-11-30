@@ -3147,7 +3147,7 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 
 				if( FOkToSpeak() )
 				{
-					SENTENCEG_PlayRndSz( ENT( pev ), "THU_CVER", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+					SENTENCEG_PlayRndSz( ENT( pev ), "THU_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
 					JustSpoke();
 				}
 				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_BEST_SOUND );
@@ -3175,7 +3175,14 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 
 	// I saw at least two of my dead comrades. Run for your life!
 	if( m_iBravery <= 0 )
+	{
+		if( FOkToSpeak() )
+		{
+			SENTENCEG_PlayRndSz( ENT( pev ), "THU_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+			JustSpoke();
+		}
 		return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ORIGIN );
+	}
 	
 	switch( m_MonsterState )
 	{
@@ -3203,7 +3210,14 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 
 		// low hp, 50% chance of running away
 		if( pev->health < pev->max_health * 0.25f && RANDOM_LONG( 0, 100 ) > 50 )
+		{
+			if( FOkToSpeak() )
+			{
+				SENTENCEG_PlayRndSz( ENT( pev ), "THU_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+				JustSpoke();
+			}
 			return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+		}
 
 		// Aynekko: make taunt sounds during combat (20% chance)
 		if( RANDOM_LONG( 0, 100 ) < 20 && FOkToSpeak() )
@@ -3221,6 +3235,11 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 
 				if( !IsLeader() )
 				{
+					if( FOkToSpeak() )
+					{
+						SENTENCEG_PlayRndSz( ENT( pev ), "THU_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+						JustSpoke();
+					}
 					return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
 				}
 				else
