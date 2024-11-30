@@ -2231,7 +2231,7 @@ Schedule_t *CHGrunt :: GetSchedule()
 				// 10% chance of flinch.
 				int iPercent = RANDOM_LONG(0,99);
 
-				if ( iPercent <= 90 && m_hEnemy != nullptr )
+				if ( iPercent <= 26 && m_hEnemy != nullptr )
 				{
 					// only try to take cover if we actually have an enemy!
 
@@ -3254,9 +3254,10 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 			}
 		}
 
-		// damaged just a little - 20% chance of flinch.
-		else if( HasConditions( bits_COND_LIGHT_DAMAGE ) && RANDOM_LONG(1, 100) > 80 )
+		// damaged just a little - 75% chance of flinch.
+		else if( HasConditions( bits_COND_LIGHT_DAMAGE ) && RANDOM_LONG(1, 100) > 25 )
 		{
+		//	ALERT( at_console, "FLINCHED %s\n", STRING(pev->classname) );
 				return GetScheduleOfType( SCHED_SMALL_FLINCH );
 		}
 		// can kick
@@ -4027,7 +4028,7 @@ Schedule_t *CMonsterGangster::GetSchedule()
 			// 10% chance of flinch.
 			int iPercent = RANDOM_LONG( 0, 99 );
 
-			if( iPercent <= 90 && m_hEnemy != nullptr )
+			if( iPercent <= 26 && m_hEnemy != nullptr )
 			{
 				// only try to take cover if we actually have an enemy!
 
@@ -4042,6 +4043,7 @@ Schedule_t *CMonsterGangster::GetSchedule()
 			}
 			else
 			{
+			//	ALERT( at_console, "FLINCHED %s\n", STRING( pev->classname ) );
 				return GetScheduleOfType( SCHED_SMALL_FLINCH );
 			}
 		}

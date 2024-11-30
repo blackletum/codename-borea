@@ -6455,6 +6455,8 @@ void CBasePlayer::RunningThink()
 
 		//ALERT(at_console, "fov value %i", this->m_iClientFOV);
 	}
+
+	float zvel = pev->velocity.z;
 	
 	if (isRunning)
 	{
@@ -6475,6 +6477,7 @@ void CBasePlayer::RunningThink()
 		{
 			float maxspd = CVAR_GET_FLOAT( "sv_maxspeed" );
 			if( maxspd <= 0 ) maxspd = 560;
+			
 			pev->velocity = pev->velocity + gpGlobals->v_forward * 10 * (maxspd / (1 / gpGlobals->frametime));
 
 			if( pev->button & IN_MOVERIGHT )
@@ -6491,6 +6494,8 @@ void CBasePlayer::RunningThink()
 			{
 				pev->velocity = pev->velocity.Normalize() * maxspd;
 			}
+
+			pev->velocity.z = zvel;
 		}
 	}
 
