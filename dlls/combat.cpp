@@ -612,7 +612,11 @@ Activity CBaseMonster :: GetSmallFlinchActivity ()
 	Activity	flinchActivity;
 	BOOL		fTriedDirection;
 	float		flDot;
-
+	if( m_bitsDamageType & DMG_CLUB )
+	{
+		m_LastHitGroup = RANDOM_LONG( 0, 7 ); // Aynekko: randomize flinch animation hack
+		ALERT( at_console, "woohoo\n" );
+	}
 	fTriedDirection = FALSE;
 	UTIL_MakeVectors ( pev->angles );
 	flDot = DotProduct ( gpGlobals->v_forward, g_vecAttackDir * -1 );
@@ -645,12 +649,9 @@ Activity CBaseMonster :: GetSmallFlinchActivity ()
 		break;
 	}
 
-
 	// do we have a sequence for the ideal activity?
-	if ( LookupActivity ( flinchActivity ) == ACTIVITY_NOT_AVAILABLE )
-	{
+	if( LookupActivity( flinchActivity ) == ACTIVITY_NOT_AVAILABLE )
 		flinchActivity = ACT_SMALL_FLINCH;
-	}
 
 	return flinchActivity;
 }
