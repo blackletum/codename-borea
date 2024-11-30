@@ -3837,6 +3837,11 @@ Schedule_t *CMonsterGangster::GetSchedule()
 		if( m_MonsterState == MONSTERSTATE_COMBAT && HasConditions( bits_COND_CAN_MELEE_ATTACK1 ) )
 			return GetScheduleOfType( SCHED_MELEE_ATTACK1 );
 
+		if( FOkToSpeak() )
+		{
+			SENTENCEG_PlayRndSz( ENT( pev ), "GANG_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+			JustSpoke();
+		}
 		return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ORIGIN );
 	}
 
@@ -3924,7 +3929,7 @@ Schedule_t *CMonsterGangster::GetSchedule()
 
 				if( FOkToSpeak() )
 				{
-					SENTENCEG_PlayRndSz( ENT( pev ), "GANG_CVER", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+					SENTENCEG_PlayRndSz( ENT( pev ), "GANG_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
 					JustSpoke();
 				}
 				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_BEST_SOUND );
@@ -3952,7 +3957,14 @@ Schedule_t *CMonsterGangster::GetSchedule()
 
 	// I saw at least two of my dead comrades. Run for your life!
 	if( m_iBravery <= 0 )
+	{
+		if( FOkToSpeak() )
+		{
+			SENTENCEG_PlayRndSz( ENT( pev ), "GANG_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+			JustSpoke();
+		}
 		return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ORIGIN );
+	}
 
 	switch( m_MonsterState )
 	{
@@ -3980,7 +3992,14 @@ Schedule_t *CMonsterGangster::GetSchedule()
 
 		// low hp, 75% chance of running away
 		if( pev->health < pev->max_health * 0.25f && RANDOM_LONG( 0, 100 ) > 25 )
+		{
+			if( FOkToSpeak() )
+			{
+				SENTENCEG_PlayRndSz( ENT( pev ), "GANG_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+				JustSpoke();
+			}
 			return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+		}
 
 		// Aynekko: make taunt sounds during combat (20% chance)
 		if( RANDOM_LONG( 0, 100 ) < 20 && FOkToSpeak() )
@@ -3998,6 +4017,11 @@ Schedule_t *CMonsterGangster::GetSchedule()
 
 				if( !IsLeader() )
 				{
+					if( FOkToSpeak() )
+					{
+						SENTENCEG_PlayRndSz( ENT( pev ), "GANG_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+						JustSpoke();
+					}
 					return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
 				}
 				else
@@ -4052,11 +4076,10 @@ Schedule_t *CMonsterGangster::GetSchedule()
 				// only try to take cover if we actually have an enemy!
 
 				//!!!KELLY - this grunt was hit and is going to run to cover.
-				if( FOkToSpeak() ) // && RANDOM_LONG(0,1))
+				if( FOkToSpeak() )
 				{
-					//SENTENCEG_PlayRndSz( ENT(pev), "HG_COVER", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch);
-					m_iSentence = HGRUNT_SENT_COVER;
-					//JustSpoke();
+					SENTENCEG_PlayRndSz( ENT( pev ), "GANG_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+					JustSpoke();
 				}
 				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
 			}
@@ -4099,6 +4122,11 @@ Schedule_t *CMonsterGangster::GetSchedule()
 			else
 			{
 				// hide!
+				if( FOkToSpeak() )
+				{
+					SENTENCEG_PlayRndSz( ENT( pev ), "GANG_FLEE", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch );
+					JustSpoke();
+				}
 				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
 			}
 		}
