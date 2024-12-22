@@ -1912,17 +1912,17 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 			{
 			default:
 			case BULLET_PLAYER_9MM:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, DMG_BULLET); 
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, gMultiDamage.type );
 				break;
 
 			case BULLET_PLAYER_MP5:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, gMultiDamage.type );
 				break;
 
 			case BULLET_PLAYER_BUCKSHOT:	
 				 // make distance based!
 			{
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_ALWAYSGIB);
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, gMultiDamage.type );
 				pEntity->pev->velocity.x = vecDirShooting.x * 200.0f;
 				pEntity->pev->velocity.y = vecDirShooting.y * 200.0f;
 				pEntity->pev->velocity.z = 200.0f;
@@ -1930,15 +1930,15 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 				break;
 			
 			case BULLET_PLAYER_357:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg357, vecDir, &tr, DMG_BULLET); 
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg357, vecDir, &tr, gMultiDamage.type );
 				break;
 
 			case BULLET_PLAYER_556:
-				pEntity->TraceAttack( pevAttacker, gSkillData.plrDmg556, vecDir, &tr, DMG_BULLET );
+				pEntity->TraceAttack( pevAttacker, gSkillData.plrDmg556, vecDir, &tr, gMultiDamage.type );
 				break;
 
 			case BULLET_PLAYER_762:
-				pEntity->TraceAttack( pevAttacker, gSkillData.plrDmg762, vecDir, &tr, DMG_BULLET );
+				pEntity->TraceAttack( pevAttacker, gSkillData.plrDmg762, vecDir, &tr, gMultiDamage.type );
 				
 				if( tr.pHit && tr.pHit->v.takedamage != DAMAGE_NO )
 				{
@@ -1977,7 +1977,7 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 				break;
 
 			case BULLET_PLAYER_EAGLE:
-				pEntity->TraceAttack( pevAttacker, gSkillData.plrDmgEagle, vecDir, &tr, DMG_BULLET );
+				pEntity->TraceAttack( pevAttacker, gSkillData.plrDmgEagle, vecDir, &tr, gMultiDamage.type );
 				break;
 				
 			case BULLET_NONE: // FIX 
