@@ -21,11 +21,11 @@ extern engine_studio_api_t IEngineStudio;
 
 #define GL_TEXTURE_RECTANGLE_NV 0x84F5
 
-cvar_t* glow_blur_steps = NULL;
-cvar_t* glow_darken_steps = NULL;
-cvar_t* glow_strength = NULL;
 cvar_t* te_bloom_effect = NULL;
-cvar_t* glow_multiplier = NULL;
+cvar_t* te_bloom_val = NULL;
+
+cvar_t* te_fxaa = NULL;
+
 float glow_mult = 0.0f;
 
 extern ShaderUtil postProcessShader;
@@ -48,12 +48,11 @@ bool CBloom::Init(void)
     // free the memory
     delete[] pBlankTex;
 
-    glow_blur_steps = CVAR_CREATE("glow_blur_steps", "15", FCVAR_ARCHIVE);
-    glow_darken_steps = CVAR_CREATE("glow_darken_steps", "5", FCVAR_ARCHIVE);
-    glow_strength = CVAR_CREATE("glow_strength", "1", FCVAR_ARCHIVE);
+    te_bloom_effect = CVAR_CREATE("te_bloom", "1", FCVAR_ARCHIVE);
+    te_fxaa = CVAR_CREATE("te_fxaa", "1", FCVAR_ARCHIVE);
 
-    te_bloom_effect = CVAR_CREATE("te_bloom_effect", "1", FCVAR_ARCHIVE);
-    glow_multiplier = CVAR_CREATE("glow_multiplier", "1", FCVAR_ARCHIVE);
+    te_bloom_val = CVAR_CREATE("te_bloom_val", "1", FCVAR_ARCHIVE);
+
 
     return true;
 }
@@ -77,10 +76,7 @@ void CBloom::Draw(void)
     if (IEngineStudio.IsHardware() != 1)
         return;
 
-    if ((int)glow_blur_steps->value == 0 || (int)glow_strength->value == 0)
-        return;
-
-    if (!(int)te_bloom_effect->value)
+    if ((int)te_bloom_effect->value == 0 && (int)te_fxaa->value == 0)
         return;
 
 
@@ -101,56 +97,62 @@ void CBloom::Draw(void)
     glLoadIdentity();
     glOrtho(0, 1, 1, 0, 0.1, 100);
 
-    // fxaa pass
+    if(te_fxaa->value > 0)
+    {
+        // fxaa pass
 
-    glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, ScreenWidth, ScreenHeight, 0);
+        glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, ScreenWidth, ScreenHeight, 0);
 
-    FXAAShader.Use();
+        FXAAShader.Use();
 
-    glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iChannel0"), 0);
-    glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iWidth"), ScreenWidth);
-    glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iHeight"), ScreenHeight);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
+        glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iChannel0"), 0);
+        glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iWidth"), ScreenWidth);
+        glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iHeight"), ScreenHeight);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
 
-    glViewport(0, 0, ScreenWidth, ScreenHeight);
-    glColor4f(1, 1, 1, 1);
-    glBegin(GL_QUADS);
-    gHUD.gBloomRenderer.DrawQuad(ScreenWidth, ScreenHeight);
-    glEnd();
-    FXAAShader.Unuse();
+        glViewport(0, 0, ScreenWidth, ScreenHeight);
+        glColor4f(1, 1, 1, 1);
+        glBegin(GL_QUADS);
+        gHUD.gBloomRenderer.DrawQuad(ScreenWidth, ScreenHeight);
+        glEnd();
+        FXAAShader.Unuse();
 
-    // fxaa end
+        // fxaa end
+    }
 
-    // bloom pass
+    if(te_bloom_effect->value > 0)
+    {
+        // bloom pass
 
-    glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, ScreenWidth, ScreenHeight, 0);
+        glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, ScreenWidth, ScreenHeight, 0);
 
-    auto mult = gHUD.m_fLight - 100.0f;
-    mult = 100 - mult;
-    mult = mult / 100.0f;
+        auto mult = gHUD.m_fLight - 100.0f;
+        mult = 100 - mult;
+        mult = mult / 100.0f;
 
-    glow_mult = lerp(glow_mult, (mult), gHUD.m_flTimeDelta * 3.0f);
+        glow_mult = lerp(glow_mult, (mult * te_bloom_val->value), gHUD.m_flTimeDelta * 3.0f);
 
-    postProcessShader.Use();
- 
-    glUniform1i(glGetUniformLocation(postProcessShader.GetProgramID(), "iChannel0"), 0);
-    glUniform1f(glGetUniformLocation(postProcessShader.GetProgramID(), "mult"), glow_mult);
-    glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iWidth"), ScreenWidth);
-    glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iHeight"), ScreenHeight);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
+        postProcessShader.Use();
 
-    glViewport(0, 0, ScreenWidth, ScreenHeight);
-    glColor4f(1, 1, 1, 1);
-    glBegin(GL_QUADS);
-    gHUD.gBloomRenderer.DrawQuad(ScreenWidth, ScreenHeight);
-    glEnd();
-    postProcessShader.Unuse();
+        glUniform1i(glGetUniformLocation(postProcessShader.GetProgramID(), "iChannel0"), 0);
+        glUniform1f(glGetUniformLocation(postProcessShader.GetProgramID(), "mult"), glow_mult);
+        glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iWidth"), ScreenWidth);
+        glUniform1i(glGetUniformLocation(FXAAShader.GetProgramID(), "iHeight"), ScreenHeight);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, g_uiScreenTex);
 
-    // bloom end
+        glViewport(0, 0, ScreenWidth, ScreenHeight);
+        glColor4f(1, 1, 1, 1);
+        glBegin(GL_QUADS);
+        gHUD.gBloomRenderer.DrawQuad(ScreenWidth, ScreenHeight);
+        glEnd();
+        postProcessShader.Unuse();
+
+        // bloom end
+    }
 
     // reset state
     glViewport(0, 0, ScreenWidth, ScreenHeight);
