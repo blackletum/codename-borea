@@ -965,7 +965,7 @@ Vector CParticleEngine::LightForParticle( cl_particle_t *pParticle )
 	Vector vEndPos = pParticle->origin - Vector(0, 0, 8964);
 	Vector vColor = Vector(0, 0, 0);
 
-	g_StudioRenderer.StudioRecursiveLightPoint(nullptr, pWorld->nodes, pParticle->origin, vEndPos, vColor);
+	g_StudioRenderer.StudioRecursiveLightPoint(nullptr, pWorld->nodes, pParticle->origin, vEndPos, vColor, false, true);
 	cl_dlight_t *pLight = gBSPRenderer.m_pDynLights;
 
 	for(int i = 0; i < MAX_DYNLIGHTS; i++, pLight++)
