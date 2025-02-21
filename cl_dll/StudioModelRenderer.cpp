@@ -4152,7 +4152,7 @@ StudioRecursiveLightPoint
 
 ====================
 */
-int CStudioModelRenderer::StudioRecursiveLightPoint( entextrainfo_t *ext, mnode_t *node, const Vector &start, const Vector &end, Vector &color , bool bStatic)
+int CStudioModelRenderer::StudioRecursiveLightPoint( entextrainfo_t *ext, mnode_t *node, const Vector &start, const Vector &end, Vector &color , bool bStatic, bool isParticle)
 {
 	float		front, back, frac;
 	int			side;
@@ -4233,22 +4233,27 @@ int CStudioModelRenderer::StudioRecursiveLightPoint( entextrainfo_t *ext, mnode_
 			// scan for existing index
 			bool bFoundStoredLight = false;
 			int iFoundIndex = 0;
-			for (int jaja = 0; jaja < StoredLightBuffer.size(); jaja++)
-			{
-				if (StoredLightBuffer[jaja].index == m_pCurrentEntity->index)
-				{
-					bFoundStoredLight = true;
-					iFoundIndex = jaja;
-				}
-			}
 
-			// not found? add!
-			if (!bFoundStoredLight)
+			// make sure we're not lerping particles
+			if(!isParticle)
 			{
-				cl_stored_light local;
-				local.index = m_pCurrentEntity->index;
-				local.color = Vector((float)(lightmap->r * flScale) / 255, (float)(lightmap->g * flScale) / 255, (float)(lightmap->b * flScale) / 255);
-				StoredLightBuffer.push_back(local);
+				for (int jaja = 0; jaja < StoredLightBuffer.size(); jaja++)
+				{
+					if (StoredLightBuffer[jaja].index == m_pCurrentEntity->index)
+					{
+						bFoundStoredLight = true;
+						iFoundIndex = jaja;
+					}
+				}
+
+				// not found? add!
+				if (!bFoundStoredLight)
+				{
+					cl_stored_light local;
+					local.index = m_pCurrentEntity->index;
+					local.color = Vector((float)(lightmap->r * flScale) / 255, (float)(lightmap->g * flScale) / 255, (float)(lightmap->b * flScale) / 255);
+					StoredLightBuffer.push_back(local);
+				}
 			}
 
 

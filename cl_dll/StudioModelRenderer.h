@@ -214,7 +214,7 @@ public:
 	virtual bool	StudioCullBBox( const Vector &mins, const Vector &maxs );
 
 	virtual void	StudioSetupLighting( bool bStatic = false );
-	virtual int		StudioRecursiveLightPoint( entextrainfo_t *ext, mnode_t *node, const Vector &start, const Vector &end, Vector &color , bool bStatic = false);
+	virtual int		StudioRecursiveLightPoint(entextrainfo_t* ext, mnode_t* node, const Vector& start, const Vector& end, Vector& color, bool bStatic = false, bool isParticle = false);
 	
 	virtual void	StudioSetTextureFlags( );
 	virtual void	StudioSetChromeVectors( );
