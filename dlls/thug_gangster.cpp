@@ -190,6 +190,8 @@ public:
 	int		m_iSentence;
 
 	static const char *pGruntSentences[];
+
+	float next_idle_sentence_time; // used for thugs and gangs
 };
 
 LINK_ENTITY_TO_CLASS( monster_human_grunt, CHGrunt );
@@ -2761,6 +2763,8 @@ void CMonsterThugPipe::Precache()
 	m_iShotgunShell = PRECACHE_MODEL( "models/shotgunshell.mdl" );
 
 	AllyDied = false;
+
+	next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 0.5, 6.5 );
 }
 
 void CMonsterThugPipe::Spawn()
@@ -3186,6 +3190,16 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 	
 	switch( m_MonsterState )
 	{
+	case MONSTERSTATE_IDLE:
+	{
+		if( gpGlobals->time > next_idle_sentence_time )
+		{
+			PlaySentence( "THU_IDLE", 3, VOL_NORM, ATTN_NORM );
+			JustSpoke();
+			next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 4.0, 8.0 );
+		}
+		break;
+	}
 	case MONSTERSTATE_ALERT:
 	{
 		if( HasConditions( bits_COND_ENEMY_DEAD ) && LookupActivity( ACT_VICTORY_DANCE ) != ACTIVITY_NOT_AVAILABLE )
@@ -3541,6 +3555,8 @@ void CMonsterGangster::Precache()
 	PRECACHE_SOUND( "weapons/psk_npc.wav" );
 	PRECACHE_SOUND( "weapons/m67_npc.wav" );
 	PRECACHE_SOUND( "weapons/mp54_npc.wav" );
+
+	next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 0.5, 6.5 );
 }
 
 void CMonsterGangster::Spawn()
@@ -3968,6 +3984,16 @@ Schedule_t *CMonsterGangster::GetSchedule()
 
 	switch( m_MonsterState )
 	{
+	case MONSTERSTATE_IDLE:
+	{
+		if( gpGlobals->time > next_idle_sentence_time )
+		{
+			PlaySentence( "GANG_IDLE", 3, VOL_NORM, ATTN_NORM );
+			JustSpoke();
+			next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 4.0, 8.0 );
+		}
+		break;
+	}
 	case MONSTERSTATE_ALERT:
 	{
 		if( HasConditions( bits_COND_ENEMY_DEAD ) && LookupActivity( ACT_VICTORY_DANCE ) != ACTIVITY_NOT_AVAILABLE )
