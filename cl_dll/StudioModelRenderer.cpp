@@ -6483,14 +6483,14 @@ void CStudioModelRenderer::Mod_LoadTexture( mstudiotexture_t *ptexture, byte *pb
 
 	if(!(ptexture->flags & STUDIO_NF_NOMIPMAP))
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_NEAREST_MIPMAP_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 	}
 	else
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
 	}
 
@@ -6843,7 +6843,7 @@ void CStudioModelRenderer::StudioDrawShadowVolume(void)
 	Vector* psvdverts = (Vector*)((byte*)m_pSVDHeader + m_pSVDSubModel->vertexindex);
 	byte* pvertbone = ((byte*)m_pSVDHeader + m_pSVDSubModel->vertinfoindex);
 	Vector shadeVector;
-	/*
+	
 	// search for closest elight
 	mlight_t closest_elight;
 	for (int i = 0; i < MAXRENDERENTS; i++)
@@ -6865,10 +6865,7 @@ void CStudioModelRenderer::StudioDrawShadowVolume(void)
 	{
 		m_vShadowLightOrigin = closest_elight.origin;
 	}
-	else
-	*/
-
-	if (m_pCvarSkyVecX->value != 0 || m_pCvarSkyVecY->value != 0 || m_pCvarSkyVecZ->value != 0 )
+	else if (m_pCvarSkyVecX->value != 0 || m_pCvarSkyVecY->value != 0 || m_pCvarSkyVecZ->value != 0 )
 	{
 		Vector skyvec(m_pCvarSkyVecX->value, m_pCvarSkyVecY->value, m_pCvarSkyVecZ->value);
 		skyvec = skyvec * -1;
@@ -7022,6 +7019,10 @@ bool CStudioModelRenderer::StudioShouldDrawShadow(void)
 
 	// Entities flagged for no shadowing
 	if (m_pCurrentEntity->curstate.renderfx == 101)
+		return false;
+
+	// for now only draw NPCs - tagged with renderfx 102
+	if (m_pCurrentEntity->curstate.renderfx != 102)
 		return false;
 
 	if (IEngineStudio.IsHardware() != 1)
