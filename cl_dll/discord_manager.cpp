@@ -25,7 +25,7 @@ bool CDiscordRPCManager::Init()
 
 	DiscordEventHandlers handlers;
 	memset(&handlers, 0, sizeof(handlers));
-	Discord_Initialize("1040499533492265051", &handlers, true, nullptr);
+	Discord_Initialize("1342384563199934525", &handlers, true, nullptr);
 	runningTime = time(0); // initialize time
 
 	// log
@@ -54,7 +54,7 @@ void CDiscordRPCManager::Update()
 
 	// set logo and name
 	discordPresence.largeImageKey = "logo"; // large image file name no extension
-	discordPresence.largeImageText = "Codename Bor3A";
+	discordPresence.largeImageText = "The Last Goodbye";
 	discordPresence.smallImageKey = "   ";	// same as large
 	discordPresence.smallImageText = "   "; // displays on hover
 
