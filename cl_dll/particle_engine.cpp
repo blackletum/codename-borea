@@ -385,7 +385,7 @@ particle_system_t *CParticleEngine::CreateSystem( char *szPath, Vector origin, V
 	{
 		pmtrace_t tr;
 		gEngfuncs.pEventAPI->EV_SetTraceHull(2);
-		gEngfuncs.pEventAPI->EV_PlayerTrace(origin, origin + Vector(0, 0, 8496), PM_WORLD_ONLY, -1, &tr);
+		gEngfuncs.pEventAPI->EV_PlayerTrace(origin, origin + Vector(0, 0, 160000), PM_STUDIO_IGNORE, -1, &tr);
 
 		if(tr.fraction == 1.0 || gEngfuncs.PM_PointContents(tr.endpos, nullptr) != CONTENTS_SKY)
 		{
@@ -476,7 +476,7 @@ void CParticleEngine::EnvironmentCreateFirst( particle_system_t *pSystem )
 
 			pmtrace_t pmtrace;
 			gEngfuncs.pEventAPI->EV_SetTraceHull(2);
-			gEngfuncs.pEventAPI->EV_PlayerTrace(vOrigin, Vector(vOrigin[0], vOrigin[1], pSystem->skyheight - 8), PM_WORLD_ONLY, -1, &pmtrace);
+			gEngfuncs.pEventAPI->EV_PlayerTrace(vOrigin, Vector(vOrigin[0], vOrigin[1], pSystem->skyheight - 8), PM_STUDIO_IGNORE, -1, &pmtrace);
 
 			if (pmtrace.allsolid || pmtrace.fraction != 1.0)
 				continue;
@@ -599,6 +599,9 @@ void CParticleEngine::CreateParticle( particle_system_t *pSystem, float *flOrigi
 	}
 	else if (pSystem->shapetype == SYSTEM_SHAPE_BOX_AROUND_PLAYER)
 	{
+		if (!gHUD.pparams)
+			return;
+
 		Vector vPlayer = gEngfuncs.GetLocalPlayer()->origin;
 		Vector vSpeed = gHUD.pparams->simvel;
 		pParticle->origin[0] = vPlayer[0] + vSpeed[0] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
