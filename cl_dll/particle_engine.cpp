@@ -387,7 +387,7 @@ particle_system_t *CParticleEngine::CreateSystem( char *szPath, Vector origin, V
 		gEngfuncs.pEventAPI->EV_SetTraceHull(2);
 		gEngfuncs.pEventAPI->EV_PlayerTrace(origin, origin + Vector(0, 0, 160000), PM_STUDIO_IGNORE, -1, &tr);
 
-		if(tr.fraction == 1.0 || gEngfuncs.PM_PointContents(tr.endpos, nullptr) != CONTENTS_SKY)
+		if(tr.fraction == 1.0)
 		{
 			// Remove system
 			m_pSystemHeader = pSystem->next;
