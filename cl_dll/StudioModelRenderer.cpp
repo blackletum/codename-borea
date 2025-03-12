@@ -3496,20 +3496,23 @@ void CStudioModelRenderer::StudioRenderModel()
 	}
 
 	// bacontsu - render distance, credit to Aynekko (Diffusion)
-	if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value && m_pCurrentEntity != gEngfuncs.GetViewModel())
-		return;
-
-	if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value - 100.0f && m_pCurrentEntity != gEngfuncs.GetViewModel())
+	if (m_pCurrentEntity->curstate.renderfx != 70)
 	{
-		float diff = m_pCvarRenderDistance->value - (m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length();
+		if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value && m_pCurrentEntity != gEngfuncs.GetViewModel())
+			return;
 
-		m_pCurrentEntity->curstate.rendermode = kRenderTransTexture;
-		m_pCurrentEntity->curstate.renderamt = diff * 255.0f / 100.0f;
-	}
-	else
-	{
-		m_pCurrentEntity->curstate.renderamt = m_pCurrentEntity->baseline.renderamt;
-		m_pCurrentEntity->curstate.rendermode = m_pCurrentEntity->baseline.rendermode;
+		if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value - 100.0f && m_pCurrentEntity != gEngfuncs.GetViewModel())
+		{
+			float diff = m_pCvarRenderDistance->value - (m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length();
+
+			m_pCurrentEntity->curstate.rendermode = kRenderTransTexture;
+			m_pCurrentEntity->curstate.renderamt = diff * 255.0f / 100.0f;
+		}
+		else
+		{
+			m_pCurrentEntity->curstate.renderamt = m_pCurrentEntity->baseline.renderamt;
+			m_pCurrentEntity->curstate.rendermode = m_pCurrentEntity->baseline.rendermode;
+		}
 	}
 
 
@@ -5356,20 +5359,24 @@ StudioRenderModelEXT
 void CStudioModelRenderer::StudioRenderModelEXT()
 {
 	// bacontsu - render distance, credit to Aynekko (Diffusion)
-	if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value && m_pCurrentEntity != gEngfuncs.GetViewModel())
-		return;
-
-	if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value - 100.0f && m_pCurrentEntity != gEngfuncs.GetViewModel())
+	// note: only apply this on static models, but the skybox objects
+	if(m_pCurrentEntity->curstate.renderfx != 70)
 	{
-		float diff = m_pCvarRenderDistance->value - (m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length();
+		if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value && m_pCurrentEntity != gEngfuncs.GetViewModel())
+			return;
 
-		m_pCurrentEntity->curstate.rendermode = kRenderTransTexture;
-		m_pCurrentEntity->curstate.renderamt = diff * 255.0f / 100.0f;
-	}
-	else
-	{
-		m_pCurrentEntity->curstate.renderamt = m_pCurrentEntity->baseline.renderamt;
-		m_pCurrentEntity->curstate.rendermode = m_pCurrentEntity->baseline.rendermode;
+		if ((m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length() > m_pCvarRenderDistance->value - 100.0f && m_pCurrentEntity != gEngfuncs.GetViewModel())
+		{
+			float diff = m_pCvarRenderDistance->value - (m_pCurrentEntity->curstate.origin - gEngfuncs.GetLocalPlayer()->curstate.origin).Length();
+
+			m_pCurrentEntity->curstate.rendermode = kRenderTransTexture;
+			m_pCurrentEntity->curstate.renderamt = diff * 255.0f / 100.0f;
+		}
+		else
+		{
+			m_pCurrentEntity->curstate.renderamt = m_pCurrentEntity->baseline.renderamt;
+			m_pCurrentEntity->curstate.rendermode = m_pCurrentEntity->baseline.rendermode;
+		}
 	}
 
 	// Save texture states before rendering, so we don't
