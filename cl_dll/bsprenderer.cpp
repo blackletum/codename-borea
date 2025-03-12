@@ -6346,6 +6346,7 @@ void CBSPRenderer::DrawSky( )
 	if (!m_bDrawSky)
 		return;
 
+	/*
 	if (gHUD.m_pSkyFogSettings.active)
 	{
 		memcpy(&pSaved, &gHUD.m_pFogSettings, sizeof(fog_settings_t));
@@ -6369,7 +6370,7 @@ void CBSPRenderer::DrawSky( )
 		glPopMatrix();
 		glMatrixMode(GL_MODELVIEW);
 	}
-
+	*/
 	if (!gHUD.m_pFogSettings.affectsky || !gHUD.m_pFogSettings.active)
 	{
 		glDisable(GL_BLEND);
@@ -6411,8 +6412,14 @@ void CBSPRenderer::DrawSky( )
 		glDepthMask(GL_TRUE);
 	}
 
+	//Render all skybox prop entities
+	gPropManager.RenderSkyProps();
+
+	/*
 	if (gHUD.m_pFogSettings.active)
 		glEnable(GL_FOG);
+
+		*/
 
 	//Render all skybox solid ents
 	EnableVertexArray();
@@ -6425,12 +6432,11 @@ void CBSPRenderer::DrawSky( )
 	ResetRenderer();
 	DisableVertexArray();
 
-	//Render all skybox prop entities
-	gPropManager.RenderSkyProps();
-
+	
 	//Clear depth buffer for the final time
 	glClear(GL_DEPTH_BUFFER_BIT);
 
+	/*
 	if (gHUD.m_pSkyFogSettings.active)
 	{
 		memcpy(&gHUD.m_pFogSettings, &pSaved, sizeof(fog_settings_t));
@@ -6445,7 +6451,7 @@ void CBSPRenderer::DrawSky( )
 
 		glMatrixMode(GL_MODELVIEW);
 	}
-
+	*/
 };
 
 /*
