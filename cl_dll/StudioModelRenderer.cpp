@@ -4112,7 +4112,7 @@ void CStudioModelRenderer::StudioSetupLighting (bool bStatic)
 	if(gBSPRenderer.m_pWorld->lightdata)
 		iret = StudioRecursiveLightPoint(pInfo, gBSPRenderer.m_pWorld->nodes, point, end, color, bStatic);
 
-	if(!iret)
+	if(!iret || m_pCurrentEntity->curstate.renderfx == 70)
 	{
 		m_pLighting.diffuselight.x = ((float)m_pCvarSkyColorX->value/255)*0.55;
 		m_pLighting.diffuselight.y = ((float)m_pCvarSkyColorY->value/255)*0.55;

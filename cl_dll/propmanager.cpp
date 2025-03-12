@@ -503,7 +503,7 @@ void CPropManager::LoadEntVars( )
 			strcpy(m_pDecals[m_iNumDecals].name, pValue);
 			m_iNumDecals++;
 		}
-		else if(!strcmp( pValue, "item_generic") || !strcmp(pValue, "env_static") || !strcmp(pValue, "prop_static") || !strcmp(pValue, "prop_grass"))
+		else if(!strcmp( pValue, "item_generic") || !strcmp(pValue, "env_static") || !strcmp(pValue, "prop_static") || !strcmp(pValue, "prop_grass") || !strcmp(pValue, "prop_blimp"))
 		{
 			bool isGrass = (!strcmp(pValue, "prop_grass"));
 
@@ -605,10 +605,17 @@ void CPropManager::LoadEntVars( )
 				m_pEntities[m_iNumEntities].curstate.rendercolor.b = iColB;
 			}
 
-			m_pEntities[m_iNumEntities].curstate.iuser3 = ValueForKey(&m_pBSPEntities[i], "prop_grass") || isGrass;
-			
+			// bacontsu - blimps
+			pValue = ValueForKey(&m_pBSPEntities[i], "prop_blimp");
+			if (pValue)
+			{
+				sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.iuser1);
+			}
+
 			// bacontsu - grass swaying
-			if (m_pEntities[m_iNumEntities].curstate.iuser3 != 0)
+			m_pEntities[m_iNumEntities].curstate.iuser3 = ValueForKey(&m_pBSPEntities[i], "prop_grass") || isGrass;
+
+			if (m_pEntities[m_iNumEntities].curstate.iuser3 != 0 || m_pEntities[m_iNumEntities].curstate.iuser1 != 0)
 			{
 				m_pEntities[m_iNumEntities].curstate.fuser3 = gEngfuncs.pfnRandomLong(1, 25);
 				m_pEntities[m_iNumEntities].curstate.fuser4 = gEngfuncs.pfnRandomLong(1, 25);
@@ -1283,6 +1290,17 @@ void CPropManager::RenderSkyProps( )
 	{
 		if(m_pEntities[i].curstate.renderfx != 70)
 			continue;
+
+		// bacontsu - its a blimp
+		auto mult = 1.0 + (m_pEntities[m_iNumEntities].curstate.fuser3 / 25);
+		if (m_pEntities[i].curstate.iuser1 == 1)
+		{
+			m_pEntities[i].angles.y = gEngfuncs.GetAbsoluteTime() * mult;
+		}
+		else if (m_pEntities[i].curstate.iuser1 == 2)
+		{
+			m_pEntities[i].angles.y = -gEngfuncs.GetAbsoluteTime() * mult;
+		}
 
 		g_StudioRenderer.StudioDrawExternalEntity( &m_pEntities[i] );
 	}
