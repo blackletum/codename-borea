@@ -509,6 +509,7 @@ int __MsgFunc_StatsPlayer(const char* pszName, int iSize, void* pbuf)
 	return 0;
 }
 
+cvar_t* gl_shadows_opacity;
 // This is called every time the DLL is loaded
 void CHud :: Init()
 {
@@ -588,6 +589,8 @@ void CHud :: Init()
 	CVAR_CREATE("test4", "0", FCVAR_ARCHIVE);
 	CVAR_CREATE("test5", "0", FCVAR_ARCHIVE);
 	CVAR_CREATE("test6", "0", FCVAR_ARCHIVE);
+
+	gl_shadows_opacity = CVAR_CREATE("gl_shadows_opacity", "0.5", FCVAR_ARCHIVE);
 
 	//RENDERERS START
 	HOOK_MESSAGE( SetFog );

@@ -299,6 +299,8 @@ void SVD_CalcRefDef ( ref_params_t* pparams )
 	//g_StudioRenderer.StudioSetBuffer();
 }
 
+extern cvar_t* gl_shadows_opacity;
+
 /*
 ====================
 SVD_DrawNormalTriangles
@@ -327,7 +329,10 @@ void SVD_DrawNormalTriangles ( void )
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glColor4f(GL_ZERO, GL_ZERO, GL_ZERO, 0.25);
+	if(gl_shadows_opacity && gl_shadows_opacity > 0)
+		glColor4f(GL_ZERO, GL_ZERO, GL_ZERO, gl_shadows_opacity->value);
+	else
+		glColor4f(GL_ZERO, GL_ZERO, GL_ZERO, 0.4);
 
 	glStencilFunc(GL_NOTEQUAL, 0, ~0);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);

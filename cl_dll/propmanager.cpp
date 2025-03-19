@@ -612,10 +612,20 @@ void CPropManager::LoadEntVars( )
 				sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.iuser1);
 			}
 
+			if (m_pEntities[m_iNumEntities].curstate.iuser1 != 0)
+			{
+				pValue = ValueForKey(&m_pBSPEntities[i], "blimpspeed");
+
+				if (pValue)
+				{
+					sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.fuser4);
+				}
+			}
+
 			// bacontsu - grass swaying
 			m_pEntities[m_iNumEntities].curstate.iuser3 = ValueForKey(&m_pBSPEntities[i], "prop_grass") || isGrass;
 
-			if (m_pEntities[m_iNumEntities].curstate.iuser3 != 0 || m_pEntities[m_iNumEntities].curstate.iuser1 != 0)
+			if (m_pEntities[m_iNumEntities].curstate.iuser3 != 0)
 			{
 				m_pEntities[m_iNumEntities].curstate.fuser3 = gEngfuncs.pfnRandomLong(1, 25);
 				m_pEntities[m_iNumEntities].curstate.fuser4 = gEngfuncs.pfnRandomLong(1, 25);
@@ -1292,7 +1302,13 @@ void CPropManager::RenderSkyProps( )
 			continue;
 
 		// bacontsu - its a blimp
-		auto mult = 1.0 + (m_pEntities[m_iNumEntities].curstate.fuser3 / 25);
+		float mult = 0;
+
+		if (m_pEntities[m_iNumEntities].curstate.fuser4 > 0)
+			mult = m_pEntities[m_iNumEntities].curstate.fuser4;
+		else
+			mult = 1.7;
+
 		if (m_pEntities[i].curstate.iuser1 == 1)
 		{
 			m_pEntities[i].angles.y = gEngfuncs.GetAbsoluteTime() * mult;
