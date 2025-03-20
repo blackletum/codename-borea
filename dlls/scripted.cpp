@@ -1118,6 +1118,7 @@ void CScriptedSentence :: DurationThink()
 	m_playing = FALSE;
 	SetNextThink( m_flRepeat );
 	SetThink( &CScriptedSentence::DelayThink );
+	SUB_UseTargets( nullptr, USE_TOGGLE, 0 ); // Aynekko
 }
 
 void CScriptedSentence :: DelayThink()
@@ -1214,7 +1215,7 @@ BOOL CScriptedSentence :: StartSentence( CBaseMonster *pTarget )
 
 	pTarget->PlayScriptedSentence( STRING(m_iszSentence), m_flDuration,  m_flVolume, m_flAttenuation, bConcurrent, pListener );
 	ALERT( at_aiconsole, "Playing sentence %s (%.1f)\n", STRING(m_iszSentence), m_flDuration );
-	SUB_UseTargets( nullptr, USE_TOGGLE, 0 );
+//	SUB_UseTargets( nullptr, USE_TOGGLE, 0 ); // Aynekko - moved to DurationThink
 	return TRUE;
 }
 
