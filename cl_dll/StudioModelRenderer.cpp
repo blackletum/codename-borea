@@ -61,6 +61,7 @@ struct cl_stored_light
 {
 	int index = 0;
 	Vector color = 0;
+	Vector color2 = 0;
 };
 
 std::vector<cl_stored_light>StoredLightBuffer;
@@ -4255,6 +4256,7 @@ int CStudioModelRenderer::StudioRecursiveLightPoint( entextrainfo_t *ext, mnode_
 					cl_stored_light local;
 					local.index = m_pCurrentEntity->index;
 					local.color = Vector((float)(lightmap->r * flScale) / 255, (float)(lightmap->g * flScale) / 255, (float)(lightmap->b * flScale) / 255);
+					local.color2 = Vector((float)(lightmap->r * flScale) / 255, (float)(lightmap->g * flScale) / 255, (float)(lightmap->b * flScale) / 255);
 					StoredLightBuffer.push_back(local);
 				}
 			}
@@ -4291,6 +4293,37 @@ int CStudioModelRenderer::StudioRecursiveLightPoint( entextrainfo_t *ext, mnode_
 
 			if(ext)
 				ext->lightstyles[0] = gBSPRenderer.m_iLightStyleValue[surf->styles[0]];
+
+			// bacontsu - this is the shit that handles switchable lightmap
+			for (int style = 1; style < MAXLIGHTMAPS && surf->styles[style] != 255; style++)
+			{
+				lightmap += size;// skip to next lightmap
+				float scale = (float)gBSPRenderer.m_iLightStyleValue[surf->styles[style]] / 255;
+
+				if (bFoundStoredLight)
+				{
+					//gEngfuncs.Con_Printf("FOUND BALLS\n"); // im at the edge of insanity
+
+
+					StoredLightBuffer[iFoundIndex].color2.x = lerp(StoredLightBuffer[iFoundIndex].color2.x, ((float)lightmap->r / 255) * scale, gHUD.m_flTimeDelta * 2.0f);
+					StoredLightBuffer[iFoundIndex].color2.y = lerp(StoredLightBuffer[iFoundIndex].color2.y, ((float)lightmap->g / 255) * scale, gHUD.m_flTimeDelta * 2.0f);
+					StoredLightBuffer[iFoundIndex].color2.z = lerp(StoredLightBuffer[iFoundIndex].color2.z, ((float)lightmap->b / 255) * scale, gHUD.m_flTimeDelta * 2.0f);
+
+					color.x += StoredLightBuffer[iFoundIndex].color2.x;
+					color.y += StoredLightBuffer[iFoundIndex].color2.y;
+					color.z += StoredLightBuffer[iFoundIndex].color2.z;
+
+				}
+				else
+				{
+					color.x += ((float)lightmap->r / 255) * scale;
+					color.y += ((float)lightmap->g / 255) * scale;
+					color.z += ((float)lightmap->b / 255) * scale;
+				}
+
+				if (ext)
+					ext->lightstyles[style] = gBSPRenderer.m_iLightStyleValue[surf->styles[style]];
+			}
 
 			if(ext)
 				ext->surfindex = node->firstsurface + i;
