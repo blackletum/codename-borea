@@ -52,6 +52,8 @@ int g_iViewmodelSkin;
 
 viewinfo_s g_viewinfo;
 
+std::vector<cl_frozen_model>FrozenBuffer;
+
 // Global engine <-> studio model rendering code interface
 engine_studio_api_t IEngineStudio;
 
@@ -2450,6 +2452,17 @@ void CStudioModelRenderer::StudioCalcRotations ( float pos[][3], vec4_t *q, mstu
 	float				s;
 	float				adj[MAXSTUDIOCONTROLLERS];
 	float				dadt;
+
+	// bacontsu - freeze models and shit
+	for (size_t i = 0; i < FrozenBuffer.size(); i++)
+	{
+		// frozen model found
+		if (FrozenBuffer[i].index == m_pCurrentEntity->index)
+		{
+			f = FrozenBuffer[i].frame;
+			m_pCurrentEntity->curstate.origin = FrozenBuffer[i].origin;
+		}
+	}
 
 	if (f > pseqdesc->numframes - 1)
 	{

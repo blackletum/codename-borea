@@ -75,6 +75,27 @@ int gEvilImpulse101;
 BOOL g_markFrameBounds = 0; //LRC
 extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
 
+static char* stristr(const char* string, const char* string2)
+{
+	int c, len;
+	c = tolower(*string2);
+	len = strlen(string2);
+
+	while (string) {
+		for (; *string && tolower(*string) != c; string++);
+		if (*string) {
+			if (strnicmp(string, string2, len) == 0) {
+				break;
+			}
+			string++;
+		}
+		else {
+			return nullptr;
+		}
+	}
+	return (char*)string;
+}
+
 
 BOOL gInitHUD = TRUE;
 
@@ -2203,6 +2224,90 @@ void CBasePlayer::PreThink()
 
 	SlidingThink(); // bacontsu - sliding handler
 
+
+	// bacontsu - do the logic for timestop here
+	if (isFrozeMode)
+	{
+		for (int i = 0; i < gpGlobals->maxEntities; i++)
+		{
+			auto edict = g_engfuncs.pfnPEntityOfEntIndex(i);
+			auto pEntity = CBaseEntity::Instance(edict);
+
+			if (pEntity && !pEntity->IsPlayer() && !pEntity->isFrozen)
+			{
+				const char* classname = STRING(pEntity->pev->classname);
+
+				if (!strncmp(classname, "monster_", strlen("monster_")) || !strncmp(classname, "grenade", strlen("grenade")))
+				{
+					if (stristr(classname, "grenade"))
+					{
+						pEntity->froze_grenade_time = pEntity->pev->dmgtime - gpGlobals->time;
+					}
+
+					// store initial values
+					pEntity->froze_angles = pEntity->pev->angles;
+					pEntity->froze_velocity = pEntity->pev->velocity;
+					pEntity->froze_movetype = pEntity->pev->movetype;
+
+					pEntity->froze_frame = pEntity->pev->frame;
+					pEntity->froze_framerate = pEntity->pev->framerate;
+
+					if (stristr(classname, "monster"))
+					{
+						MESSAGE_BEGIN(MSG_ALL, gmsgFreezeModel);
+						WRITE_BYTE(1); // input mode
+						WRITE_SHORT(pEntity->entindex());
+						WRITE_SHORT(pEntity->froze_frame);
+						WRITE_COORD(pEntity->pev->origin.x);
+						WRITE_COORD(pEntity->pev->origin.y);
+						WRITE_COORD(pEntity->pev->origin.z);
+						MESSAGE_END();
+					}
+
+					pEntity->isFrozen = true;
+				}
+			}
+		}
+
+	}
+	else
+	{
+		for (int i = 0; i < gpGlobals->maxEntities; i++)
+		{
+			auto edict = g_engfuncs.pfnPEntityOfEntIndex(i);
+			auto pEntity = CBaseEntity::Instance(edict);
+
+			if (pEntity && !pEntity->IsPlayer() && pEntity->isFrozen)
+			{
+				const char* classname = STRING(pEntity->pev->classname);
+
+				if (!strncmp(classname, "monster_", strlen("monster_")) || !strncmp(classname, "grenade", strlen("grenade")))
+				{
+
+					if (stristr(classname, "grenade"))
+					{
+						pEntity->pev->dmgtime = pEntity->froze_grenade_time + gpGlobals->time;
+					}
+
+					pEntity->isFrozen = false;
+					pEntity->pev->angles = pEntity->froze_angles;
+					pEntity->pev->velocity = pEntity->froze_velocity;
+					pEntity->pev->movetype = pEntity->froze_movetype;
+
+					pEntity->pev->frame = pEntity->froze_frame;
+					pEntity->pev->framerate = pEntity->froze_framerate;
+
+					// link to world
+					UTIL_SetOrigin(pEntity->pev, pEntity->pev->origin);
+
+					pEntity->pev->nextthink = gpGlobals->time + 0.1f;
+				}
+			}
+		}
+
+		
+	}
+
 	// animated fov stuff
 	currFov = CVAR_GET_FLOAT("default_fov");
 
@@ -4110,6 +4215,7 @@ void CBasePlayer::ImpulseCommands( )
 	
 	pev->impulse = 0;
 }
+//==========================
 
 //=========================================================
 //=========================================================
@@ -4244,6 +4350,21 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		gEvilImpulse101 = FALSE;
 		break;
 
+		// chaos mode
+	case 155:
+		// iterate on all entities in the vicinity.
+		this->isFrozeMode = true;
+		UTIL_ScreenFadeAll(Vector(255, 255, 255), 1.5, 1.0, 255, FFADE_IN);
+		break;
+	case 156:
+		// iterate on all entities in the vicinity.
+		this->isFrozeMode = false;
+
+		UTIL_ScreenFadeAll(Vector(255, 255, 255), 0.6, 0.1, 255, FFADE_IN);
+		MESSAGE_BEGIN(MSG_ALL, gmsgFreezeModel);
+		WRITE_BYTE(0); // clear mode
+		MESSAGE_END();
+		break;
 	case 102:
 		// Gibbage!!!
 		CGib::SpawnRandomGibs( pev, 1, 1 );

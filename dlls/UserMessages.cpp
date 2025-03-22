@@ -101,6 +101,8 @@ int gmsgOldWeapon = 0;
 int gmsgCustomIcon = 0;
 int gmsgStamina = 0;
 
+int gmsgFreezeModel;
+
 void LinkUserMessages()
 {
 	// Already taken care of?
@@ -176,6 +178,9 @@ void LinkUserMessages()
 	gmsgChapterName = REG_USER_MSG("ChapterName", -1);
 	gmsgSendAnim = REG_USER_MSG("SendAnim", -1);
 	//RENDERERS END
+
+	gmsgFreezeModel = REG_USER_MSG("FreezeModel", -1);;
+
 
 	gmsgSpectator = g_engfuncs.pfnRegUserMsg("Spectator", 2);
 	gmsgStatusIcon = g_engfuncs.pfnRegUserMsg("StatusIcon", -1);

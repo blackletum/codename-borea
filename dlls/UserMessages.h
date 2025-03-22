@@ -99,4 +99,6 @@ extern int gmsgCustomIcon;
 extern int gmsgStamina;
 extern int gmsgChapterName;
 
+extern int gmsgFreezeModel;
+
 void LinkUserMessages();

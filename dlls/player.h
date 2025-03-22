@@ -254,6 +254,9 @@ public:
 	// ads
 	int m_iScopeType;
 
+	// froze
+	bool isFrozeMode;
+
 	// Opposing Force specific
 
 	char* m_szTeamModel;

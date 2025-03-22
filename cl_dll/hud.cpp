@@ -268,6 +268,42 @@ int __MsgFunc_SendAnim(const char* pszName, int iSize, void* pbuf)
 
 }
 
+// bacontsu
+int __MsgFunc_FreezeModel(const char* pszName, int iSize, void* pbuf)
+{
+	BEGIN_READ(pbuf, iSize);
+	cl_frozen_model local;
+
+	bool mode = READ_BYTE();
+
+	if(mode)
+	{
+		// new input
+		local.index = READ_SHORT();
+		local.frame = READ_SHORT();
+		local.origin.x = READ_COORD();
+		local.origin.y = READ_COORD();
+		local.origin.z = READ_COORD();
+
+		bool alreadyRegistered = false;
+		for (size_t i = 0; i < FrozenBuffer.size(); i++)
+		{
+			if (local.index == FrozenBuffer[i].index)
+				alreadyRegistered = true;
+		}
+
+		// make sure we're not UPDATING new data
+		if(!alreadyRegistered)
+			FrozenBuffer.push_back(local);
+	}
+	else
+	{
+		// unfreeze everything
+		FrozenBuffer.clear();
+	}
+	return 1;
+}
+
 // TFFree Command Menu
 void __CmdFunc_OpenCommandMenu()
 {
@@ -607,6 +643,8 @@ void CHud :: Init()
 	HOOK_MESSAGE(UseEnt);
 	HOOK_MESSAGE(SendAnim);
 
+	HOOK_MESSAGE(FreezeModel);
+
 	gPropManager.Init();
 	gTextureLoader.Init();
 	gBSPRenderer.Init();
@@ -924,6 +962,8 @@ void CHud :: VidInit()
 	//RENDERERS_END
 	g_ImGUIManager.VidInit();
 	g_DiscordRPC.VidInit();
+
+	FrozenBuffer.clear();
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)

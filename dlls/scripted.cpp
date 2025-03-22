@@ -357,6 +357,10 @@ CBaseMonster* CCineMonster :: FindEntity( const char* sName, CBaseEntity *pActiv
 // make the entity enter a scripted sequence
 void CCineMonster :: PossessEntity()
 {
+
+	if (isFrozen)
+		return;
+
 	CBaseEntity		*pEntity = m_hTargetEnt;
 	CBaseMonster	*pTarget = nullptr;
 	if ( pEntity )

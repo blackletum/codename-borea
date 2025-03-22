@@ -404,6 +404,17 @@ public:
 	int		IsDormant();
 	BOOL    IsLockedByMaster() { return FALSE; }
 
+	// bacontsu - frozen logic
+	bool isFrozen;
+	Vector froze_velocity;
+	Vector froze_angles;
+	int froze_movetype; 
+	float froze_grenade_time;
+
+	// frozen models
+	int froze_frame;
+	int froze_framerate;
+
 	static CBaseEntity *Instance( edict_t *pent )
 	{ 
 		if ( !pent )

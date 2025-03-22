@@ -528,7 +528,15 @@ CSound* CBaseMonster :: PBestScent ()
 //=========================================================
 void CBaseMonster :: MonsterThink ()
 {
-	SetNextThink( 0.1 );// keep monster thinking.
+	//SetNextThink( 0.1 );// keep monster thinking.
+	pev->nextthink = gpGlobals->time + 0.1f;
+
+	if (isFrozen)
+	{
+		pev->frame = this->froze_frame;
+		pev->framerate = this->froze_framerate;
+		return;
+	}
 
 	RunAI();
 

@@ -1071,3 +1071,13 @@ extern FogSettings g_fogPreFade;
 extern FogSettings g_fogPostFade;
 extern float g_fFogFadeDuration;
 extern float g_fFogFadeFraction;
+
+
+struct cl_frozen_model
+{
+	int index;
+	int frame;
+	Vector origin;
+};
+
+extern std::vector<cl_frozen_model>FrozenBuffer;

@@ -260,6 +260,18 @@ void DispatchThink( edict_t *pent )
 	{
 		if ( FBitSet( pEntity->pev->flags, FL_DORMANT ) )
 			ALERT( at_error, "Dormant entity %s is thinking!!\n", STRING(pEntity->pev->classname) );
+
+		if (pEntity->isFrozen)
+		{
+			pEntity->pev->movetype = MOVETYPE_FLY;
+			pEntity->pev->frame = pEntity->froze_frame;
+			pEntity->pev->velocity = Vector(0, 0, 0);
+			// link to world
+			UTIL_SetOrigin(pEntity->pev, pEntity->pev->origin);
+			pEntity->pev->angles = pEntity->pev->angles;
+
+			return;
+		}
 				
 		//if (pEntity->pev->classname) ALERT(at_console, "DispatchThink %s\n", STRING(pEntity->pev->targetname));
 		pEntity->Think();
