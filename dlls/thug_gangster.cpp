@@ -367,7 +367,7 @@ BOOL CHGrunt :: FOkToSpeak()
 //=========================================================
 void CHGrunt :: JustSpoke()
 {
-	CTalkMonster::g_talkWaitTime = gpGlobals->time + RANDOM_FLOAT(1.5, 2.0);
+	CTalkMonster::g_talkWaitTime = gpGlobals->time + RANDOM_FLOAT(3.5, 4.0);
 	m_iSentence = HGRUNT_SENT_NONE;
 }
 
