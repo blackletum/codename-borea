@@ -2459,8 +2459,15 @@ void CStudioModelRenderer::StudioCalcRotations ( float pos[][3], vec4_t *q, mstu
 		// frozen model found
 		if (FrozenBuffer[i].index == m_pCurrentEntity->index)
 		{
+
+			if (FrozenBuffer[i].frame == 0)
+			{
+				FrozenBuffer[i].frame = f;
+				FrozenBuffer[i].origin = m_pCurrentEntity->origin;
+			}
+
 			f = FrozenBuffer[i].frame;
-			m_pCurrentEntity->curstate.origin = FrozenBuffer[i].origin;
+			m_pCurrentEntity->baseline.origin = FrozenBuffer[i].origin;
 		}
 	}
 

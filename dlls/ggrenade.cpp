@@ -403,6 +403,10 @@ void CGrenade::Detonate()
 // 
 void CGrenade::ExplodeTouch( CBaseEntity *pOther )
 {
+
+	if (isFrozen)
+		return;
+
 	TraceResult tr;
 	Vector		vecSpot;// trace starts here!
 

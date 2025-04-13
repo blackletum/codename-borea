@@ -280,10 +280,10 @@ int __MsgFunc_FreezeModel(const char* pszName, int iSize, void* pbuf)
 	{
 		// new input
 		local.index = READ_SHORT();
-		local.frame = READ_SHORT();
-		local.origin.x = READ_COORD();
-		local.origin.y = READ_COORD();
-		local.origin.z = READ_COORD();
+		//local.frame = READ_SHORT();
+		//local.origin.x = READ_COORD();
+		//local.origin.y = READ_COORD();
+		//local.origin.z = READ_COORD();
 
 		bool alreadyRegistered = false;
 		for (size_t i = 0; i < FrozenBuffer.size(); i++)

@@ -261,6 +261,7 @@ void DispatchThink( edict_t *pent )
 		if ( FBitSet( pEntity->pev->flags, FL_DORMANT ) )
 			ALERT( at_error, "Dormant entity %s is thinking!!\n", STRING(pEntity->pev->classname) );
 
+
 		if (pEntity->isFrozen)
 		{
 			pEntity->pev->movetype = MOVETYPE_FLY;

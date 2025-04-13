@@ -2237,7 +2237,7 @@ void CBasePlayer::PreThink()
 			{
 				const char* classname = STRING(pEntity->pev->classname);
 
-				if (!strncmp(classname, "monster_", strlen("monster_")) || !strncmp(classname, "grenade", strlen("grenade")))
+				if (!strncmp(classname, "monster_", strlen("monster_")) || !strncmp(classname, "grenade", strlen("grenade")) || !strncmp(classname, "gib", strlen("gib")))
 				{
 					if (stristr(classname, "grenade"))
 					{
@@ -2251,20 +2251,41 @@ void CBasePlayer::PreThink()
 
 					pEntity->froze_frame = pEntity->pev->frame;
 					pEntity->froze_framerate = pEntity->pev->framerate;
+					pEntity->froze_origin = pEntity->pev->origin;
 
 					if (stristr(classname, "monster"))
 					{
 						MESSAGE_BEGIN(MSG_ALL, gmsgFreezeModel);
 						WRITE_BYTE(1); // input mode
 						WRITE_SHORT(pEntity->entindex());
-						WRITE_SHORT(pEntity->froze_frame);
-						WRITE_COORD(pEntity->pev->origin.x);
-						WRITE_COORD(pEntity->pev->origin.y);
-						WRITE_COORD(pEntity->pev->origin.z);
+						//WRITE_SHORT(pEntity->froze_frame);
+						//WRITE_COORD(pEntity->pev->origin.x);
+						//WRITE_COORD(pEntity->pev->origin.y);
+						//WRITE_COORD(pEntity->pev->origin.z);
 						MESSAGE_END();
 					}
 
 					pEntity->isFrozen = true;
+				}
+			}
+
+			// already frozen!
+			if (pEntity && !pEntity->IsPlayer() && pEntity->isFrozen)
+			{
+				const char* classname = STRING(pEntity->pev->classname);
+
+				if (!strncmp(classname, "monster_", strlen("monster_")) || !strncmp(classname, "grenade", strlen("grenade")) || !strncmp(classname, "gib", strlen("gib")))
+				{
+					pEntity->pev->movetype = MOVETYPE_FLY;
+					pEntity->pev->frame = pEntity->froze_frame;
+					pEntity->pev->velocity = Vector(0, 0, 0);
+					// link to world
+					UTIL_SetOrigin(pEntity->pev, pEntity->pev->origin);
+
+					if(!strncmp(classname, "gib", strlen("gib")))
+						pEntity->pev->angles = Vector(0,0,0);
+
+					pev->nextthink = gpGlobals->time + 10.0f;
 				}
 			}
 		}
@@ -2281,7 +2302,7 @@ void CBasePlayer::PreThink()
 			{
 				const char* classname = STRING(pEntity->pev->classname);
 
-				if (!strncmp(classname, "monster_", strlen("monster_")) || !strncmp(classname, "grenade", strlen("grenade")))
+				if (!strncmp(classname, "monster_", strlen("monster_")) || !strncmp(classname, "grenade", strlen("grenade")) || !strncmp(classname, "gib", strlen("gib")))
 				{
 
 					if (stristr(classname, "grenade"))
@@ -2296,6 +2317,7 @@ void CBasePlayer::PreThink()
 
 					pEntity->pev->frame = pEntity->froze_frame;
 					pEntity->pev->framerate = pEntity->froze_framerate;
+					pEntity->pev->origin = pEntity->froze_origin;
 
 					// link to world
 					UTIL_SetOrigin(pEntity->pev, pEntity->pev->origin);
@@ -4354,13 +4376,13 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 	case 155:
 		// iterate on all entities in the vicinity.
 		this->isFrozeMode = true;
-		UTIL_ScreenFadeAll(Vector(255, 255, 255), 1.5, 1.0, 255, FFADE_IN);
+		UTIL_ScreenFadeAll(Vector(130, 93, 21), 1.2, 1.0, 255, FFADE_IN);
 		break;
 	case 156:
 		// iterate on all entities in the vicinity.
 		this->isFrozeMode = false;
 
-		UTIL_ScreenFadeAll(Vector(255, 255, 255), 0.6, 0.1, 255, FFADE_IN);
+		UTIL_ScreenFadeAll(Vector(130, 92, 21), 0.6, 0.1, 255, FFADE_IN);
 		MESSAGE_BEGIN(MSG_ALL, gmsgFreezeModel);
 		WRITE_BYTE(0); // clear mode
 		MESSAGE_END();

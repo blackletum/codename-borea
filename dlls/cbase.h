@@ -410,6 +410,7 @@ public:
 	Vector froze_angles;
 	int froze_movetype; 
 	float froze_grenade_time;
+	Vector froze_origin;
 
 	// frozen models
 	int froze_frame;
