@@ -722,7 +722,7 @@ void CImguiManager::DrawSpeeds()
 	if (!gParticleEngine.m_pCvarParticleDebug)
 		return;
 
-	int width = 75;
+	int width = 95;
 
 	if (gBSPRenderer.m_pCvarSpeeds->value == 1.0f)
 		width += 165;
@@ -743,7 +743,7 @@ void CImguiManager::DrawSpeeds()
 	ImGuiIO& io = ImGui::GetIO();
 
 	ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 350 , 100));
-	ImGui::SetNextWindowSize(ImVec2(250, width));
+	ImGui::SetNextWindowSize(ImVec2(300, width));
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
@@ -752,13 +752,21 @@ void CImguiManager::DrawSpeeds()
 	ImVec4* colours = ImGui::GetStyle().Colors;
 	colours[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.1f, 0.4f);
 
+	int ogl_major, ogl_minor;
+
+	SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &ogl_major);
+	SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &ogl_minor);
+
+	static std::string gl_version = std::to_string(ogl_major) + "." + std::to_string(ogl_minor);
+
 	ImGui::Begin("Codename Borea", &is_open, window_flags);
 	ImGui::SetWindowFontScale(1.5f);
-	ImGui::TextColored(ImVec4(0.76f, 0.62f, 0.2f, 1), "Codename Borea");
+	ImGui::TextColored(ImVec4(0.76f, 0.62f, 0.2f, 1), "Parish");
 	ImGui::SetWindowFontScale(1.0f);
 	ImGui::Text("Renderer: ReTrinity");
-	std::string version = "OpenGL: " + (std::string)(const char*)glGetString(GL_VERSION);
+	std::string version = "OpenGL: " + gl_version;
 	ImGui::Text(version.c_str());
+	ImGui::Text((const char*)glGetString(GL_RENDERER));
 
 	if(gBSPRenderer.m_pCvarSpeeds->value == 1.0f)
 	{
