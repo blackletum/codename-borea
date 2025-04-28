@@ -3223,6 +3223,43 @@ void CStudioModelRenderer::StudioProcessGait( entity_state_t *pplayer )
 }
 
 /*
+==================
+TraceIgnoreModel
+Special traceline wrapper for better flashlight - BlueNightHawk
+==================
+*/
+pmtrace_t TraceIgnoreModel(Vector vecSrc, Vector vecEnd, int flags, int entignore, const char* pszModelIgnore, int count)
+{
+	physent_t* pe = nullptr;
+	pmtrace_t tr = { 0 };
+
+	constexpr int MAX_TRACES = 50;
+
+	if (count > MAX_TRACES)
+		return tr;
+
+	// Store off the old count
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+
+	gEngfuncs.pEventAPI->EV_SetTraceHull(2);
+	gEngfuncs.pEventAPI->EV_PlayerTrace(vecSrc, vecEnd, flags, entignore, &tr);
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	pe = gEngfuncs.pEventAPI->EV_GetPhysent(tr.ent);
+
+	if (!pe)
+		return tr;
+
+	if ((pszModelIgnore != nullptr && !stricmp(pe->name, pszModelIgnore)) || pe->rendermode != kRenderNormal)
+	{
+		return TraceIgnoreModel(vecSrc, vecEnd, flags, tr.ent, pszModelIgnore, count++);
+	}
+
+	return tr;
+}
+
+/*
 ====================
 StudioDrawPlayer
 
@@ -3230,6 +3267,49 @@ StudioDrawPlayer
 */
 int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 {
+	m_pCurrentEntity->model = IEngineStudio.Mod_ForName("models/parish_npcbase.mdl", 0); //load model 
+
+	// use 4 traceline to find angles
+#define DIST 10
+#define DIST_DOWN 100
+	Vector fwd, right;
+	AngleVectors(m_pCurrentEntity->angles, fwd, right, nullptr);
+	auto tr1 = TraceIgnoreModel(m_pCurrentEntity->origin + (fwd * DIST), m_pCurrentEntity->origin + (fwd * DIST) - Vector(0, 0, DIST_DOWN), PM_NORMAL | PM_STUDIO_IGNORE, 1, nullptr, 0);
+	auto tr2 = TraceIgnoreModel(m_pCurrentEntity->origin, m_pCurrentEntity->origin - Vector(0, 0, DIST_DOWN), PM_NORMAL | PM_STUDIO_IGNORE, 1, nullptr, 0);
+	auto tr3 = TraceIgnoreModel(m_pCurrentEntity->origin + (right * DIST), m_pCurrentEntity->origin + (right * DIST) - Vector(0, 0, DIST_DOWN), PM_NORMAL | PM_STUDIO_IGNORE, 1, nullptr, 0);
+
+	Vector angleForward;
+	Vector angleRight;
+	Vector finalAngle;
+
+	VectorAngles((tr1.endpos - tr2.endpos).Normalize(), angleForward);
+	VectorAngles((tr3.endpos - tr2.endpos).Normalize(), angleRight);
+
+	if(angleRight[PITCH] > 180)
+	{
+		angleRight[PITCH] = 360 - angleRight[PITCH];
+		angleRight[PITCH] = angleRight[PITCH] * -1;
+	}
+
+	if (angleForward[PITCH] > 180)
+	{
+		angleForward[PITCH] = 360 - angleForward[PITCH];
+		angleForward[PITCH] = angleForward[PITCH] * -1;
+	}
+
+	m_pCurrentEntity->baseline.angles[PITCH] = lerp(m_pCurrentEntity->baseline.angles[PITCH], angleForward[PITCH], gHUD.m_flTimeDelta * 5.0f);
+	m_pCurrentEntity->baseline.angles[ROLL] = lerp(m_pCurrentEntity->baseline.angles[ROLL], -angleRight[PITCH], gHUD.m_flTimeDelta * 5.0f);
+
+	m_pCurrentEntity->angles[PITCH] = m_pCurrentEntity->baseline.angles[PITCH];
+
+	//gEngfuncs.Con_Printf("roll is %f\n", -m_pCurrentEntity->baseline.angles[ROLL]);
+	m_pCurrentEntity->angles[ROLL] = m_pCurrentEntity->baseline.angles[ROLL];
+
+
+
+	m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37;
+
+
 	m_bExternalEntity = false;
 
 	IEngineStudio.GetTimes( &m_nFrameCount, &m_clTime, &m_clOldTime );
@@ -3265,6 +3345,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 			return 1;
 	}
 
+	/*
 	if (pplayer->gaitsequence)
 	{
 		Vector orig_angles;
@@ -3296,6 +3377,10 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 
 		StudioSetUpTransform( 0 );
 	}
+	*/
+
+	m_pCurrentEntity->curstate.sequence = 0;
+	StudioSetUpTransform(0);
 
 	m_pPlayerInfo = IEngineStudio.PlayerInfo( m_nPlayerIndex );
 	StudioSetupBones( );

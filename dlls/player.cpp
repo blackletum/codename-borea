@@ -2203,6 +2203,8 @@ void CBasePlayer::PreThink()
 
 	SlidingThink(); // bacontsu - sliding handler
 
+	
+
 	// animated fov stuff
 	currFov = CVAR_GET_FLOAT("default_fov");
 

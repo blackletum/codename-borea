@@ -604,6 +604,7 @@ void CWorld :: Precache()
 
 	PRECACHE_MODEL( "sprites/null.spr" ); //LRC
 
+	PRECACHE_MODEL("models/parish_npcbase.mdl");
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
 //
