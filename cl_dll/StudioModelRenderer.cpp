@@ -3269,8 +3269,27 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 {
 	m_pCurrentEntity->model = IEngineStudio.Mod_ForName("models/parish_npcbase.mdl", 0); //load model 
 
-	// use 4 traceline to find angles
-#define DIST 10
+	Vector est_velocity;
+	VectorSubtract(m_pCurrentEntity->origin, m_pCurrentEntity->baseline.origin, est_velocity);
+	VectorCopy(m_pCurrentEntity->origin, m_pCurrentEntity->baseline.origin);
+
+	//gEngfuncs.Con_Printf("vel %f %f %f\n", est_velocity.x, est_velocity.y, est_velocity.z);
+
+	Vector ang;
+	VectorAngles(est_velocity, ang);
+
+	if (est_velocity.Length2D() > 0.1f)
+	{
+		m_pCurrentEntity->angles[YAW] = ang[YAW];
+		m_pCurrentEntity->baseline.angles[YAW] = m_pCurrentEntity->angles[YAW];
+	}
+	else
+		m_pCurrentEntity->angles[YAW] = m_pCurrentEntity->baseline.angles[YAW];
+
+	
+
+	// use 3 traceline to find angles
+#define DIST 5
 #define DIST_DOWN 100
 	Vector fwd, right;
 	AngleVectors(m_pCurrentEntity->angles, fwd, right, nullptr);
@@ -3297,18 +3316,25 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		angleForward[PITCH] = angleForward[PITCH] * -1;
 	}
 
+	/*
+	if (est_velocity.Length2D() == 0)
+	{
+		angleRight[PITCH] *= 0.25;
+		angleForward[PITCH] *= 0.25;
+	}
+	*/
+
 	m_pCurrentEntity->baseline.angles[PITCH] = lerp(m_pCurrentEntity->baseline.angles[PITCH], angleForward[PITCH], gHUD.m_flTimeDelta * 5.0f);
 	m_pCurrentEntity->baseline.angles[ROLL] = lerp(m_pCurrentEntity->baseline.angles[ROLL], -angleRight[PITCH], gHUD.m_flTimeDelta * 5.0f);
 
 	m_pCurrentEntity->angles[PITCH] = m_pCurrentEntity->baseline.angles[PITCH];
-
-	//gEngfuncs.Con_Printf("roll is %f\n", -m_pCurrentEntity->baseline.angles[ROLL]);
 	m_pCurrentEntity->angles[ROLL] = m_pCurrentEntity->baseline.angles[ROLL];
 
-
-
-	m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37;
-
+	// only do on local player
+	if(m_pCurrentEntity == gEngfuncs.GetLocalPlayer())
+		m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37;
+	else
+		m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37/2.0f;
 
 	m_bExternalEntity = false;
 
@@ -3379,7 +3405,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	}
 	*/
 
-	m_pCurrentEntity->curstate.sequence = 0;
+	//m_pCurrentEntity->curstate.sequence = 0;
 	StudioSetUpTransform(0);
 
 	m_pPlayerInfo = IEngineStudio.PlayerInfo( m_nPlayerIndex );

@@ -1206,6 +1206,23 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		}
 		break;
 	case PLAYER_IDLE:
+		if (!FBitSet(pev->flags, FL_ONGROUND) && (m_Activity == ACT_HOP || m_Activity == ACT_LEAP))	// Still jumping
+		{
+			m_IdealActivity = m_Activity;
+		}
+		else if (pev->waterlevel > 1 && pev->watertype != CONTENT_FOG)
+		{
+			if (speed == 0)
+				m_IdealActivity = ACT_HOVER;
+			else
+				m_IdealActivity = ACT_SWIM;
+		}
+		else
+		{
+			m_IdealActivity = ACT_IDLE;
+			//animDesired = 10;
+		}
+		break;
 	case PLAYER_WALK:
 		if ( !FBitSet( pev->flags, FL_ONGROUND ) && (m_Activity == ACT_HOP || m_Activity == ACT_LEAP) )	// Still jumping
 		{
@@ -1221,6 +1238,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		else
 		{
 			m_IdealActivity = ACT_WALK;
+			//animDesired = 10;
 		}
 		break;
 
@@ -1302,22 +1320,23 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		break;
 
 	case ACT_WALK:
+		animDesired = 10;
+
+		break;
+
+	case ACT_IDLE:
 		if (m_Activity != ACT_RANGE_ATTACK1 || m_fSequenceFinished)
 		{
-			if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
-				strcpy( szAnim, "crouch_aim_" );
+			if (FBitSet(pev->flags, FL_DUCKING))	// crouching
+				strcpy(szAnim, "crouch_aim_");
 			else
-				strcpy( szAnim, "ref_aim_" );
-			strcat( szAnim, m_szAnimExtention );
-			animDesired = LookupSequence( szAnim );
-			if (animDesired == -1)
-				animDesired = 0;
-			m_Activity = ACT_WALK;
+				strcpy(szAnim, "ref_aim_");
 		}
 		else
 		{
-			animDesired = pev->sequence;
+			animDesired = 0;
 		}
+		break;
 	}
 
 	if ( FBitSet( pev->flags, FL_DUCKING ) )
