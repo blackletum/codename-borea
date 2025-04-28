@@ -3280,12 +3280,31 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 
 	if (est_velocity.Length2D() > 0.1f)
 	{
-		m_pCurrentEntity->angles[YAW] = ang[YAW];
-		m_pCurrentEntity->baseline.angles[YAW] = m_pCurrentEntity->angles[YAW];
-	}
-	else
-		m_pCurrentEntity->angles[YAW] = m_pCurrentEntity->baseline.angles[YAW];
+		//m_pCurrentEntity->angles[YAW] = ang[YAW];
 
+		// 360 to 0
+		if (ang[YAW] < 45 && m_pCurrentEntity->baseline.angles[YAW] > 315)
+		{
+			ang[YAW] = ang[YAW] + 360.0f;
+
+			if (m_pCurrentEntity->baseline.angles[YAW] > 344.0f)
+				m_pCurrentEntity->baseline.angles[YAW] = -15;
+		}
+		// 0 to 360
+		else if (ang[YAW] > 315 && m_pCurrentEntity->baseline.angles[YAW] < 45)
+		{
+			ang[YAW] = ang[YAW] - 360.0f;
+
+			if (m_pCurrentEntity->baseline.angles[YAW] < 15.0f)
+				m_pCurrentEntity->baseline.angles[YAW] = 360.0f + 14.0f;
+		}
+
+		m_pCurrentEntity->baseline.angles[YAW] = lerp(m_pCurrentEntity->baseline.angles[YAW], ang[YAW], gHUD.m_flTimeDelta * 7.0f);
+
+	}
+
+	m_pCurrentEntity->angles[YAW] = m_pCurrentEntity->baseline.angles[YAW];
+	gEngfuncs.Con_Printf("ang ang ang %f\n", m_pCurrentEntity->angles[YAW]);
 	
 
 	// use 3 traceline to find angles
@@ -3316,13 +3335,13 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		angleForward[PITCH] = angleForward[PITCH] * -1;
 	}
 
-	/*
+	
 	if (est_velocity.Length2D() == 0)
 	{
 		angleRight[PITCH] *= 0.25;
 		angleForward[PITCH] *= 0.25;
 	}
-	*/
+	
 
 	m_pCurrentEntity->baseline.angles[PITCH] = lerp(m_pCurrentEntity->baseline.angles[PITCH], angleForward[PITCH], gHUD.m_flTimeDelta * 5.0f);
 	m_pCurrentEntity->baseline.angles[ROLL] = lerp(m_pCurrentEntity->baseline.angles[ROLL], -angleRight[PITCH], gHUD.m_flTimeDelta * 5.0f);
