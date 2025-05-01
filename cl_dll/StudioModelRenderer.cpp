@@ -3304,7 +3304,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	}
 
 	m_pCurrentEntity->angles[YAW] = m_pCurrentEntity->baseline.angles[YAW];
-	gEngfuncs.Con_Printf("ang ang ang %f\n", m_pCurrentEntity->angles[YAW]);
+	//gEngfuncs.Con_Printf("ang ang ang %f\n", m_pCurrentEntity->angles[YAW]);
 	
 
 	// use 3 traceline to find angles
@@ -3338,8 +3338,8 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	
 	if (est_velocity.Length2D() == 0)
 	{
-		angleRight[PITCH] *= 0.25;
-		angleForward[PITCH] *= 0.25;
+		angleRight[PITCH] *= 0.75;
+		angleForward[PITCH] *= 0.75;
 	}
 	
 
@@ -3372,6 +3372,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	m_pStudioHeader = (studiohdr_t *)IEngineStudio.Mod_Extradata (m_pRenderModel);
 	IEngineStudio.StudioSetHeader( m_pStudioHeader );
 	IEngineStudio.SetRenderModel( m_pRenderModel );
+
 	StudioSetupTextureHeader();
 
 	if(!m_pTextureHeader)
