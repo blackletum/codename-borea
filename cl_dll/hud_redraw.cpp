@@ -273,7 +273,7 @@ int CHud :: Redraw( float flTime, int intermission )
 	glDepthRange(0.0f, 0.0f);
 
 	HUD_MarkUsableEnt();
-	HUD_DrawBloodOverlay();
+	//HUD_DrawBloodOverlay();
 
 	// draw all registered HUD elements
 	if ( m_pCvarDraw->value )
