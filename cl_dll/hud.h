@@ -885,6 +885,10 @@ public:
 	float	m_fLight = 0.0f;
 	int		m_iScopeType;
 
+	// thirdperson stuff
+	bool	m_bIsAimingTPS;
+	Vector	m_vecAimingAngTPS;
+
 	int m_iFontHeight;
 	int DrawHudNumber(int x, int y, int iFlags, int iNumber, int r, int g, int b );
 	int DrawHudString(int x, int y, int iMaxX, char *szString, int r, int g, int b );

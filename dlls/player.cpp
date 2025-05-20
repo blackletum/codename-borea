@@ -2222,7 +2222,17 @@ void CBasePlayer::PreThink()
 
 	SlidingThink(); // bacontsu - sliding handler
 
-	
+	// bacontsu - Aiming TPS handler
+	if (isAimingTPS)
+	{
+		targetFov = -30;  // 0 means reset to default fov
+		wasAimingTPS = true;
+	}
+	else if (wasAimingTPS && targetFov != 0)
+	{
+		targetFov = 0;
+		wasAimingTPS = false;
+	}
 
 	// animated fov stuff
 	currFov = CVAR_GET_FLOAT("default_fov");
@@ -4123,6 +4133,12 @@ void CBasePlayer::ImpulseCommands( )
 			break;
 		}
 
+	case 210:
+		{
+			isAimingTPS = !isAimingTPS;
+			break;
+		}
+
 	default:
 		// check all of the cheat impulse commands now
 		CheatImpulseCommands( iImpulse );
@@ -4877,6 +4893,10 @@ void CBasePlayer :: UpdateClientData()
 	WRITE_BYTE((bool)m_iSlidingStage);
 	WRITE_FLOAT(light);
 	WRITE_BYTE(m_iScopeType);
+	WRITE_BYTE(isAimingTPS);
+	WRITE_COORD(pev->v_angle.x);
+	WRITE_COORD(pev->v_angle.y);
+	WRITE_COORD(pev->v_angle.z);
 	MESSAGE_END();
 
 	if (pev->dmg_take || pev->dmg_save || m_bitsHUDDamage != m_bitsDamageType)

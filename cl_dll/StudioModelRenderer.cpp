@@ -3278,7 +3278,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	Vector ang;
 	VectorAngles(est_velocity, ang);
 
-	if (est_velocity.Length2D() > 0.1f)
+	if (est_velocity.Length2D() > 0.1f && !gHUD.m_bIsAimingTPS)
 	{
 		//m_pCurrentEntity->angles[YAW] = ang[YAW];
 
@@ -3348,6 +3348,64 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 
 	m_pCurrentEntity->angles[PITCH] = m_pCurrentEntity->baseline.angles[PITCH];
 	m_pCurrentEntity->angles[ROLL] = m_pCurrentEntity->baseline.angles[ROLL];
+
+	// do custom gait here
+	//m_pCurrentEntity->curstate.controller[0] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
+	//m_pCurrentEntity->curstate.controller[1] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
+	//m_pCurrentEntity->curstate.controller[2] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
+	//m_pCurrentEntity->curstate.controller[3] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
+	//gEngfuncs.Con_Printf("s in %f cos %f\n", sin(gEngfuncs.GetAbsoluteTime()), cos(gEngfuncs.GetAbsoluteTime()));
+
+	m_pCurrentEntity->baseline.controller[0] = lerp(m_pCurrentEntity->baseline.controller[0], 127 * ((gHUD.leanAngle + 30) / 30.0f), gHUD.m_flTimeDelta * 10);
+	m_pCurrentEntity->curstate.controller[0] = m_pCurrentEntity->baseline.controller[0];
+
+	//gEngfuncs.Con_Printf("leanangle %i\n", (int)m_pCurrentEntity->baseline.controller[0]);
+
+
+
+	if (gHUD.m_bIsAimingTPS)
+	{
+
+		// convert 180 -> -180 to 0 -> 360
+		if (gHUD.m_vecAimingAngTPS[YAW] > -180 && gHUD.m_vecAimingAngTPS[YAW] < 0)
+			gHUD.m_vecAimingAngTPS[YAW] = 360 + gHUD.m_vecAimingAngTPS[YAW];
+
+
+
+		if (gHUD.m_vecAimingAngTPS[YAW] < 35 && m_pCurrentEntity->angles[YAW] > 315)
+			m_pCurrentEntity->angles[YAW] = m_pCurrentEntity->angles[YAW] - 360;
+
+
+
+		int finalAng = m_pCurrentEntity->angles[YAW] - gHUD.m_vecAimingAngTPS[YAW];
+
+		finalAng = clamp(finalAng, -40, 40);
+
+		if (finalAng > 39)
+		{
+			m_pCurrentEntity->baseline.angles[YAW]--;
+			m_pCurrentEntity->angles[YAW]--;
+		}
+		else if (finalAng < -39)
+		{
+			m_pCurrentEntity->baseline.angles[YAW]++;
+			m_pCurrentEntity->angles[YAW]++;
+		}
+
+
+		gEngfuncs.Con_Printf("yaw angle %i %i %i\n", (int)m_pCurrentEntity->angles[YAW], (int)gHUD.m_vecAimingAngTPS[YAW], finalAng);
+
+		m_pCurrentEntity->curstate.controller[1] = 127.0f - ((finalAng/40.0f) * 127.0f);
+	}
+	else
+	{
+		m_pCurrentEntity->curstate.controller[1] = 127;
+	}
+
+
+	m_pCurrentEntity->curstate.controller[2] = 127;
+	m_pCurrentEntity->curstate.controller[3] = 127;
+
 
 	// only do on local player
 	if(m_pCurrentEntity == gEngfuncs.GetLocalPlayer())

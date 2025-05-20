@@ -476,7 +476,6 @@ int __MsgFunc_UseEnt(const char* pszName, int iSize, void* pbuf)
 	return 1;
 }
 
-
 //void InitPostEffects(); //Forward Declaration for Post-Processing
 
 //RENDERERS END

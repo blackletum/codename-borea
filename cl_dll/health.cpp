@@ -167,7 +167,11 @@ int CHudHealth::MsgFunc_Stamina(const char* pszName, int iSize, void* pbuf)
 	gHUD.m_bSliding = (bool)(int)READ_BYTE();
 	gHUD.m_fLight = READ_FLOAT();
 	gHUD.m_iScopeType = READ_BYTE();
+	gHUD.m_bIsAimingTPS = (bool)READ_BYTE();
 
+	gHUD.m_vecAimingAngTPS.x = READ_COORD();
+	gHUD.m_vecAimingAngTPS.y = READ_COORD();
+	gHUD.m_vecAimingAngTPS.z = READ_COORD();
 	return 1;
 }
 

@@ -254,6 +254,10 @@ public:
 	// ads
 	int m_iScopeType;
 
+	// parish TPS movement system
+	bool isAimingTPS;
+	bool wasAimingTPS;
+
 	// Opposing Force specific
 
 	char* m_szTeamModel;
