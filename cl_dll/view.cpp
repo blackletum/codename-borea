@@ -85,6 +85,7 @@ float		v_cameraRelaxAngle	= 5.0f;
 float		v_cameraFocusAngle	= 35.0f;
 int			v_cameraMode = CAM_MODE_FOCUS;
 qboolean	v_resetCamera = 1;
+bool m_bLensEffect = false;
 
 Vector v_client_aimangles;
 Vector ev_punchangle;
@@ -533,13 +534,13 @@ void V_CamAnims(struct ref_params_s* pparams, cl_entity_s* view)
 				break;
 
 			// usual names used in viewmodels
-			if (!stricmp(pbone[i].name, "camera"))
+			if (!strcmp(pbone[i].name, "camera"))
 			{
 				index = i;
 				break;
 			}
-			else if (!stricmp(pbone[i].name, "gun") || !stricmp(pbone[i].name, "weapon")
-				|| !stricmp(pbone[i].name, "glock") || !stricmp(pbone[i].name, "Bip01 R Wrist") || !stricmp(pbone[i].name, "Bip01 R Hand"))
+			else if (!strcmp(pbone[i].name, "gun") || !strcmp(pbone[i].name, "weapon")
+				|| !strcmp(pbone[i].name, "glock") || !strcmp(pbone[i].name, "Bip01 R Wrist") || !strcmp(pbone[i].name, "Bip01 R Hand"))
 			{
 				index = i;
 				break;
@@ -928,9 +929,13 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 		targetLerp = Vector(-1.0f, -3.0f, 1);
 		targetLerpAngle = Vector(0, 0, 0);
 		break;
+	case WEAPON_MP5:
+		m_bLensEffect = true;
+		break;
 
 	default:
 		targetLerp = targetLerpAngle = Vector(0, 0, 0);
+		m_bLensEffect = false;
 		break;
 
 	}
@@ -955,7 +960,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 
 
 	// Bacontsu - wallrun offsetting
-	float target;
+	float target = 0;
 	if(gHUD.wallType == 2)
 		target = 30;
 	else if (gHUD.wallType == 1)

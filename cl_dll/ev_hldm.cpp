@@ -579,7 +579,7 @@ void EV_FireGlock1( event_args_t *args )
 
 	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4 );
 
-	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, right ); 
 
 //	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/pl_gun3.wav", gEngfuncs.pfnRandomFloat(0.92, 1.0), ATTN_NORM, 0, 98 + gEngfuncs.pfnRandomLong( 0, 3 ) );
 
@@ -624,7 +624,7 @@ void EV_FireGlock2( event_args_t *args )
 
 	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4 );
 
-	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, right ); 
 
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/pl_gun3.wav", gEngfuncs.pfnRandomFloat(0.92, 1.0), ATTN_NORM, 0, 98 + gEngfuncs.pfnRandomLong( 0, 3 ) );
 
@@ -679,7 +679,7 @@ void EV_FireShotGunDouble( event_args_t *args )
 	{
 		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 6 );
 
-		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL ); 
+		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL, right ); 
 	}
 
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/m67_fire.wav", gEngfuncs.pfnRandomFloat(0.98, 1.0), ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
@@ -732,7 +732,7 @@ void EV_FireShotGunSingle( event_args_t *args )
 
 	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 6 );
 
-	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL ); 
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL, right);
 
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/m67_fire.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
 
@@ -789,7 +789,7 @@ void EV_FireMP5( event_args_t *args )
 
 	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4 );
 
-	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, right);
 
 	/* Aynekko: disable this
 	switch( gEngfuncs.pfnRandomLong( 0, 1 ) )
@@ -1720,7 +1720,7 @@ void EV_FireEagle( event_args_t* args )
 		forward, right, up,
 		-9.0, 14.0, 9.0 );
 
-	EV_EjectBrass( ShellOrigin, ShellVelocity, args->angles[ 1 ], iShell, TE_BOUNCE_SHELL );
+	EV_EjectBrass( ShellOrigin, ShellVelocity, args->angles[ 1 ], iShell, TE_BOUNCE_SHELL, right);
 
 	gEngfuncs.pEventAPI->EV_PlaySound(
 		args->entindex,
@@ -1852,7 +1852,7 @@ void EV_FireM249( event_args_t* args )
 		forward, right, up,
 		-28.0, 24.0, 4.0 );
 
-	EV_EjectBrass( ShellOrigin, ShellVelocity, args->angles[ 1 ], iShell, TE_BOUNCE_SHELL );
+	EV_EjectBrass( ShellOrigin, ShellVelocity, args->angles[ 1 ], iShell, TE_BOUNCE_SHELL, right);
 
 	gEngfuncs.pEventAPI->EV_PlaySound(
 		args->entindex,

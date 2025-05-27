@@ -139,6 +139,8 @@ void CMP5::Holster( int skiplocal /* = 0 */)
 	if( m_pPlayer->targetFov != 0 )
 	{
 		SecondaryAttack();
+		m_pPlayer->m_iScopeType = false;
+		m_flLens_on = 0;
 	}
 }
 
@@ -241,9 +243,12 @@ void CMP5::SecondaryAttack()
 {
 	if( m_pPlayer->isRunning ) return;
 
+	m_flLens_on = gpGlobals->time + 0.1;
+
 	if( m_pPlayer->targetFov != 0 )
 	{
 		m_pPlayer->targetFov = 0; // 0 means reset to default fov
+		m_flLens_on = gpGlobals->time;
 		m_pPlayer->isScoping = false;
 	}
 	else if( m_pPlayer->targetFov != -70 )
@@ -275,6 +280,14 @@ void CMP5::Reload()
 
 void CMP5::WeaponIdle()
 {
+	if (m_flLens_on != 0 && m_flLens_on < gpGlobals->time )
+	{
+		if (m_pPlayer->isScoping == false)
+			m_pPlayer->m_iScopeType = false;
+		else
+			m_pPlayer->m_iScopeType = WEAPON_MP5;
+		m_flLens_on = 0;
+	}
 	if( m_flRifleShoot > 0 )
 	{
 		// time to shoot next bullet

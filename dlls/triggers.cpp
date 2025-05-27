@@ -37,6 +37,9 @@
 #include "ctf/CTFGoalFlag.h"
 #include "UserMessages.h"
 
+#include <string>
+#include <sstream>
+
 #include <cctype>
 
 #define	SF_TRIGGER_PUSH_START_OFF	2//spawnflag that makes trigger_push spawn turned OFF
@@ -456,6 +459,33 @@ void CTriggerRotTest::Think()
 	pev->armorvalue += pev->armortype * 0.1;
 	SetNextThink( 0.1 );
 }
+
+class CClientCommand : public CPointEntity
+{
+public:
+	void EXPORT Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+
+};
+
+
+LINK_ENTITY_TO_CLASS(point_clientcommand, CClientCommand);
+
+void CClientCommand::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+		char command[64];
+		int cmdvalue;
+		std::istringstream iss(STRING(pev->message));
+		std::string word;
+
+		iss >> word;
+		strcpy(command, word.c_str());
+		iss >> word;
+		cmdvalue = atoi(word.c_str());
+
+		sprintf(command, "%s %d\n", command, cmdvalue);
+		CLIENT_COMMAND(pActivator->edict(), command);
+}
+
 
 //**********************************************************
 // The Multimanager Entity - when fired, will fire up to 16 targets

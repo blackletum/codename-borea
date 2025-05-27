@@ -2277,7 +2277,10 @@ void CBasePlayer::PreThink()
 
 	WaterThink(); // bacontsu - water steps function
 
-	WallrunThink(); // bacontsu - running in special walls
+	if (CVAR_GET_FLOAT("sv_wallrun") > 0)
+	{
+		WallrunThink(); // bacontsu - running in special walls
+	}
 
 	SlowmoPhysics(); // bacontsu - slowmotion handler
 
@@ -3515,7 +3518,7 @@ void CBasePlayer::Spawn()
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;
 	m_fLongJump			= FALSE;// no longjump module.
-	playerStamina		= 100;
+	playerStamina		= CVAR_GET_FLOAT("sv_sprintdur");
 /*	Rain_dripsPerSecond = 0;
 	Rain_windX = 0;
 	Rain_windY = 0;
@@ -4215,7 +4218,7 @@ void CBasePlayer::ImpulseCommands( )
 					}
 				}
 			}		
-			if( !DoPlayerKickPunch )
+			if( !DoPlayerKickPunch && !IsOnLadder() && !FBitSet(pev->flags, FL_DUCKING))
 			{
 				DoPlayerKickPunch = true;
 				KickPunchStartTime = gpGlobals->time;
@@ -4530,6 +4533,17 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			WRITE_SHORT(FALSE);					// Reset
 		MESSAGE_END();
 		break;
+	
+		//health debugging
+	//take health away
+	case 153:
+		TakeDamage(pev, pev, 5, 0);
+		break;
+	//give health
+	case 154:
+		pev->health += 5;
+		break;
+		
 	}
 #endif	// HLDEMO_BUILD
 }
@@ -4749,7 +4763,7 @@ void CBasePlayer::ItemPostFrame()
 		return;
 
 	// Aynekko: do kick here (activated by impulse 666)
-	if( DoPlayerKickPunch )
+	if( DoPlayerKickPunch)
 	{
 		if( gpGlobals->time > KickPunchStartTime + 0.4 && !DoKickDamage )
 		{
@@ -6502,7 +6516,7 @@ void CBasePlayer::RunningThink()
 	// player stamina mechanism
 	if (nextStaminaRegen < gpGlobals->time && !isRunning && !(pev->button & IN_RUN))
 	{
-		if (playerStamina < 100) playerStamina++;
+		if (playerStamina < CVAR_GET_FLOAT("sv_sprintdur")) playerStamina++;
 
 		if (pev->velocity.Length2D() == 0) //player is idle, recharge faster!
 		{
@@ -6606,8 +6620,10 @@ void CBasePlayer::ClimbingPhysics()
 	// detect if we can actually climb something
 	if (!isClimbing)
 	{
-		UTIL_TraceLine(headSrc, headEnd, ignore_monsters, ENT(pev), &headTr);
-		UTIL_TraceLine(vecSrc2, vecEnd2, ignore_monsters, ENT(pev), &climbTr2);
+		//UTIL_TraceLine(headSrc, headEnd, ignore_monsters, ENT(pev), &headTr);
+		//UTIL_TraceLine(vecSrc2, vecEnd2, ignore_monsters, ENT(pev), &climbTr2);
+		UTIL_TraceHull(headSrc, headEnd, ignore_monsters, head_hull, ENT(pev), &headTr);
+		UTIL_TraceHull(vecSrc2, vecEnd2, ignore_monsters, head_hull, ENT(pev), &climbTr2);
 
 		Vector vecSrc1 = Vector(pev->origin.x, pev->origin.y, climbTr2.vecEndPos.z);
 
@@ -6619,7 +6635,8 @@ void CBasePlayer::ClimbingPhysics()
 
 		Vector vecEnd1 = vecSrc1 + realForward * 40;
 
-		UTIL_TraceLine(vecSrc1, vecEnd1, ignore_monsters, ENT(pev), &climbTr1);
+		//UTIL_TraceLine(vecSrc1, vecEnd1, ignore_monsters, ENT(pev), &climbTr1);
+		UTIL_TraceHull(vecSrc1, vecEnd1, ignore_monsters, head_hull, ENT(pev), &climbTr1);
 	}
 
 	if (headTr.flFraction != 1 && climbTr1.flFraction == 1 && climbTr2.flFraction != 1)
@@ -6695,8 +6712,8 @@ void CBasePlayer::ClimbingPhysics()
 
 		// trace until infront of player is clear, and under the player is filled
 		TraceResult under, forward;
-		UTIL_TraceLine(pev->origin, pev->origin + gpGlobals->v_forward * 40, ignore_monsters, ENT(pev), &forward);
-		UTIL_TraceLine(pev->origin, pev->origin - gpGlobals->v_up * 40, ignore_monsters, ENT(pev), &under);
+		UTIL_TraceHull(pev->origin, pev->origin + gpGlobals->v_forward * 40, ignore_monsters, head_hull, ENT(pev), &forward);
+		UTIL_TraceHull(pev->origin, pev->origin - gpGlobals->v_up * 40, ignore_monsters, head_hull, ENT(pev), &under);
 
 
 		if (under.flFraction != 1 && forward.flFraction == 1)
@@ -6885,13 +6902,17 @@ void CBasePlayer::LeaningThink()
 	right.z = 0;
 	right.Normalize();
 
+
 	// left leaning
 	if (pev->button & IN_LEFT)
 	{
 		// first scan
-		Vector vecSrc = pev->origin + up * 50;
+		//using view_ofs for this makes camera clip though geometry when moving to crouch position,
+		//but i guess its less buggy than using the up vector
+		Vector vecSrc = pev->origin + pev->view_ofs + Vector(0, 0, 24);
 		Vector vecEnd = vecSrc - right * 100;
-		UTIL_TraceLine(vecSrc, vecEnd, ignore_monsters, ENT(pev), &leanLeftTr);
+		//UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev), &leanLeftTr);
+		UTIL_TraceHull(vecSrc, vecEnd, dont_ignore_monsters, head_hull, ENT(pev), &leanLeftTr);
 		vecEnd = leanLeftTr.vecEndPos;
 
 		// second scan
@@ -6918,9 +6939,9 @@ void CBasePlayer::LeaningThink()
 	else if (pev->button & IN_RIGHT)
 	{
 		// first scan
-		Vector vecSrc = pev->origin + up * 50;
+		Vector vecSrc = pev->origin + pev->view_ofs + Vector(0, 0, 24);
 		Vector vecEnd = vecSrc + right * 100;
-		UTIL_TraceLine(vecSrc, vecEnd, ignore_monsters, ENT(pev), &leanRightTr);
+		UTIL_TraceHull(vecSrc, vecEnd, dont_ignore_monsters, head_hull, ENT(pev), &leanRightTr);
 		vecEnd = leanRightTr.vecEndPos;
 
 		// second scan

@@ -2854,12 +2854,22 @@ void PM_NoClip()
 {
 	int			i;
 	Vector		wishvel;
-	float		fmove, smove;
+	float		fmove, smove, noclipspeed;
 //	float		currentspeed, addspeed, accelspeed;
 
 	// Copy movement amounts
-	fmove = pmove->cmd.forwardmove;
-	smove = pmove->cmd.sidemove;
+	#ifdef CLIENT_DLL
+	noclipspeed = gEngfuncs.pfnGetCvarFloat("sv_noclipspeed");
+	#else
+	noclipspeed = g_engfuncs.pfnCVarGetFloat("sv_noclipspeed");
+	#endif
+	if (noclipspeed > 100)
+		noclipspeed = 100;
+	else if (noclipspeed < 0)
+		noclipspeed = 1;
+
+	fmove = pmove->cmd.forwardmove * noclipspeed;
+	smove = pmove->cmd.sidemove * noclipspeed;
 	
 	VectorNormalize ( pmove->forward ); 
 	VectorNormalize ( pmove->right );

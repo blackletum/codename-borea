@@ -3369,13 +3369,13 @@ void SET_MODEL(edict_t* e, const char* model)
 	if (strlen(model) > 4)
 	{
 		// mod directory
-		char modName[MAX_PATH];
+		char modName[MAX_PATH] = "";
 		g_engfuncs.pfnGetGameDir(modName);
 		strcat(modName, "/");
 		strcat(modName, model);
 
 		// fallback directory
-		char modName2[MAX_PATH];
+		char modName2[MAX_PATH] = "";
 		GetFallbackDir(modName2);
 		strcat(modName2, "/");
 		strcat(modName2, model);
@@ -3399,29 +3399,32 @@ void SET_MODEL(edict_t* e, const char* model)
 int PRECACHE_MODEL(const char* s)
 {
 	int model;
+	char modelpath[128];
+
+	strcpy(modelpath, s);
 
 	if (strlen(s) > 4)
 	{
 		// mod directory
-		char modName[MAX_PATH];
+		char modName[MAX_PATH] = "";
 		g_engfuncs.pfnGetGameDir(modName);
 		strcat(modName, "/");
-		strcat(modName, s);
+		strcat(modName, modelpath);
 
 		// fallback directory
-		char modName2[MAX_PATH];
+		char modName2[MAX_PATH] = "";
 		GetFallbackDir(modName2);
 		strcat(modName2, "/");
-		strcat(modName2, s);
+		strcat(modName2, modelpath);
 
 		// hl directory (valve)
 		char modName3[MAX_PATH] = "valve/";
-		strcat(modName3, s);
+		strcat(modName3, modelpath);
 
 		if (std::filesystem::exists(modName) || std::filesystem::exists(modName2) || std::filesystem::exists(modName3))
-			return model = g_engfuncs.pfnPrecacheModel((char*)s);
+			return model = g_engfuncs.pfnPrecacheModel(s);
 		else
 			return g_engfuncs.pfnPrecacheModel("models/error.mdl");
 	}
-	else return model = g_engfuncs.pfnPrecacheModel((char*)s);
+	else return model = g_engfuncs.pfnPrecacheModel(s);
 }

@@ -430,6 +430,8 @@ void DLLEXPORT HUD_StudioEvent( const struct mstudioevent_s *event, const struct
 //	RecClStudioEvent(event, entity);
 
 	int iMuzzleFlash = 1;
+	if (entity && entity->curstate.body == 1)
+		iMuzzleFlash = 0;
 
 #if defined( _TFC )
 

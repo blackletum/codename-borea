@@ -350,7 +350,7 @@ void ClientPutInServer( edict_t *pEntity )
 
 	entvars_t *pev = &pEntity->v;
 
-	pPlayer = GetClassPtr((CBasePlayer *)pev);
+	pPlayer = GetClassPtr((CBasePlayer*)pev);
 	pPlayer->SetCustomDecalFrames(-1); // Assume none;
 
 	// Allocate a CBasePlayer for pev, and call spawn
@@ -923,6 +923,20 @@ void ClientCommand( edict_t *pEntity )
 		if (g_pGameRules->IsCTF())
 		{
 			DumpCTFFlagInfo(reinterpret_cast<CBasePlayer*>(GET_PRIVATE(pEntity)));
+		}
+	}
+	else if (FStrEq(pcmd, "hurtme"))
+	{
+		if (atoi(CMD_ARGV(1)))
+			player->pev->health -= atoi(CMD_ARGV(1));
+	}
+	else if (FStrEq(pcmd, "healme"))
+	{
+		if (atoi(CMD_ARGV(1)))
+		{
+			player->pev->health += atoi(CMD_ARGV(1));
+			if (player->pev->health > 100)
+				player->pev->health = 100;
 		}
 	}
 	else
@@ -1699,30 +1713,30 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 		}
 	}
 
-	// HACK:  Somewhat...
-	// Class is overridden for non-players to signify a breakable glass object ( sort of a class? )
-	// that's 'class' in the sense medic, engineer, etc... !! --LRC
-	if ( !player )
-	{
-		state->playerclass  = ent->v.playerclass;
-	}
+		// HACK:  Somewhat...
+		// Class is overridden for non-players to signify a breakable glass object ( sort of a class? )
+		// that's 'class' in the sense medic, engineer, etc... !! --LRC
+		if ( !player )
+		{
+			state->playerclass  = ent->v.playerclass;
+		}
 
-	// Special stuff for players only
-	if ( player )
-	{
-		memcpy( state->basevelocity, ent->v.basevelocity, 3 * sizeof( float ) );
+		// Special stuff for players only
+		if ( player )
+		{
+			memcpy( state->basevelocity, ent->v.basevelocity, 3 * sizeof( float ) );
 
-		state->weaponmodel  = MODEL_INDEX( STRING( ent->v.weaponmodel ) );
-		state->gaitsequence = ent->v.gaitsequence;
-		state->spectator = ent->v.flags & FL_SPECTATOR;
-		state->friction     = ent->v.friction;
+			state->weaponmodel  = MODEL_INDEX( STRING( ent->v.weaponmodel ) );
+			state->gaitsequence = ent->v.gaitsequence;
+			state->spectator = ent->v.flags & FL_SPECTATOR;
+			state->friction     = ent->v.friction;
 
-		state->gravity      = ent->v.gravity;
-//		state->team			= ent->v.team;
-//
-		state->usehull      = ( ent->v.flags & FL_DUCKING ) ? 1 : 0;
-		state->health		= ent->v.health;
-	}
+			state->gravity      = ent->v.gravity;
+	//		state->team			= ent->v.team;
+	//
+			state->usehull      = ( ent->v.flags & FL_DUCKING ) ? 1 : 0;
+			state->health		= ent->v.health;
+		}
 
 	return 1;
 }

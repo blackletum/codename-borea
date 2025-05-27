@@ -132,8 +132,12 @@ EV_EjectBrass
 Bullet shell casings
 =================
 */
-void EV_EjectBrass( float *origin, float *velocity, float rotation, int model, int soundtype )
+void EV_EjectBrass( float *origin, float *velocity, float rotation, int model, int soundtype, Vector right)
 {
+	for (int i = 0; i < 3; i++)
+	{
+		origin[i] += gHUD.leanAngle * right[i]; // only when leaning left the brass ejection origin is misplaced, why
+	}
 	Vector endpos;
 	VectorClear( endpos );
 	endpos[1] = rotation;

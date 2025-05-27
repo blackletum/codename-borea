@@ -28,6 +28,8 @@
 #include "com_model.h"
 #include "triangleapi.h"
 
+extern bool m_bLensEffect;
+
 extern int g_iUseEnt;
 extern std::string g_szUseEntClassname;
 void HUD_MarkUsableEnt();
@@ -117,6 +119,49 @@ int CHud :: Redraw( float flTime, int intermission )
 	gPostProcess.ApplyPostEffects(); //PostProcessing
 	gHUD.gLensflare.Draw(flTime);
 	gBlur.DrawBlur();
+
+	if (m_bLensEffect) //this needs some cleaning up
+	{
+		// GL START
+		// setup ortho projection
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glLoadIdentity();
+
+		glMatrixMode(GL_PROJECTION);
+		glPushMatrix();
+		glLoadIdentity();
+
+		glOrtho(0, 1, 1, 0, 0.1, 100);
+
+
+		int blendenabled = glIsEnabled(GL_BLEND);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
+		//49, 89, 60
+		Vector lenscolor = Vector(63.f / 255, 71.f / 255, 99.f / 255);
+		glColor4f(lenscolor.x, lenscolor.y, lenscolor.z, 1);
+		// GL END
+
+		glDisable(GL_TEXTURE_2D);
+
+		glBegin(GL_QUADS);
+		glVertex3f(0, 0, -1);
+		glVertex3f(1, 0, -1);
+		glVertex3f(1, 1, -1);
+		glVertex3f(0, 1, -1);
+		glEnd();
+		
+		glMatrixMode(GL_PROJECTION);
+		glPopMatrix();
+		glMatrixMode(GL_MODELVIEW);
+		glPopMatrix();
+
+		if (!blendenabled) glDisable(GL_BLEND);
+		glEnable(GL_TEXTURE_2D);
+
+	}
+
 	//RENDERERS END
 
 	m_fOldTime = m_flTime;	// save time of previous redraw

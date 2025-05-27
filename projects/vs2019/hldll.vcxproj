@@ -42,9 +42,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\..\..\Program Files %28x86%29\Steam\steamapps\common\Half-Life\spirinityop4\dlls</OutDir>
-    <IntDir>$(Configuration)\$(ProjectName)\int\</IntDir>
+    <OutDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\dlls</OutDir>
+    <IntDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\\int\</IntDir>
     <TargetName>opfor</TargetName>
+    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -290,6 +291,7 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\pm_shared\pm_shared.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\the_last_goodbye_fixing\pm_shared\pm_structs.h" />
     <ClInclude Include="..\..\common\beamdef.h" />
     <ClInclude Include="..\..\common\com_model.h" />
     <ClInclude Include="..\..\common\const.h" />

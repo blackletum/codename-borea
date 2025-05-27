@@ -34,11 +34,11 @@ LINK_ENTITY_TO_CLASS(weapon_penguin, CPenguin);
 
 void CPenguin::Precache()
 {
-	g_engfuncs.pfnPrecacheModel("models/w_penguinnest.mdl");
-	g_engfuncs.pfnPrecacheModel("models/v_penguin.mdl");
-	g_engfuncs.pfnPrecacheModel("models/p_penguin.mdl");
-	g_engfuncs.pfnPrecacheSound("squeek/sqk_hunt2.wav");
-	g_engfuncs.pfnPrecacheSound("squeek/sqk_hunt3.wav");
+	PRECACHE_MODEL("models/w_penguinnest.mdl");
+	PRECACHE_MODEL("models/v_penguin.mdl");
+	PRECACHE_MODEL("models/p_penguin.mdl");
+	PRECACHE_SOUND("squeek/sqk_hunt2.wav");
+	PRECACHE_SOUND("squeek/sqk_hunt3.wav");
 	UTIL_PrecacheOther("monster_penguin");
 	m_usPenguinFire = g_engfuncs.pfnPrecacheEvent(1, "events/penguinfire.sc");
 }

@@ -429,16 +429,16 @@ int CHudHealth::Draw(float flTime)
 		FillRGBA(x, y, scaleLerp, 15, 21, 255, 255, 255);
 
 		// draw stamina empty bar
-		x = 220 + m_iStamina * 1.3f + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
+		x = 220 + m_iStamina * 0.8f + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
 		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 50 + gHUD.camValue[1] * 0.1f;
-		int stamina = (100-m_iStamina) * 1.3f;
+		int stamina = (gEngfuncs.pfnGetCvarFloat("sv_sprintdur") - m_iStamina) * 0.8f;
 
 		FillRGBA(x, y, stamina, 5, 144, 144, 144, 100);
 
 		// draw stamina
 		x = 220 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
 		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 50 + gHUD.camValue[1] * 0.1f;
-		stamina = m_iStamina * 1.3f;
+		stamina = m_iStamina * 0.8f;
 
 		FillRGBA(x, y, stamina, 5, 249, 111, 45, 255);
 

@@ -34,6 +34,7 @@
 #include "vgui_ScorePanel.h"
 #include "rain.h"
 #include "blur.h"
+#include "SDL2/SDL_syswm.h"
 
 hud_player_info_t	 g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
 extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
@@ -770,6 +771,19 @@ void CHud::BRD_SetBorderless(SDL_Window* brd_windowArg)
 	SDL_SetWindowSize(brd_windowArg, weg, heg);
 	SDL_SetWindowBordered(brd_windowArg, SDL_FALSE);
 	SDL_RaiseWindow(brd_windowArg);
+
+	SDL_SysWMinfo wmInfo;
+	SDL_VERSION(&wmInfo.version);
+	if (SDL_GetWindowWMInfo(brd_windowArg, &wmInfo)) {
+		HWND hwnd = wmInfo.info.win.window;
+		SetWindowPos(
+			hwnd,
+			HWND_NOTOPMOST,
+			0, 0, 0, 0,
+			SWP_NOMOVE | SWP_NOSIZE
+		);
+	}
+
 	gEngfuncs.Con_Printf("\nBorderless mode initialised.\n");
 }
 
