@@ -25,6 +25,8 @@
 #include "event_api.h"
 #include "pm_shared.h"
 
+extern Vector v_angles;
+
 #define IS_FIRSTPERSON_SPEC ( g_iUser1 == OBS_IN_EYE || (g_iUser1 && (gHUD.m_Spectator.m_pip->value == INSET_IN_EYE)) )
 /*
 =================
@@ -134,10 +136,10 @@ Bullet shell casings
 */
 void EV_EjectBrass( float *origin, float *velocity, float rotation, int model, int soundtype, Vector right)
 {
-	for (int i = 0; i < 3; i++)
-	{
-		origin[i] += gHUD.leanAngle * right[i]; // only when leaning left the brass ejection origin is misplaced, why
-	}
+	//for (int i = 0; i < 3; i++)
+	//{
+	//	origin[i] += gHUD.leanAngle * right[i]; // only when leaning left the brass ejection origin is misplaced, why
+	//}
 	Vector endpos;
 	VectorClear( endpos );
 	endpos[1] = rotation;
@@ -157,6 +159,8 @@ void EV_GetDefaultShellInfo( event_args_t *args, float *origin, float *velocity,
 	float fR, fU;
 
 	int idx;
+
+	rightScale += v_angles[ROLL] * 30.0f / 18.0f;
 
 	idx = args->entindex;
 

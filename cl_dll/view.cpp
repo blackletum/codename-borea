@@ -572,6 +572,7 @@ void V_CamAnims(struct ref_params_s* pparams, cl_entity_s* view)
 			l_campos[i] = lerp(l_campos[i], result2[i] * 1.2, pparams->frametime * 17.0f);
 
 			pparams->viewangles[i] += l_camangles[i] / 25;
+
 			//pparams->vieworg[i] += l_campos[i] / 10;
 
 			//gEngfuncs.Con_Printf("x: %f y: %f", l_camangles[0], l_camangles[1]);
@@ -836,7 +837,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	pparams->vieworg[2] += waterOffset;
 	
 	V_CalcViewRoll ( pparams );
-	V_CamAnims(pparams, view);
+	//V_CamAnims(pparams, view);
 	V_AddIdle ( pparams );
 
 	// offsets
@@ -1053,8 +1054,8 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 
 	VectorCopy(view->angles, view->curstate.angles);
 	
-	pparams->viewangles[ROLL] += bobRight * 0.15;
-	pparams->viewangles[PITCH] += bobRight * 0.55;
+	//pparams->viewangles[ROLL] += bobRight * 0.15;
+	//pparams->viewangles[PITCH] += bobRight * 0.55;
 
 
 	gHUD.bobValue[0] = bobRight;
