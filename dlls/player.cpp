@@ -1275,7 +1275,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 	case ACT_HOVER:
 	case ACT_LEAP:
 	case ACT_SWIM:
-	case ACT_HOP:
 	case ACT_DIESIMPLE:
 	default:
 		if ( m_Activity == m_IdealActivity)
@@ -1320,25 +1319,36 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		break;
 
 	case ACT_WALK:
-		animDesired = 10;
+
+		if (m_iSlidingStage == 1)
+			animDesired = 26;
+		else if (pev->velocity.Length2D() > 300)
+			animDesired = 18;
+		else if (isOnWall)
+			animDesired = 29;
+		else
+			animDesired = 10;
 
 		break;
-
-	case ACT_IDLE:
-		if (m_Activity != ACT_RANGE_ATTACK1 || m_fSequenceFinished)
+	case ACT_HOP:
+		
+		if (pev->velocity.Length2D() < 20)
 		{
-			if (FBitSet(pev->flags, FL_DUCKING))	// crouching
-				strcpy(szAnim, "crouch_aim_");
-			else
-				strcpy(szAnim, "ref_aim_");
+			//ALERT(at_console, "IS JUMPNGGG\n");
+			animDesired = 46;
 		}
 		else
-		{
+			animDesired = 23;
+		break;
+	case ACT_IDLE:
+		if (FBitSet(pev->flags, FL_DUCKING))
+			animDesired = 2;
+		else
 			animDesired = 0;
-		}
 		break;
 	}
 
+	/*
 	if ( FBitSet( pev->flags, FL_DUCKING ) )
 	{
 		if ( speed == 0)
@@ -1364,7 +1374,19 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		// pev->gaitsequence	= LookupActivity( ACT_WALK );
 		pev->gaitsequence	= LookupSequence( "deep_idle" );
 	}
+	*/
 
+	if (isOnWall)
+	{
+		animDesired = 29;
+
+		/*
+		if(wallType == 1)
+			animDesired = 29
+		else if (wallType == 2)
+			animDesired =
+			*/
+	}
 
 	// Already using the desired animation?
 	if (pev->sequence == animDesired)
@@ -3157,6 +3179,8 @@ void CBasePlayer::PostThink()
 	{
 		if (!pev->velocity.x && !pev->velocity.y)
 			SetAnimation( PLAYER_IDLE );
+		else if (isOnWall)
+			SetAnimation(PLAYER_WALK);
 		else if ((pev->velocity.x || pev->velocity.y) && (FBitSet(pev->flags, FL_ONGROUND)))
 			SetAnimation( PLAYER_WALK );
 		else if (pev->waterlevel > 1)
@@ -3507,7 +3531,7 @@ void CBasePlayer::Spawn()
 
 	g_pGameRules->GetPlayerSpawnSpot( this );
 
-	SET_MODEL(ENT(pev), "models/player.mdl");
+	SET_MODEL(ENT(pev), "models/parish_npcbase.mdl");
 	g_ulModelIndexPlayer = pev->modelindex;
 	pev->sequence		= LookupActivity( ACT_IDLE );
 

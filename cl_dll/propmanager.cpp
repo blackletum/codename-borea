@@ -976,6 +976,7 @@ bool CPropManager::LoadMDL( char *name, cl_entity_t *pEntity, entity_t *pBSPEnti
 
 	m_pCurrentExtraData->pModelData = &m_pHeaders[m_iNumHeaders];
 	m_iNumHeaders++;
+
 	return true;
 }
 

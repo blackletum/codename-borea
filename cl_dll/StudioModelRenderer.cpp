@@ -2435,6 +2435,51 @@ float CStudioModelRenderer::StudioEstimateInterpolant()
 	return dadt;
 }
 
+float lerped_bones_quaterion[2048][MAXSTUDIOBONES][4];
+float lerped_bones_origin[2048][MAXSTUDIOBONES][3];
+
+void Slerp(const vec4_t q1, const vec4_t q2, float t, vec4_t out)
+{
+	float dot = q1[0] * q2[0] + q1[1] * q2[1] + q1[2] * q2[2] + q1[3] * q2[3];
+
+	// If the dot product is negative, slerp won't take
+	// the shorter path. So fix by reversing one quaternion.
+	if (dot < 0.0f)
+	{
+		dot = -dot;
+		vec4_t q2_neg = { -q2[0], -q2[1], -q2[2], -q2[3] };
+		Slerp(q1, q2_neg, t, out);
+		return;
+	}
+
+	const float DOT_THRESHOLD = 0.995f;
+	if (dot > DOT_THRESHOLD)
+	{
+		// If the quaternions are close, use linear interpolation
+		for (int i = 0; i < 4; i++)
+			out[i] = q1[i] + t * (q2[i] - q1[i]);
+
+		// Normalize the result
+		float mag = sqrtf(out[0] * out[0] + out[1] * out[1] + out[2] * out[2] + out[3] * out[3]);
+		for (int i = 0; i < 4; i++)
+			out[i] /= mag;
+		return;
+	}
+
+	// SLERP
+	float theta_0 = acosf(dot);        // angle between input vectors
+	float theta = theta_0 * t;         // angle between q1 and result
+	float sin_theta = sinf(theta);
+	float sin_theta_0 = sinf(theta_0);
+
+	float s0 = cosf(theta) - dot * sin_theta / sin_theta_0;
+	float s1 = sin_theta / sin_theta_0;
+
+	for (int i = 0; i < 4; i++)
+		out[i] = (s0 * q1[i]) + (s1 * q2[i]);
+}
+
+
 /*
 ====================
 StudioCalcRotations
@@ -2480,14 +2525,45 @@ void CStudioModelRenderer::StudioCalcRotations ( float pos[][3], vec4_t *q, mstu
 
 	StudioCalcBoneAdj( dadt, adj, m_pCurrentEntity->curstate.controller, m_pCurrentEntity->latched.prevcontroller, m_pCurrentEntity->mouth.mouthopen );
 
-	for (i = 0; i < m_pStudioHeader->numbones; i++, pbone++, panim++) 
-	{
-		StudioCalcBoneQuaterion( frame, s, pbone, panim, adj, q[i] );
+	//gEngfuncs.Con_Printf	("jajajaja max player %i\n", gEngfuncs.GetLocalPlayer()->index);
 
-		StudioCalcBonePosition( frame, s, pbone, panim, adj, pos[i] );
-		// if (0 && i == 0)
-		//	Con_DPrintf("%d %d %d %d\n", m_pCurrentEntity->curstate.sequence, frame, j, k );
-	}
+	if(m_pCurrentEntity->index <= gEngfuncs.GetMaxClients() && m_pCurrentEntity->index >= gEngfuncs.GetLocalPlayer()->index)
+		for (i = 0; i < m_pStudioHeader->numbones; i++, pbone++, panim++) 
+		{
+			vec4_t ang;
+			Vector org;
+
+			StudioCalcBoneQuaterion( frame, s, pbone, panim, adj, ang);
+			StudioCalcBonePosition( frame, s, pbone, panim, adj, org);
+
+			Slerp(
+				lerped_bones_quaterion[m_pCurrentEntity->index][i],
+				ang,
+				gHUD.m_flTimeDelta * 10.0f,
+				lerped_bones_quaterion[m_pCurrentEntity->index][i]
+			);
+
+			for (int x = 0; x < 4; x++)
+			{
+				if (x < 3)
+				{
+					lerped_bones_origin[m_pCurrentEntity->index][i][x] = lerp(lerped_bones_origin[m_pCurrentEntity->index][i][x], org[x], gHUD.m_flTimeDelta * 10.0f);
+					pos[i][x] = lerped_bones_origin[m_pCurrentEntity->index][i][x];
+				}
+
+				//lerped_bones_quaterion[m_pCurrentEntity->index][i][x] = lerp(lerped_bones_quaterion[m_pCurrentEntity->index][i][x], ang[x], gHUD.m_flTimeDelta * 5.0f);
+				q[i][x] = lerped_bones_quaterion[m_pCurrentEntity->index][i][x];
+				//q[i][x] = ang[x];
+
+			}
+
+		}
+	else
+		for (i = 0; i < m_pStudioHeader->numbones; i++, pbone++, panim++)
+		{
+			StudioCalcBoneQuaterion( frame, s, pbone, panim, adj, q[i] );
+			StudioCalcBonePosition( frame, s, pbone, panim, adj, pos[i] );
+		}
 
 	if (pseqdesc->motiontype & STUDIO_X)
 	{
@@ -2685,6 +2761,7 @@ void CStudioModelRenderer::StudioSetupBones ()
 	panim = StudioGetAnim( m_pRenderModel, pseqdesc );
 	StudioCalcRotations( pos, q, pseqdesc, panim, f );
 
+	/*
 	if (pseqdesc->numblends > 1)
 	{
 		float				s;
@@ -2761,6 +2838,8 @@ void CStudioModelRenderer::StudioSetupBones ()
 		// Con_DPrintf("prevframe = %4.2f\n", f);
 		m_pCurrentEntity->latched.prevframe = f;
 	}
+
+	*/
 
 	pbones = (mstudiobone_t*)((byte*)m_pStudioHeader + m_pStudioHeader->boneindex);
 
@@ -3259,6 +3338,20 @@ pmtrace_t TraceIgnoreModel(Vector vecSrc, Vector vecEnd, int flags, int entignor
 	return tr;
 }
 
+float AngleLerp(float from, float to, float t)
+{
+	// Normalize to range [-180, 180]
+	float delta = fmodf(to - from + 540.0f, 360.0f) - 180.0f;
+	return from + delta * t;
+}
+
+float AngleDiff(float a, float b)
+{
+	// Returns the shortest difference from angle b to a (a - b) in range [-180, 180]
+	float delta = fmodf(a - b + 540.0f, 360.0f) - 180.0f;
+	return delta;
+}
+
 /*
 ====================
 StudioDrawPlayer
@@ -3280,31 +3373,13 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 
 	if (est_velocity.Length2D() > 0.1f && !gHUD.m_bIsAimingTPS)
 	{
-		//m_pCurrentEntity->angles[YAW] = ang[YAW];
+		float& currentYaw = m_pCurrentEntity->baseline.angles[YAW];
+		float targetYaw = ang[YAW];
 
-		// 360 to 0
-		if (ang[YAW] < 45 && m_pCurrentEntity->baseline.angles[YAW] > 315)
-		{
-			ang[YAW] = ang[YAW] + 360.0f;
-
-			if (m_pCurrentEntity->baseline.angles[YAW] > 344.0f)
-				m_pCurrentEntity->baseline.angles[YAW] = -15;
-		}
-		// 0 to 360
-		else if (ang[YAW] > 315 && m_pCurrentEntity->baseline.angles[YAW] < 45)
-		{
-			ang[YAW] = ang[YAW] - 360.0f;
-
-			if (m_pCurrentEntity->baseline.angles[YAW] < 15.0f)
-				m_pCurrentEntity->baseline.angles[YAW] = 360.0f + 14.0f;
-		}
-
-		m_pCurrentEntity->baseline.angles[YAW] = lerp(m_pCurrentEntity->baseline.angles[YAW], ang[YAW], gHUD.m_flTimeDelta * 7.0f);
-
+		currentYaw = AngleLerp(currentYaw, targetYaw, gHUD.m_flTimeDelta * 7.0f);
 	}
 
 	m_pCurrentEntity->angles[YAW] = m_pCurrentEntity->baseline.angles[YAW];
-	//gEngfuncs.Con_Printf("ang ang ang %f\n", m_pCurrentEntity->angles[YAW]);
 	
 
 	// use 3 traceline to find angles
@@ -3350,37 +3425,21 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	m_pCurrentEntity->angles[ROLL] = m_pCurrentEntity->baseline.angles[ROLL];
 
 	// do custom gait here
-	//m_pCurrentEntity->curstate.controller[0] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
-	//m_pCurrentEntity->curstate.controller[1] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
-	//m_pCurrentEntity->curstate.controller[2] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
-	//m_pCurrentEntity->curstate.controller[3] = 127 * (1 + sin(gEngfuncs.GetAbsoluteTime()));
-	//gEngfuncs.Con_Printf("s in %f cos %f\n", sin(gEngfuncs.GetAbsoluteTime()), cos(gEngfuncs.GetAbsoluteTime()));
-
+	// bacontsu - leaning
 	m_pCurrentEntity->baseline.controller[0] = lerp(m_pCurrentEntity->baseline.controller[0], 127 * ((gHUD.leanAngle + 30) / 30.0f), gHUD.m_flTimeDelta * 10);
 	m_pCurrentEntity->curstate.controller[0] = m_pCurrentEntity->baseline.controller[0];
-
 	//gEngfuncs.Con_Printf("leanangle %i\n", (int)m_pCurrentEntity->baseline.controller[0]);
-
 
 
 	if (gHUD.m_bIsAimingTPS)
 	{
+		float entityYaw = m_pCurrentEntity->angles[YAW];
+		float aimYaw = gHUD.m_vecAimingAngTPS[YAW];
 
-		// convert 180 -> -180 to 0 -> 360
-		if (gHUD.m_vecAimingAngTPS[YAW] > -180 && gHUD.m_vecAimingAngTPS[YAW] < 0)
-			gHUD.m_vecAimingAngTPS[YAW] = 360 + gHUD.m_vecAimingAngTPS[YAW];
-
-
-
-		if (gHUD.m_vecAimingAngTPS[YAW] < 35 && m_pCurrentEntity->angles[YAW] > 315)
-			m_pCurrentEntity->angles[YAW] = m_pCurrentEntity->angles[YAW] - 360;
-
-
-
-		int finalAng = m_pCurrentEntity->angles[YAW] - gHUD.m_vecAimingAngTPS[YAW];
-
+		int finalAng = (int)AngleDiff(entityYaw, aimYaw);
 		finalAng = clamp(finalAng, -40, 40);
 
+		// Smooth correction if needed
 		if (finalAng > 39)
 		{
 			m_pCurrentEntity->baseline.angles[YAW]--;
@@ -3392,10 +3451,10 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 			m_pCurrentEntity->angles[YAW]++;
 		}
 
+		gEngfuncs.Con_Printf("yaw angle %i %i %i\n", (int)m_pCurrentEntity->angles[YAW], (int)aimYaw, finalAng);
 
-		gEngfuncs.Con_Printf("yaw angle %i %i %i\n", (int)m_pCurrentEntity->angles[YAW], (int)gHUD.m_vecAimingAngTPS[YAW], finalAng);
-
-		m_pCurrentEntity->curstate.controller[1] = 127.0f - ((finalAng/40.0f) * 127.0f);
+		// Use finalAng to set controller value
+		m_pCurrentEntity->curstate.controller[1] = 127.0f - ((finalAng / 40.0f) * 127.0f);
 	}
 	else
 	{
@@ -3406,10 +3465,16 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	m_pCurrentEntity->curstate.controller[2] = 127;
 	m_pCurrentEntity->curstate.controller[3] = 127;
 
+	//gEngfuncs.Con_Printf("is ducking %s\n", gEngfuncs.GetLocalPlayer()->curstate.usehull == 1 ? "yes" : "no");
 
 	// only do on local player
 	if(m_pCurrentEntity == gEngfuncs.GetLocalPlayer())
-		m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37;
+	{
+		if(gEngfuncs.GetLocalPlayer()->curstate.usehull == 1)
+			m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37/2.0f;
+		else
+			m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37;
+	}
 	else
 		m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37/2.0f;
 
@@ -3545,6 +3610,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		StudioRenderModel( );
 		m_pPlayerInfo = nullptr;
 
+		/*
 		if (pplayer->weaponmodel)
 		{
 			cl_entity_t saveent = *m_pCurrentEntity;
@@ -3564,6 +3630,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 			*m_pCurrentEntity = saveent;
 			m_pRenderModel = savedmdl;
 		}
+		*/
 	}
 
 	return 1;

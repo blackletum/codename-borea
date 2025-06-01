@@ -223,7 +223,7 @@ public:
 	bool isOnWall;
 	void WallrunThink();
 	TraceResult wallRightTr, wallLeftTr;
-	int wallType; // 0 - none	1 - left	2 - right
+	int wallType; // 0 - none	1 - right	2 - left
 
 	// slowmotion
 	bool isSlowmo;

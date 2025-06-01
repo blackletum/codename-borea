@@ -32,6 +32,7 @@ Transparency code by Neil "Jed" Jedrzejewski
 
 extern int g_iViewmodelSkin;
 
+
 /*
 ====================
 CStudioModelRenderer
@@ -361,7 +362,6 @@ public:
 	Vector			m_vertexTransform[MAXSTUDIOVERTS * 2];
 
 	Vector m_vShadowLightOrigin;
-
 
 private:
 	// Pointer to the shadow volume data
