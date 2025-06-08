@@ -50,7 +50,7 @@ cvar_t  allow_spectators = { "allow_spectators", "0.0", FCVAR_SERVER };		// 0 pr
 cvar_t	impulsetarget={"sohl_impulsetarget","0", FCVAR_SERVER }; //LRC - trigger ents manually
 cvar_t	mw_debug={"sohl_mwdebug","0", FCVAR_SERVER }; //LRC - debug info. for MoveWith. (probably not useful for most people.)
 
-cvar_t wallrun = { "sv_wallrun", "1", FCVAR_SERVER | FCVAR_ARCHIVE };
+cvar_t wallrun = { "sv_wallrun", "0", FCVAR_SERVER | FCVAR_ARCHIVE };
 cvar_t noclipspeed = { "sv_noclipspeed", "1", FCVAR_SERVER | FCVAR_ARCHIVE };
 cvar_t sprintduration = { "sv_sprintdur", "150", FCVAR_SERVER | FCVAR_ARCHIVE };
 
@@ -1352,5 +1352,6 @@ void GameDLLInit()
 
 	SERVER_COMMAND( "exec skill.cfg\n" );
 	SERVER_COMMAND( "exec skillopfor.cfg\n" );
+	SERVER_COMMAND( "exec config.cfg\n" ); //salsa: because server cvars dont seem to save, hope this wont break nuthin
 }
 
