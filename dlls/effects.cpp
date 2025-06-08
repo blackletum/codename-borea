@@ -3756,12 +3756,12 @@ void CClientFog::SendInitMessage( CBasePlayer *player )
 		else
 			MESSAGE_BEGIN( MSG_ALL, gmsgSetFog, nullptr );
 
-			WRITE_SHORT ( pev->rendercolor.x );
-			WRITE_SHORT ( pev->rendercolor.y );
-			WRITE_SHORT ( pev->rendercolor.z );
-			WRITE_SHORT ( m_iStartDist );
-			WRITE_SHORT ( m_iEndDist );
-			WRITE_SHORT ( m_bDontAffectSky );
+			WRITE_SHORT ( int(pev->rendercolor.x) );
+			WRITE_SHORT ( int(pev->rendercolor.y) );
+			WRITE_SHORT ( int(pev->rendercolor.z) );
+			WRITE_SHORT ( int(m_iStartDist) );
+			WRITE_SHORT ( int(m_iEndDist) );
+			WRITE_SHORT ( int(m_bDontAffectSky) );
 		MESSAGE_END();
 	}
 	else
@@ -4755,8 +4755,6 @@ void CEnvFog :: Precache ()
 		SetNextThink( 0.1 );
 	}
 }
-
-extern int gmsgSetFog;
 
 void CEnvFog :: TurnOn ()
 {

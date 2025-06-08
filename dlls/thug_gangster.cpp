@@ -189,6 +189,8 @@ public:
 
 	int		m_iSentence;
 
+	float 		m_flNextShoot;
+
 	static const char *pGruntSentences[];
 
 	float next_idle_sentence_time; // used for thugs and gangs
@@ -822,6 +824,18 @@ void CHGrunt :: Shoot ()
 			FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_10DEGREES, 2048, BULLET_MONSTER_MP5 ); // shoot +-5 degrees
 
 		pev->effects |= EF_MUZZLEFLASH;
+		Vector attachment, null;
+		GetAttachment(0, attachment, null);
+
+		MESSAGE_BEGIN(MSG_BROADCAST, gmsgMuzzleFlash);
+		//WRITE_SHORT(0); //attachment index
+		WRITE_COORD(attachment.x);
+		WRITE_COORD(attachment.y);
+		WRITE_COORD(attachment.z);
+		WRITE_SHORT(entindex());
+		MESSAGE_END();
+
+		m_flNextShoot = gpGlobals->time + 0.1f;
 	
 		m_cAmmoLoaded--;// take away a bullet!
 	}
@@ -860,6 +874,19 @@ void CHGrunt :: Shotgun ()
 		FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0 ); // shoot +-7.5 degrees
 
 	pev->effects |= EF_MUZZLEFLASH;
+
+	m_flNextShoot = gpGlobals->time + 1.f;
+
+	Vector attachment, null;
+	GetAttachment(0, attachment, null);
+
+	MESSAGE_BEGIN(MSG_BROADCAST, gmsgMuzzleFlash);
+	//WRITE_SHORT(0); //attachment index
+	WRITE_COORD(attachment.x);
+	WRITE_COORD(attachment.y);
+	WRITE_COORD(attachment.z);
+	WRITE_SHORT(entindex());
+	MESSAGE_END();
 	
 	m_cAmmoLoaded--;// take away a bullet!
 
@@ -2039,10 +2066,10 @@ void CHGrunt :: SetActivity ( Activity NewActivity )
 		}
 		break;
 	case ACT_RUN:
-		if ( 0 )// pev->health <= HGRUNT_LIMP_HEALTH )
+		if (!HasConditions(bits_COND_ENEMY_OCCLUDED) && m_hEnemy)// pev->health <= HGRUNT_LIMP_HEALTH )
 		{
-			// limp!
-		//	iSequence = LookupActivity ( ACT_RUN_HURT );
+			// run while aiming
+			iSequence = LookupActivity ( ACT_RUN_SCARED );
 		}
 		else
 		{
@@ -3375,10 +3402,12 @@ Schedule_t *CMonsterThugPipe::GetScheduleOfType( int Type )
 	case SCHED_RANGE_ATTACK1:
 	{
 		// randomly stand or crouch
-		if( RANDOM_LONG( 0, 9 ) == 0 )
-			m_fStanding = RANDOM_LONG( 0, 1 );
+		if (RANDOM_LONG(0, 10) < 5)
+			m_fStanding = 0;
+		else
+			m_fStanding = 1;
 
-		if( m_fStanding )
+		if( !m_fStanding )
 			return &slGruntRangeAttack1B[0];
 		else
 			return &slGruntRangeAttack1A[0];
@@ -3489,8 +3518,11 @@ public:
 	void PainSound() override;
 	void IdleSound() override;
 	void OnCatchFire() override;
+	float m_flLerpedTurn;
 
 	void Pistol( void );
+
+	void MonsterThink() override;
 
 	static const char *pGangsterSentences[];
 };
@@ -3563,6 +3595,8 @@ void CMonsterGangster::Spawn()
 {
 	Precache();
 
+	m_flLerpedTurn = 0;
+
 	if( pev->model )
 		SET_MODEL( ENT( pev ), STRING( pev->model ) ); //LRC
 	else
@@ -3576,6 +3610,8 @@ void CMonsterGangster::Spawn()
 	}
 
 	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
+
+	m_flNextShoot = 0;
 
 	pev->solid = SOLID_SLIDEBOX;
 	pev->movetype = MOVETYPE_STEP;
@@ -4243,6 +4279,9 @@ Schedule_t *CMonsterGangster::GetScheduleOfType( int Type )
 		if( RANDOM_LONG( 0, 9 ) == 0 )
 			m_fStanding = RANDOM_LONG( 0, 1 );
 
+		//if(RANDOM_LONG(0, 50) < 40 && (pev->origin - m_hEnemy.Get()->v.origin).Length() > 64)
+		//	return &slGruntEstablishLineOfFire[0];
+
 		if( m_fStanding )
 			return &slGruntRangeAttack1B[0];
 		else
@@ -4254,7 +4293,10 @@ Schedule_t *CMonsterGangster::GetScheduleOfType( int Type )
 	}
 	case SCHED_COMBAT_FACE:
 	{
-		return &slGruntCombatFace[0];
+		//if (RANDOM_LONG(0, 50) < 35 && (pev->origin - m_hEnemy.Get()->v.origin).Length() > 64)
+		//	return &slGruntEstablishLineOfFire[0];
+		//else
+			return &slGruntCombatFace[0];
 	}
 	case SCHED_GRUNT_WAIT_FACE_ENEMY:
 	{
@@ -4541,6 +4583,19 @@ void CMonsterGangster::Pistol( void )
 
 		pev->effects |= EF_MUZZLEFLASH;
 
+		m_flNextShoot = gpGlobals->time + 0.4f;
+
+		Vector attachment, null;
+		GetAttachment(0, attachment, null);
+
+		MESSAGE_BEGIN(MSG_BROADCAST, gmsgMuzzleFlash);
+		//WRITE_SHORT(0); //attachment index
+		WRITE_COORD(attachment.x);
+		WRITE_COORD(attachment.y);
+		WRITE_COORD(attachment.z);
+		WRITE_SHORT(entindex());
+		MESSAGE_END();
+
 		m_cAmmoLoaded--;// take away a bullet!
 	}
 
@@ -4550,4 +4605,74 @@ void CMonsterGangster::Pistol( void )
 	// Teh_Freak: World Lighting!
 	FranUtils::EmitDlight( pev->origin, 16, { 255, 255, 160 }, 0.05f, 0 );
 	// Teh_Freak: World Lighting!
+}
+
+void CMonsterGangster::MonsterThink()
+{
+	CSquadMonster::MonsterThink();
+	if (m_hEnemy && !HasConditions(bits_COND_ENEMY_OCCLUDED) && m_cAmmoLoaded > 0)
+	{
+
+		float ang;
+		Vector forward, enemy;
+		Vector dist = m_hEnemy->pev->origin - pev->origin;
+
+
+		dist = dist.Normalize();
+		VectorAngles(dist, enemy);
+
+		float controller = enemy.y - pev->angles.y;
+		controller += 360;
+		m_flLerpedTurn = lerp(m_flLerpedTurn, controller, gpGlobals->frametime * 40);
+
+		// do our custom logic here
+
+		if (m_flNextShoot < gpGlobals->time && m_cAmmoLoaded > 0)
+		{
+			if ((m_Activity == ACT_WALK || m_Activity == ACT_RUN) && (enemy.y - pev->angles.y) <= 65.0f && (enemy.y - pev->angles.y) >= -65.0)
+			{		
+				if (FBitSet(pev->weapons, HGRUNT_SHOTGUN))
+				{
+					Shotgun();
+					EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sbarrel1.wav", 1, ATTN_NORM);
+				}
+				else if (FBitSet(pev->weapons, HGRUNT_PISTOL))
+				{
+					Pistol();
+					EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/psk_npc.wav", 1, ATTN_NORM);
+				}
+				else
+				{
+					// the first round of the three round burst plays the sound and puts a sound in the world sound list.
+					if (m_cAmmoLoaded > 0)
+					{
+						if (RANDOM_LONG(0, 1))
+						{
+							EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun1.wav", 1, ATTN_NORM);
+						}
+						else
+						{
+							EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun2.wav", 1, ATTN_NORM);
+						}
+					}
+					else
+					{
+						EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/dryfire1.wav", 1, ATTN_NORM);
+					}
+
+					Shoot();
+				}
+
+				CSoundEnt::InsertSound(bits_SOUND_COMBAT, pev->origin, 384, 0.3);
+			}
+		}
+
+		SetBoneController(3, (m_flLerpedTurn - 360) * -1);
+	}
+	else
+	{
+		float controller = 0;
+		m_flLerpedTurn = lerp(m_flLerpedTurn, 0, gpGlobals->frametime * 10);
+		SetBoneController(3, m_flLerpedTurn);
+	}
 }

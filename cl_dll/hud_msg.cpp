@@ -370,6 +370,28 @@ int CHud ::MsgFunc_StudioDecal(const char *pszName, int iSize, void *pbuf)
 
 	return 1;
 }
+int CHud::MsgFunc_MuzzleFlash(const char* pszName, int iSize, void* pbuf)
+{
+	BEGIN_READ(pbuf, iSize);
+
+	Vector attachment;
+	attachment.x = READ_COORD();
+	attachment.y = READ_COORD();
+	attachment.z = READ_COORD();
+	int entindex = READ_SHORT();
+
+	if (!entindex)
+		return 1;
+
+	cl_entity_t* pEntity = gEngfuncs.GetEntityByIndex(entindex);
+
+	if (!pEntity)
+		return 1;
+
+	gEngfuncs.pEfxAPI->R_MuzzleFlash(attachment, 51);
+
+	return 1;
+}
 int CHud ::MsgFunc_FreeEnt(const char *pszName, int iSize, void *pbuf)
 {
 	BEGIN_READ( pbuf, iSize );

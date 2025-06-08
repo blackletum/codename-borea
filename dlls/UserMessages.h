@@ -68,6 +68,7 @@ extern int gmsgSetFog;
 extern int gmsgLightStyle;
 extern int gmsgCreateDecal;
 extern int gmsgStudioDecal;
+extern int gmsgMuzzleFlash;
 extern int gmsgCreateDLight;
 extern int gmsgFreeEnt;
 extern int gmsgSkyMark_Sky;

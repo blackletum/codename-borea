@@ -439,6 +439,10 @@ int __MsgFunc_StudioDecal(const char *pszName, int iSize, void *pbuf )
 {
 	return gHUD.MsgFunc_StudioDecal( pszName, iSize, pbuf );
 }
+int __MsgFunc_MuzzleFlash(const char* pszName, int iSize, void* pbuf)
+{
+	return gHUD.MsgFunc_MuzzleFlash(pszName, iSize, pbuf);
+}
 int __MsgFunc_SkyMark_S(const char *pszName, int iSize, void *pbuf )
 {
 	return gBSPRenderer.MsgSkyMarker_Sky( pszName, iSize, pbuf );
@@ -605,6 +609,7 @@ void CHud :: Init()
 	HOOK_MESSAGE( LightStyle );
 	HOOK_MESSAGE( CreateDecal );
 	HOOK_MESSAGE( StudioDecal );
+	HOOK_MESSAGE( MuzzleFlash );
 	HOOK_MESSAGE( SkyMark_S );
 	HOOK_MESSAGE( SkyMark_W );
 	HOOK_MESSAGE( DynLight );

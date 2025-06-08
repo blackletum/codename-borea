@@ -67,6 +67,8 @@ int gmsgCamData = 0; // for trigger_viewset
 int gmsgRainData = 0;
 int gmsgInventory = 0; //AJH Inventory system
 
+int gmsgMuzzleFlash = 0;
+
 //RENDERERS START
 int gmsgSetFog		= 0;
 int gmsgLightStyle	= 0;
@@ -167,6 +169,7 @@ void LinkUserMessages()
 	gmsgLightStyle = REG_USER_MSG("LightStyle", -1);
 	gmsgCreateDecal = REG_USER_MSG("CreateDecal", -1);
 	gmsgStudioDecal = REG_USER_MSG("StudioDecal", -1);
+	gmsgMuzzleFlash = REG_USER_MSG("MuzzleFlash", -1);
 	gmsgCreateDLight = REG_USER_MSG("DynLight", -1);
 	gmsgFreeEnt = REG_USER_MSG("FreeEnt", -1);
 	gmsgSkyMark_Sky = REG_USER_MSG("SkyMark_S", -1); 

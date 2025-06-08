@@ -1019,6 +1019,8 @@ public:
 	int  _cdecl MsgFunc_WpnSkn(const char* pszName, int iSize, void* pbuf);
 //RENDERERS END
 
+	int  _cdecl MsgFunc_MuzzleFlash(const char* pszName, int iSize, void* pbuf);
+
 	// Aynekko
 	int  _cdecl MsgFunc_KickPunch( const char *pszName, int iSize, void *pbuf );
 
