@@ -1074,6 +1074,12 @@ int CBaseMonster :: CheckEnemy ( CBaseEntity *pEnemy )
 	float	flDistToEnemy;
 	int		iUpdatedLKP;// set this to TRUE if you update the EnemyLKP in this function.
 
+	if (FBitSet(pEnemy->pev->flags, FL_NOTARGET))
+	{
+		pEnemy = nullptr;
+		return FALSE;
+	}
+
 	iUpdatedLKP = FALSE;
 	ClearConditions ( bits_COND_ENEMY_FACING_ME );
 	

@@ -1061,13 +1061,27 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			if( FClassnameIs( pev, "monster_thug_pipe" ) || FClassnameIs( pev, "monster_thug_wrench" ) || FClassnameIs( pev, "monster_thug_crowbar" ) )
 				dmg = gSkillData.thugDmg;
 
-			if ( pHurt )
+			if (pHurt)
 			{
 				// SOUND HERE!
-				UTIL_MakeVectors( pev->angles );
+				UTIL_MakeVectors(pev->angles);
 				pHurt->pev->punchangle.x = 15;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 100 + gpGlobals->v_up * 50;
-				pHurt->TakeDamage( pev, pev, dmg, DMG_CLUB );
+				pHurt->TakeDamage(pev, pev, dmg, DMG_CLUB);
+				char hurtsound[96];
+				switch (RANDOM_LONG(0, 2))
+				{
+				case 0:
+					strcpy(hurtsound, "weapons/cbar_hitbod1.wav");
+					break;
+				case 1:
+					strcpy(hurtsound, "weapons/cbar_hitbod2.wav");
+					break;
+				case 2:
+					strcpy(hurtsound, "weapons/cbar_hitbod3.wav");
+					break;
+				}
+				EMIT_SOUND(pHurt->edict(), CHAN_AUTO, hurtsound, 0.5, ATTN_NORM);
 			}
 		}
 		break;
@@ -2066,7 +2080,7 @@ void CHGrunt :: SetActivity ( Activity NewActivity )
 		}
 		break;
 	case ACT_RUN:
-		if (!HasConditions(bits_COND_ENEMY_OCCLUDED) && m_hEnemy)// pev->health <= HGRUNT_LIMP_HEALTH )
+		if (!HasConditions(bits_COND_ENEMY_OCCLUDED) && m_hEnemy && m_cAmmoLoaded > 0)// pev->health <= HGRUNT_LIMP_HEALTH )
 		{
 			// run while aiming
 			iSequence = LookupActivity ( ACT_RUN_SCARED );
@@ -2075,6 +2089,8 @@ void CHGrunt :: SetActivity ( Activity NewActivity )
 		{
 			iSequence = LookupActivity ( NewActivity );
 		}
+		if(iSequence == -1)
+			iSequence = LookupActivity(NewActivity);
 		break;
 	case ACT_WALK:
 		if ( pev->health <= HGRUNT_LIMP_HEALTH )
@@ -2136,7 +2152,7 @@ Schedule_t *CHGrunt :: GetSchedule()
 	{
 		if (pev->flags & FL_ONGROUND)
 		{
-			// just landed
+			// just landedm
 			pev->movetype = MOVETYPE_STEP;
 			return GetScheduleOfType ( SCHED_GRUNT_REPEL_LAND );
 		}
@@ -2724,6 +2740,12 @@ public:
 	void IdleSound() override;
 	void OnCatchFire() override;
 
+	void MonsterThink() override;
+
+	BOOL CheckMeleeAttack1(float flDot, float flDist) override;
+
+	float m_fSwingTime;
+
 	static const char *pThugSentences[];
 };
 
@@ -2742,6 +2764,56 @@ const char *CMonsterThugPipe::pThugSentences[] =
 	"THU_TAUNT", // say rude things
 };
 
+BOOL CMonsterThugPipe::CheckMeleeAttack1(float flDot, float flDist)
+{
+	if (!m_hEnemy)
+		return false;
+
+	if (m_hEnemy->pev->velocity.Length2D() > 6)
+		return false; //we`ll hit him on monsterthink()
+
+	if (flDist > 64 || flDot < 0.7 ||
+		m_hEnemy->Classify() == CLASS_ALIEN_BIOWEAPON ||
+		m_hEnemy->Classify() == CLASS_PLAYER_BIOWEAPON)
+	{
+		return false;
+	}
+	return true;
+}
+
+void CMonsterThugPipe::MonsterThink()
+{
+	CSquadMonster::MonsterThink();
+	if (!m_hEnemy)
+		return;
+
+	Vector2D vec2LOS;
+	float flDot;
+	float flDist = (m_hEnemy->pev->origin - pev->origin).Length();
+
+	UTIL_MakeVectors(pev->angles);
+
+	vec2LOS = (m_hEnemy->pev->origin - pev->origin).Make2D();
+	vec2LOS = vec2LOS.Normalize();
+
+	flDot = DotProduct(vec2LOS, gpGlobals->v_forward.Make2D());
+
+	bool shouldwehithim = CheckMeleeAttack1(flDot, flDist);
+
+	if (!HasConditions(bits_COND_ENEMY_OCCLUDED) && !shouldwehithim && flDist < 64 &&
+		m_hEnemy->pev->velocity.Length2D() > 6 && m_Activity == ACT_RUN && m_fSwingTime < gpGlobals->time)
+	{
+			SetActivity(ACT_RUN_SCARED);
+			m_IdealActivity = ACT_RUN_SCARED;
+			m_movementActivity = ACT_RUN_SCARED;
+			m_fSwingTime = gpGlobals->time + 0.5667;
+	}
+	else if (pev->sequence == LookupActivity(ACT_RUN_SCARED) && m_fSequenceFinished)
+	{
+		SetActivity(ACT_RUN);
+	}
+}
+
 void CMonsterThugPipe::Precache()
 {
 	if( pev->model )
@@ -2756,6 +2828,10 @@ void CMonsterThugPipe::Precache()
 			PRECACHE_MODEL( "models/thug03a.mdl" );
 
 	}
+
+	PRECACHE_SOUND("weapons/cbar_hitbod1.wav");
+	PRECACHE_SOUND("weapons/cbar_hitbod2.wav");
+	PRECACHE_SOUND("weapons/cbar_hitbod3.wav");
 
 	PRECACHE_SOUND( "weapons/dryfire1.wav" ); //LRC
 
@@ -2790,6 +2866,8 @@ void CMonsterThugPipe::Precache()
 	m_iShotgunShell = PRECACHE_MODEL( "models/shotgunshell.mdl" );
 
 	AllyDied = false;
+
+	m_fSwingTime = 0.f;
 
 	next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 0.5, 6.5 );
 }
