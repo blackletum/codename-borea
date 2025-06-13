@@ -50,6 +50,8 @@ Extended and/or recoded by Andrew Lucas
 #include "GameStudioModelRenderer.h"
 extern CGameStudioModelRenderer g_StudioRenderer;
 
+cl_texture_t *scopetexture = nullptr;
+
 
 
 //using namespace std; //BLOODY HELL MR. LUCAS!!
@@ -1285,8 +1287,20 @@ void CBSPRenderer::CheckTextures ( )
 			}
 		}
 
-		gTextureLoader.LoadWADTexture(szTexture, pWorld->textures[i]->gl_texturenum);
+		// salsa: i use these 2 lines to fix text and texture corruption on my own mod thats using trinity on 25th anniverary half-life,
+		// it could fix some of the texture issues we're having like the green skybox texture on the health sprite, but i am not sure
+		
+		pWorld->textures[i]->gl_texturenum = current_ext_texture_id;
+
+		gTextureLoader.LoadWADTexture(szTexture);
+
+		//gTextureLoader.LoadWADTexture(szTexture, pWorld->textures[i]->gl_texturenum);
 	}
+	if (scopetexture != nullptr)
+	{
+		scopetexture = nullptr;
+	}
+	scopetexture = gTextureLoader.LoadTexture("gfx/textures/smgscope.tga");
 }
 /*
 ====================

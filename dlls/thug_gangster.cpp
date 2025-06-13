@@ -912,7 +912,11 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 	{
 		case HGRUNT_AE_VICTORYDANCE:
 		{
-			SENTENCEG_PlayRndSz( ENT( pev ), "GANG_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch );
+			if (FClassnameIs(pev, "monster_thug_pipe") || FClassnameIs(pev, "monster_thug_wrench") || FClassnameIs(pev, "monster_thug_crowbar"))
+				SENTENCEG_PlayRndSz(ENT(pev), "THU_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch);
+			else
+				SENTENCEG_PlayRndSz( ENT( pev ), "GANG_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch );
+
 			JustSpoke();
 		}
 		break;
@@ -1459,12 +1463,15 @@ Schedule_t slGruntEstablishLineOfFire[] =
 		bits_COND_CAN_MELEE_ATTACK1	|
 		bits_COND_CAN_RANGE_ATTACK2	|
 		bits_COND_CAN_MELEE_ATTACK2	|
-		bits_COND_HEAR_SOUND,
+		bits_COND_HEAR_SOUND | 
+		bits_COND_LIGHT_DAMAGE |
+		bits_COND_HEAVY_DAMAGE,
 		
 		bits_SOUND_DANGER,
 		"GruntEstablishLineOfFire"
 	},
 };
+
 
 //=========================================================
 // GruntFoundEnemy - grunt established sight with an enemy
@@ -2106,6 +2113,8 @@ void CHGrunt :: SetActivity ( Activity NewActivity )
 		}
 		break;
 	case ACT_IDLE:
+		if (m_Activity == ACT_RUN_SCARED)
+			return;
 		if ( m_MonsterState == MONSTERSTATE_COMBAT )
 		{
 			NewActivity = ACT_IDLE_ANGRY;
@@ -2739,6 +2748,7 @@ public:
 	void PainSound() override;
 	void IdleSound() override;
 	void OnCatchFire() override;
+	int IgnoreConditions() override;
 
 	void MonsterThink() override;
 
@@ -2781,36 +2791,78 @@ BOOL CMonsterThugPipe::CheckMeleeAttack1(float flDot, float flDist)
 	return true;
 }
 
+int CMonsterThugPipe::IgnoreConditions()
+{
+	int iIgnoreConditions = 0;
+
+	if (pev->sequence == LookupActivity(ACT_RUN_SCARED))
+		iIgnoreConditions = bits_COND_HEAR_SOUND; //because otherwise they dont complete their swing animation
+	
+	return iIgnoreConditions | CHGrunt::IgnoreConditions();
+}
+
 void CMonsterThugPipe::MonsterThink()
 {
-	CSquadMonster::MonsterThink();
-	if (!m_hEnemy)
-		return;
-
-	Vector2D vec2LOS;
-	float flDot;
-	float flDist = (m_hEnemy->pev->origin - pev->origin).Length();
-
-	UTIL_MakeVectors(pev->angles);
-
-	vec2LOS = (m_hEnemy->pev->origin - pev->origin).Make2D();
-	vec2LOS = vec2LOS.Normalize();
-
-	flDot = DotProduct(vec2LOS, gpGlobals->v_forward.Make2D());
-
-	bool shouldwehithim = CheckMeleeAttack1(flDot, flDist);
-
-	if (!HasConditions(bits_COND_ENEMY_OCCLUDED) && !shouldwehithim && flDist < 64 &&
-		m_hEnemy->pev->velocity.Length2D() > 6 && m_Activity == ACT_RUN && m_fSwingTime < gpGlobals->time)
+	if (HasConditions(bits_COND_LIGHT_DAMAGE))
 	{
-			SetActivity(ACT_RUN_SCARED);
-			m_IdealActivity = ACT_RUN_SCARED;
-			m_movementActivity = ACT_RUN_SCARED;
-			m_fSwingTime = gpGlobals->time + 0.5667;
+		if (RANDOM_LONG(0, 50) < 35)
+		{
+			ClearConditions(bits_COND_LIGHT_DAMAGE);
+		}
 	}
-	else if (pev->sequence == LookupActivity(ACT_RUN_SCARED) && m_fSequenceFinished)
+
+	CSquadMonster::MonsterThink();
+	if(m_hEnemy)
 	{
-		SetActivity(ACT_RUN);
+		if(m_hEnemy->IsAlive())
+		{
+
+
+			Vector2D vec2LOS;
+			float flDot;
+			float flDist = (m_hEnemy->pev->origin - pev->origin).Length();
+
+			UTIL_MakeVectors(pev->angles);
+
+			vec2LOS = (m_hEnemy->pev->origin - pev->origin).Make2D();
+			vec2LOS = vec2LOS.Normalize();
+
+			flDot = DotProduct(vec2LOS, gpGlobals->v_forward.Make2D());
+
+			bool shouldwehithim = CheckMeleeAttack1(flDot, flDist);
+
+			if (!HasConditions(bits_COND_ENEMY_OCCLUDED) && !shouldwehithim && flDist < 64 &&
+				m_hEnemy->pev->velocity.Length2D() > 6 && m_Activity == ACT_RUN && m_fSwingTime < gpGlobals->time)
+			{
+				SetActivity(ACT_RUN_SCARED);
+				m_IdealActivity = ACT_RUN_SCARED;
+				m_movementActivity = ACT_RUN_SCARED;
+				m_fSwingTime = gpGlobals->time + 0.5667;
+			}
+			else if (pev->sequence == LookupActivity(ACT_RUN_SCARED))
+			{
+				if (m_fSequenceFinished)
+				{
+					SetActivity(ACT_RUN);
+				}
+				else
+				{
+					MakeIdealYaw(pev->origin + m_vecTossVelocity * 64);
+					ChangeYaw(pev->yaw_speed);
+					m_Route[m_iRouteIndex].vecLocation = m_hEnemy->pev->origin;
+					m_flGroundSpeed *= 1.1;
+				}
+			}
+		}
+	}
+
+	if ((pev->sequence == LookupActivity(ACT_RUN_SCARED) || pev->sequence == LookupActivity(ACT_RUN)) && (!m_hEnemy || !m_hEnemy->IsAlive()))
+	{
+		SetActivity(ACT_RESET);
+		m_movementActivity = ACT_IDLE;
+		m_Route[m_iRouteIndex].vecLocation = pev->origin;
+		TaskComplete();
+		pev->sequence = LookupActivity(ACT_IDLE);
 	}
 }
 
@@ -3270,7 +3322,7 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 
 			// Aynekko: investigate sound behaviour (just like hassassin)
 			// 40% chance of doing it
-			if( RANDOM_LONG(0,100) > 60 && !HasConditions( bits_COND_SEE_ENEMY ) && (pSound->m_iType & bits_SOUND_COMBAT) && (pev->health > pev->max_health * 0.75f) )
+			if( RANDOM_LONG(0,100) > 20 && !HasConditions( bits_COND_SEE_ENEMY ) && (pSound->m_iType & bits_SOUND_COMBAT) && (pev->health > pev->max_health * 0.75f) )
 			{
 				if( FOkToSpeak() )
 				{
@@ -3393,7 +3445,7 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 		}
 
 		// damaged just a little - 75% chance of flinch.
-		else if( HasConditions( bits_COND_LIGHT_DAMAGE ) && RANDOM_LONG(1, 100) > 25 )
+		else if( HasConditions( bits_COND_LIGHT_DAMAGE ) && RANDOM_LONG(1, 100) > 35 )
 		{
 		//	ALERT( at_console, "FLINCHED %s\n", STRING(pev->classname) );
 				return GetScheduleOfType( SCHED_SMALL_FLINCH );
@@ -3452,7 +3504,8 @@ Schedule_t *CMonsterThugPipe::GetScheduleOfType( int Type )
 	{
 	case SCHED_TAKE_COVER_FROM_ENEMY:
 	{
-		return &slGruntTakeCover[0];
+		//return &slGruntTakeCover[0]; thugs should not stop chasing player unless grenade
+		return &slGruntEstablishLineOfFire[0];
 	}
 	case SCHED_TAKE_COVER_FROM_BEST_SOUND:
 	{
@@ -4073,7 +4126,7 @@ Schedule_t *CMonsterGangster::GetSchedule()
 
 			// Aynekko: investigate sound behaviour (just like hassassin)
 			// 40% chance of doing it
-			if( RANDOM_LONG( 0, 100 ) > 60 && !HasConditions( bits_COND_SEE_ENEMY ) && (pSound->m_iType & bits_SOUND_COMBAT) && (pev->health > pev->max_health * 0.75f) )
+			if( RANDOM_LONG( 0, 100 ) > 20 && !HasConditions( bits_COND_SEE_ENEMY ) && (pSound->m_iType & bits_SOUND_COMBAT) && (pev->health > pev->max_health * 0.75f) )
 			{
 				if( FOkToSpeak() )
 				{
@@ -4576,16 +4629,16 @@ void CMonsterGangster::HandleAnimEvent( MonsterEvent_t *pEvent )
 			{
 				if( RANDOM_LONG( 0, 1 ) )
 				{
-					EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "hgrunt/gr_mgun1.wav", 1, ATTN_NORM );
+					EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "hgrunt/gr_mgun1.wav", 1, 0.4);
 				}
 				else
 				{
-					EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "hgrunt/gr_mgun2.wav", 1, ATTN_NORM );
+					EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "hgrunt/gr_mgun2.wav", 1, 0.4);
 				}
 			}
 			else
 			{
-				EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/dryfire1.wav", 1, ATTN_NORM );
+				EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/dryfire1.wav", 1, 0.4);
 			}
 
 			Shoot();
@@ -4593,12 +4646,12 @@ void CMonsterGangster::HandleAnimEvent( MonsterEvent_t *pEvent )
 		else if( FBitSet( pev->weapons, HGRUNT_SHOTGUN ) )
 		{
 			Shotgun();
-			EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/sbarrel1.wav", 1, ATTN_NORM );
+			EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/sbarrel1.wav", 1, 0.4);
 		}
 		else if( FBitSet( pev->weapons, HGRUNT_PISTOL ) ) // pistol
 		{
 			Pistol();
-			EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/psk_npc.wav", 1, ATTN_NORM );
+			EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/psk_npc.wav", 1, 0.4);
 		}
 
 		CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 384, 0.3 );
@@ -4701,7 +4754,8 @@ void CMonsterGangster::MonsterThink()
 
 		float controller = enemy.y - pev->angles.y;
 		controller += 360;
-		m_flLerpedTurn = lerp(m_flLerpedTurn, controller, gpGlobals->frametime * 40);
+		//m_flLerpedTurn = lerp(m_flLerpedTurn, controller, gpGlobals->frametime * 10);
+		m_flLerpedTurn = controller;
 
 		// do our custom logic here
 
@@ -4712,12 +4766,12 @@ void CMonsterGangster::MonsterThink()
 				if (FBitSet(pev->weapons, HGRUNT_SHOTGUN))
 				{
 					Shotgun();
-					EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sbarrel1.wav", 1, ATTN_NORM);
+					EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sbarrel1.wav", 1, 0.4);
 				}
 				else if (FBitSet(pev->weapons, HGRUNT_PISTOL))
 				{
 					Pistol();
-					EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/psk_npc.wav", 1, ATTN_NORM);
+					EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/psk_npc.wav", 1, 0.4);
 				}
 				else
 				{
@@ -4726,16 +4780,16 @@ void CMonsterGangster::MonsterThink()
 					{
 						if (RANDOM_LONG(0, 1))
 						{
-							EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun1.wav", 1, ATTN_NORM);
+							EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun1.wav", 1, 0.4);
 						}
 						else
 						{
-							EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun2.wav", 1, ATTN_NORM);
+							EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun2.wav", 1, 0.4);
 						}
 					}
 					else
 					{
-						EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/dryfire1.wav", 1, ATTN_NORM);
+						EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/dryfire1.wav", 1, 0.4);
 					}
 
 					Shoot();

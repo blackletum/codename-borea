@@ -129,6 +129,7 @@ particle_system_t *CParticleEngine::AllocSystem( )
 		m_pSystemHeader->prev = pSystem;
 		pSystem->next = m_pSystemHeader;
 	}
+	pSystem->cache = true;
 
 	m_iNumCreatedSystems++;
 	m_pSystemHeader = pSystem;
@@ -415,19 +416,19 @@ particle_system_t *CParticleEngine::CreateSystem( char *szPath, Vector origin, V
 	if(!pSystem->watersystem)
 		memset(pSystem->watercreate, 0, sizeof(pSystem->watercreate));
 
-	if(parent)
+	if (parent)
 	{
 		// Child systems cannot spawn on their own
 		pSystem->parentsystem = parent;
 		pSystem->maxparticles = NULL;
 		pSystem->particlefreq = NULL;
 	}
-	else
+	else if (gBSPRenderer.m_pWorld)
 	{
 		if ((pSystem->shapetype != SYSTEM_SHAPE_PLANE_ABOVE_PLAYER) && (pSystem->shapetype != SYSTEM_SHAPE_BOX_AROUND_PLAYER))
 		{
 			// create all starting particles
-			for(int i = 0; i < pSystem->startparticles; i++)
+			for (int i = 0; i < pSystem->startparticles; i++)
 				CreateParticle(pSystem);
 		}
 		else
@@ -436,6 +437,8 @@ particle_system_t *CParticleEngine::CreateSystem( char *szPath, Vector origin, V
 			EnvironmentCreateFirst(pSystem);
 		}
 	}
+	else
+		pSystem->cache = true;
 
 	return pSystem;
 }
@@ -483,14 +486,14 @@ void CParticleEngine::EnvironmentCreateFirst( particle_system_t *pSystem )
 		}
 		else if (pSystem->shapetype == SYSTEM_SHAPE_BOX_AROUND_PLAYER)
 		{
-			if(gEngfuncs.GetLocalPlayer() && gHUD.pparams)
+			if(gEngfuncs.GetLocalPlayer())
 			{
 				Vector vPlayer = gEngfuncs.GetLocalPlayer()->origin;
-				Vector vSpeed = gHUD.pparams->simvel;
+				//Vector vSpeed = gHUD.pparams->simvel; pparams is not available during hud_tempentupdate
 
-				vOrigin[0] = vPlayer[0] + vSpeed[0] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
-				vOrigin[1] = vPlayer[1] + vSpeed[1] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
-				vOrigin[2] = vPlayer[2] + vSpeed[2] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
+				vOrigin[0] = vPlayer[0] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize); //+ vSpeed[0];
+				vOrigin[1] = vPlayer[1] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize); //+ vSpeed[1];
+				vOrigin[2] = vPlayer[2] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize); //+ vSpeed[2];
 			}
 
 			//gEngfuncs.Con_Printf("idk if this works \n");
@@ -599,14 +602,11 @@ void CParticleEngine::CreateParticle( particle_system_t *pSystem, float *flOrigi
 	}
 	else if (pSystem->shapetype == SYSTEM_SHAPE_BOX_AROUND_PLAYER)
 	{
-		if (!gHUD.pparams)
-			return;
-
 		Vector vPlayer = gEngfuncs.GetLocalPlayer()->origin;
-		Vector vSpeed = gHUD.pparams->simvel;
-		pParticle->origin[0] = vPlayer[0] + vSpeed[0] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
-		pParticle->origin[1] = vPlayer[1] + vSpeed[1] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
-		pParticle->origin[2] = vPlayer[2] + vSpeed[2] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
+		//Vector vSpeed = gHUD.pparams->simvel; pparams is not available during hud_tempentupdate
+		pParticle->origin[0] = vPlayer[0] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize); //+ vSpeed[0];
+		pParticle->origin[1] = vPlayer[1] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize); //+ vSpeed[1];
+		pParticle->origin[2] = vPlayer[2] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize); //+ vSpeed[2];
 
 		//gEngfuncs.Con_Printf("idk if this works \n");
 	}
@@ -812,6 +812,14 @@ void CParticleEngine::UpdateSystems( )
 	particle_system_t *next = m_pSystemHeader;
 	while(next)
 	{
+		if (next->cache)
+		{
+			EnvironmentCreateFirst(next);
+			next->cache = false;
+			particle_system_t* pnext = next->next;
+			next = pnext;
+			continue;
+		}
 		if(next->maxparticles != 0)
 		{
 			particle_system_t *pnext = next->next;

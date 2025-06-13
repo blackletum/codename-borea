@@ -234,7 +234,8 @@ void CBaseMonster :: Listen ()
 		pCurrentSound = CSoundEnt::SoundPointerForIndex( iSound );
 
 		if ( pCurrentSound	&& 
-			 ( pCurrentSound->m_iType & (iMySounds|bits_SOUND_FIRE) )	&&  // Aynekko: added fire here...this is absolutely barbaric. But I can't figure out why dogs and rats can't hear them.
+			 //( pCurrentSound->m_iType & (iMySounds|bits_SOUND_FIRE) )	&&  // Aynekko: added fire here...this is absolutely barbaric. But I can't figure out why dogs and rats can't hear them.
+			(pCurrentSound->m_iType) && // salsa: monsters weren't able to hear gunshots, so no fire for now
 			 ( pCurrentSound->m_vecOrigin - EarPosition() ).Length() <= pCurrentSound->m_iVolume * hearingSensitivity )
 
 		//if ( ( g_pSoundEnt->m_SoundPool[ iSound ].m_iType & iMySounds ) && ( g_pSoundEnt->m_SoundPool[ iSound ].m_vecOrigin - EarPosition()).Length () <= g_pSoundEnt->m_SoundPool[ iSound ].m_iVolume * hearingSensitivity ) 

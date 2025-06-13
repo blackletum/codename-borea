@@ -28,7 +28,11 @@
 #include "com_model.h"
 #include "triangleapi.h"
 
+#include "bsprenderer.h"
+
 extern bool m_bLensEffect;
+
+extern cl_texture_t* scopetexture;
 
 extern int g_iUseEnt;
 extern std::string g_szUseEntClassname;
@@ -124,6 +128,7 @@ int CHud :: Redraw( float flTime, int intermission )
 	{
 		// GL START
 		// setup ortho projection
+		glDisable(GL_DEPTH_TEST);
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
 		glLoadIdentity();
@@ -132,9 +137,11 @@ int CHud :: Redraw( float flTime, int intermission )
 		glPushMatrix();
 		glLoadIdentity();
 
-		glOrtho(0, 1, 1, 0, 0.1, 100);
+		//glOrtho(0, 1, 1, 0, 0.1, 100);
+		glOrtho(0, ScreenWidth, ScreenHeight, 0, -1, 1);
 
-
+		
+		//blueish overlay
 		int blendenabled = glIsEnabled(GL_BLEND);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
@@ -143,14 +150,44 @@ int CHud :: Redraw( float flTime, int intermission )
 		glColor4f(lenscolor.x, lenscolor.y, lenscolor.z, 1);
 		// GL END
 
+
 		glDisable(GL_TEXTURE_2D);
 
 		glBegin(GL_QUADS);
-		glVertex3f(0, 0, -1);
-		glVertex3f(1, 0, -1);
-		glVertex3f(1, 1, -1);
-		glVertex3f(0, 1, -1);
+		glVertex2f(0, 0);
+		glVertex2f(ScreenWidth, 0);
+		glVertex2f(ScreenWidth, ScreenHeight);
+		glVertex2f(0, ScreenHeight);
 		glEnd();
+
+		int scopeSize = 768;
+		int x = (ScreenWidth - scopeSize) / 2;
+		int y = (ScreenHeight - scopeSize) / 2;
+
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.2);
+
+		glColor4f(1, 1, 1, 1);
+
+		//scope image
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, scopetexture->iIndex);
+
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 1.0f); glVertex2f(x, y);
+		glTexCoord2f(1.0f, 1.0f); glVertex2f(x + scopeSize, y);
+		glTexCoord2f(1.0f, 0.0f); glVertex2f(x + scopeSize, y + scopeSize);
+		glTexCoord2f(0.0f, 0.0f); glVertex2f(x, y + scopeSize);
+		glEnd();
+
+		//glDisable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0);
+
 		
 		glMatrixMode(GL_PROJECTION);
 		glPopMatrix();
@@ -159,6 +196,7 @@ int CHud :: Redraw( float flTime, int intermission )
 
 		if (!blendenabled) glDisable(GL_BLEND);
 		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_DEPTH_TEST);
 
 	}
 

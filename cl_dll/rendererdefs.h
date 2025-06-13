@@ -106,6 +106,7 @@ struct particle_system_t
 	int id;
 	int shapetype;
 	int randomdir;
+	bool cache;
 
 	Vector origin;
 	Vector dir;
