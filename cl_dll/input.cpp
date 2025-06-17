@@ -470,6 +470,8 @@ void IN_UseDown ()
 {
 	KeyDown(&in_use);
 	gHUD.m_Spectator.HandleButtonsDown( IN_USE );
+
+	gHUD.m_PointMessage.m_bDrawReadable = false;
 }
 void IN_UseUp () {KeyUp(&in_use);}
 void IN_JumpDown ()
@@ -481,11 +483,14 @@ void IN_JumpDown ()
 void IN_JumpUp () {KeyUp(&in_jump);}
 void IN_DuckDown()
 {
-	KeyDown(&in_duck);
+	if (in_duck.state & 1)
+		KeyUp(&in_duck);
+	else
+		KeyDown(&in_duck);
 	gHUD.m_Spectator.HandleButtonsDown( IN_DUCK );
 
 }
-void IN_DuckUp() {KeyUp(&in_duck);}
+void IN_DuckUp() {}//KeyUp(&in_duck);}
 void IN_ReloadDown() {KeyDown(&in_reload);}
 void IN_ReloadUp() {KeyUp(&in_reload);}
 void IN_Alt1Down() {KeyDown(&in_alt1);}

@@ -705,6 +705,8 @@ void CHud :: Init()
 	m_PlayerBrowse.Init();
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 
+	m_PointMessage.Init();
+
 	m_Menu.Init();
 
 	MsgFunc_ResetHUD(nullptr, 0, nullptr );
@@ -953,6 +955,8 @@ void CHud :: VidInit()
 	//RENDERERS_END
 	g_ImGUIManager.VidInit();
 	g_DiscordRPC.VidInit();
+
+	m_PointMessage.VidInit();
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)

@@ -269,10 +269,18 @@ void CMP5::Reload()
 	m_iRifleShotsFired = 0;
 	m_flRifleShoot = 0;
 
-	if( m_pPlayer->targetFov != 0 )
+	if( m_pPlayer->targetFov != 0 && m_iClip < MP5_MAX_CLIP)
 	{
 		SecondaryAttack();
 	}
+
+	if(m_iClip < MP5_MAX_CLIP)
+	{
+		if (m_pPlayer->isScoping == false)
+			m_pPlayer->m_iScopeType = false;
+	}
+
+	m_flLens_on = 0;
 
 	DefaultReload( MP5_MAX_CLIP, MP5_RELOAD, 3.5 );
 }

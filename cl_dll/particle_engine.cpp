@@ -129,7 +129,7 @@ particle_system_t *CParticleEngine::AllocSystem( )
 		m_pSystemHeader->prev = pSystem;
 		pSystem->next = m_pSystemHeader;
 	}
-	pSystem->cache = true;
+	pSystem->cache = false;
 
 	m_iNumCreatedSystems++;
 	m_pSystemHeader = pSystem;
@@ -812,7 +812,7 @@ void CParticleEngine::UpdateSystems( )
 	particle_system_t *next = m_pSystemHeader;
 	while(next)
 	{
-		if (next->cache)
+		if (next->cache == true)
 		{
 			EnvironmentCreateFirst(next);
 			next->cache = false;

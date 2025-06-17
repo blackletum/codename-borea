@@ -600,6 +600,9 @@
     <ClCompile Include="..\..\dlls\spider.cpp">
       <Filter>Source Files\dlls\TLG_monsters</Filter>
     </ClCompile>
+    <ClCompile Include="pointmessage.cpp">
+      <Filter>Source Files\dlls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\dlls\doors.h">

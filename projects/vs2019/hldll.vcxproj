@@ -49,8 +49,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\..\..\Program Files %28x86%29\Steam\steamapps\common\Half-Life\spirinityop4\dlls</OutDir>
-    <IntDir>$(Configuration)\$(ProjectName)\int\</IntDir>
+    <OutDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\dlls</OutDir>
+    <IntDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\dlls\int\</IntDir>
     <TargetName>opfor</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -289,6 +289,7 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\pm_shared\pm_debug.cpp" />
     <ClCompile Include="..\..\pm_shared\pm_math.cpp" />
     <ClCompile Include="..\..\pm_shared\pm_shared.cpp" />
+    <ClCompile Include="pointmessage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\the_last_goodbye_fixing\pm_shared\pm_structs.h" />

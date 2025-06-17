@@ -5686,13 +5686,16 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 
 private:
-	int		m_iszNewTarget;
+	string_t		m_iszNewTarget;
+	BOOL changebodygroup, changeskin;
 };
 LINK_ENTITY_TO_CLASS( trigger_changetarget, CTriggerChangeTarget );
 
 TYPEDESCRIPTION	CTriggerChangeTarget::m_SaveData[] =
 {
 	DEFINE_FIELD( CTriggerChangeTarget, m_iszNewTarget, FIELD_STRING ),
+	DEFINE_FIELD(CTriggerChangeTarget, changebodygroup, FIELD_BOOLEAN),
+	DEFINE_FIELD(CTriggerChangeTarget, changeskin, FIELD_BOOLEAN),
 };
 
 IMPLEMENT_SAVERESTORE(CTriggerChangeTarget,CBaseDelay);
@@ -5704,12 +5707,23 @@ void CTriggerChangeTarget::KeyValue( KeyValueData *pkvd )
 		m_iszNewTarget = ALLOC_STRING( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "changebodygroup"))
+	{
+		changebodygroup = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "changeskin"))
+	{
+		changeskin = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseDelay::KeyValue( pkvd );
 }
 
 void CTriggerChangeTarget::Spawn()
 {
+	changebodygroup = changeskin = 0;
 }
 
 
@@ -5733,6 +5747,10 @@ void CTriggerChangeTarget::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, U
 		{
 			pMonster->m_pGoalEnt = nullptr;
 		}
+		if(changeskin)
+			pTarget->pev->skin = pev->skin;
+		if(changebodygroup)
+			pTarget->pev->body = pev->body;
 	}
 }
 

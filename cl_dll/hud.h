@@ -31,6 +31,7 @@
 #define _cdecl 
 #endif
 
+#include <string>
 #include "wrect.h"
 #include "cl_dll.h"
 #include "ammo.h"
@@ -154,10 +155,11 @@ public:
 	void _cdecl UserCmd_NextWeapon();
 	void _cdecl UserCmd_PrevWeapon();
 
+	WEAPON* m_pWeapon; //expose m_pWeapon for fastswitch
+
 private:
 	float m_fFade;
 	RGBA  m_rgba;
-	WEAPON *m_pWeapon;
 	int	m_HUD_bucket0;
 	int m_HUD_selection;
 
@@ -786,6 +788,23 @@ private:
 	bool m_fFriendly;
 };
 
+class CPointMessageRenderer : public CHudBase
+{
+public:
+	int Init() override;
+	int VidInit() override;
+	void Reset() override;
+	int Draw(float flTime) override;
+	bool MsgFunc_PointMsg(const char* pszName, int iSize, void* pbuf);
+	bool MsgFunc_Readable(const char* pszName, int iSize, void* pbuf);
+
+	bool m_bDrawReadable;
+	Vector readableOrg;
+	std::string readablePath;
+	float m_flUseKeyDelay;
+
+};
+
 //
 //-----------------------------------------------------
 //
@@ -946,6 +965,8 @@ public:
 	CHudTextMessage m_TextMessage;
 	CHudStatusIcons m_StatusIcons;
 	CHudBenchmark	m_Benchmark;
+
+	CPointMessageRenderer m_PointMessage;
 
 	CHudLensflare gLensflare;
 	CBloom gBloomRenderer;

@@ -347,20 +347,20 @@ int CHudHealth::Draw(float flTime)
 		int CrossWidth = gHUD.GetSpriteRect(m_HUD_cross).right - gHUD.GetSpriteRect(m_HUD_cross).left;
 
 		// draw background
-		x = 50 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 90 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+		x = 50;
+		y = ScreenHeight - 90 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 		gHUD.DrawBackground(x, y, x + 350, y + 100, BACKGROUND_SPRITE, BACKGROUND_COLOR, kRenderTransTexture);
 
 		// draw health
-		x = 190 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 70 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+		x = 190;
+		y = ScreenHeight - 70 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 		//gHUD.DrawHudNumber(x, y, DHN_DRAWZERO, m_iHealth, r, g, b);
 
 		// draw health
-		x = 200 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 90 + gHUD.camValue[1] * 0.1f;
+		x = 200;
+		y = ScreenHeight - 90;
 		scale = m_iHealth * 1.3f;
 		static float scaleLerpHealth = 0.0f;
 		scaleLerpHealth = lerp(scaleLerpHealth, scale, gHUD.m_flTimeDelta * 5);
@@ -373,8 +373,8 @@ int CHudHealth::Draw(float flTime)
 		gHUD.DrawHudString(x, y, ScreenWidth, "Vitals", 251, 125, 43);
 
 		// draw cardio lines
-		x = 85 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight - 98 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 + gHUD.camValue[1] * 0.1f;
+		x = 85;
+		y = ScreenHeight - 98 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 		if (m_iHealth > 80)
 		{
@@ -402,8 +402,8 @@ int CHudHealth::Draw(float flTime)
 		}
 
 		// draw health logo
-		x = 100 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 78 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+		x = 100;
+		y = ScreenHeight - 78 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 		gHUD.DrawBackground(x - heartScaler*2, y - heartScaler*2, x + 80 + heartScaler*2, y + 80 + heartScaler * 2, HEALTH_SPRITE, HEALTH_COLOR, kRenderTransAdd);
 
@@ -419,8 +419,8 @@ int CHudHealth::Draw(float flTime)
 		*/
 
 		// draw battery
-		x = 210 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 70 + gHUD.camValue[1] * 0.1f;
+		x = 210;
+		y = ScreenHeight - 70;
 		scale = gHUD.m_Battery.m_iBat * 1.3f;
 		static float scaleLerp = 0.0f;
 		scaleLerp = lerp(scaleLerp, scale, gHUD.m_flTimeDelta * 5);
@@ -429,15 +429,15 @@ int CHudHealth::Draw(float flTime)
 		FillRGBA(x, y, scaleLerp, 15, 21, 255, 255, 255);
 
 		// draw stamina empty bar
-		x = 220 + m_iStamina * 0.8f + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 50 + gHUD.camValue[1] * 0.1f;
+		x = 220 + m_iStamina * 0.8f;
+		y = ScreenHeight - 50;
 		int stamina = (gEngfuncs.pfnGetCvarFloat("sv_sprintdur") - m_iStamina) * 0.8f;
 
 		FillRGBA(x, y, stamina, 5, 144, 144, 144, 100);
 
 		// draw stamina
-		x = 220 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-		y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 50 + gHUD.camValue[1] * 0.1f;
+		x = 220;
+		y = ScreenHeight - 50;
 		stamina = m_iStamina * 0.8f;
 
 		FillRGBA(x, y, stamina, 5, 249, 111, 45, 255);

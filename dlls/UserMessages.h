@@ -100,6 +100,9 @@ extern int gmsgCustomIcon;
 extern int gmsgStamina;
 extern int gmsgChapterName;
 
+extern int gmsgReadable; // bacontsu - func_readable
+extern int gmsgMessage;
+
 // Aynekko
 extern int gmsgKickPunch;
 

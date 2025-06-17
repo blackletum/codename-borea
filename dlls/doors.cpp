@@ -91,6 +91,8 @@ public:
 	float   m_fAcceleration;	//AJH
 	float	m_fDeceleration;	//AJH
 	BOOL	m_iSpeedMode;		//AJH for changing door speeds
+
+	BOOL m_bDisableWaterShader;
 };
 
 
@@ -113,6 +115,8 @@ TYPEDESCRIPTION	CBaseDoor::m_SaveData[] =
 	DEFINE_FIELD( CBaseDoor, m_fAcceleration, FIELD_FLOAT ),	//AJH
 	DEFINE_FIELD( CBaseDoor, m_fDeceleration, FIELD_FLOAT ),	//AJH
 	DEFINE_FIELD( CBaseDoor, m_iSpeedMode, FIELD_BOOLEAN ),		//AJH for changing door speeds
+
+	DEFINE_FIELD( CBaseDoor, m_bDisableWaterShader, FIELD_BOOLEAN),
 };
 
 IMPLEMENT_SAVERESTORE( CBaseDoor, CBaseToggle );
@@ -300,6 +304,11 @@ void CBaseDoor::KeyValue( KeyValueData *pkvd )
 		pev->sequence = atoi(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "nowatershader"))
+	{
+		m_bDisableWaterShader = 1;
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseToggle::KeyValue( pkvd );
 }
@@ -404,7 +413,10 @@ void CBaseDoor::Spawn( )
 	else
 	{// special contents
 		//RENDERERS START
-		pev->effects	|= FL_WATERSHADER;
+
+		if(!m_bDisableWaterShader)
+			pev->effects |= FL_WATERSHADER;
+
 		//RENDERERS END
 		pev->solid		= SOLID_NOT;
 		SetBits( pev->spawnflags, SF_DOOR_SILENT );	// water is silent for now

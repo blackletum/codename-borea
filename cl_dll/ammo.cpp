@@ -450,14 +450,16 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 		if ( p && fastSwitch ) // check for fast weapon switch mode
 		{
 			// if fast weapon switch is on, then weapons can be selected in a single keypress
-			// but only if there is only one item in the bucket
-			WEAPON *p2 = GetNextActivePos( p->iSlot, p->iSlotPos );
-			if ( !p2 )
-			{	// only one active item in bucket, so change directly to weapon
-				ServerCmd( p->szName );
-				g_weaponselect = p->iId;
-				return;
+			WEAPON* p2 = GetNextActivePos(p->iSlot, p->iSlotPos);
+			if ( p == gHUD.m_Ammo.m_pWeapon && p2 != NULL)
+			{
+				p = p2;
 			}
+
+
+			ServerCmd(p->szName);
+			g_weaponselect = p->iId;
+			return;
 		}
 	}
 	else
@@ -909,8 +911,8 @@ int CHudAmmo::Draw(float flTime)
 	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight/2;
 
 	// draw background
-	x = ScreenWidth - 50 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-	y = ScreenHeight + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - 90 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+	x = ScreenWidth - 50;
+	y = ScreenHeight - 90 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 	gHUD.DrawBackground(x, y, x - 350, y + 100, BACKGROUND_SPRITE, BACKGROUND_COLOR, kRenderTransTexture);
 
 	// Does weapon have any ammo at all?
@@ -923,8 +925,8 @@ int CHudAmmo::Draw(float flTime)
 		{
 			// room for the number and the '|' and the current ammo
 			
-			x = ScreenWidth - 350 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-			y = ScreenHeight - 30 + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+			x = ScreenWidth - 350;
+			y = ScreenHeight - 30 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, pw->iClip, r, g, b);
 
 
@@ -936,8 +938,8 @@ int CHudAmmo::Draw(float flTime)
 
 			int iBarWidth =  AmmoWidth/10;
 
-			x = ScreenWidth - 280 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-			y = ScreenHeight - 20 + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+			x = ScreenWidth - 280;
+			y = ScreenHeight - 20 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 			r = giR;
 			g = giG;
@@ -958,8 +960,8 @@ int CHudAmmo::Draw(float flTime)
 		else
 		{
 			// SPR_Draw a bullets only line
-			x = ScreenWidth - 350 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-			y = ScreenHeight - 30 + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+			x = ScreenWidth - 350;
+			y = ScreenHeight - 30 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, gWR.CountAmmo(pw->iAmmoType), r, g, b);
 		}
 
@@ -977,8 +979,8 @@ int CHudAmmo::Draw(float flTime)
 		// Do we have secondary ammo?
 		if ((pw->iAmmo2Type != 0) && (gWR.CountAmmo(pw->iAmmo2Type) > 0))
 		{
-			x = ScreenWidth - 280 + gHUD.bobValue[0] * 2.5f - gHUD.lagangle_x * 3 + gHUD.camValue[0] * 0.1f;
-			y = ScreenHeight - 40 + gHUD.bobValue[1] * 2.5f + gHUD.velz * 10 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + gHUD.camValue[1] * 0.1f;
+			x = ScreenWidth - 280;
+			y = ScreenHeight - 40 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 			x = gHUD.DrawHudString(x, y, 512, (char*)std::to_string(gWR.CountAmmo(pw->iAmmo2Type)).c_str(), r, g, b);
 
 			// Draw the ammo Icon
