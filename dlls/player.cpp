@@ -6517,10 +6517,12 @@ void CBasePlayer::WallrunThink()
 	// atleast 100u/s speed to init wallrun
 	if(pev->velocity.Length2D() > 100.0f && !hitsWall)
 	{
+
+		// bacontsu - make sure the walls are 10% from 10 degree, to make sure its not a surfable surface.
 		Vector angRight, angLeft;
 		VectorAngles(wallRightTr.vecPlaneNormal, angRight);
 		VectorAngles(wallLeftTr.vecPlaneNormal, angLeft);
-		ALERT(at_console, "degree right %f left %f\n", angRight[PITCH], angLeft[PITCH]);
+		//ALERT(at_console, "degree right %f left %f\n", angRight[PITCH], angLeft[PITCH]);
 
 		// right traceline
 		if (wallRightTr.flFraction < 1 && !(pev->flags & FL_ONGROUND) && (angRight[PITCH] < 10.0f || angRight[PITCH] > 350.0f))
