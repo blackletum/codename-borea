@@ -2527,7 +2527,8 @@ void CStudioModelRenderer::StudioCalcRotations ( float pos[][3], vec4_t *q, mstu
 
 	//gEngfuncs.Con_Printf	("jajajaja max player %i\n", gEngfuncs.GetLocalPlayer()->index);
 
-	if(m_pCurrentEntity->index <= gEngfuncs.GetMaxClients() && m_pCurrentEntity->index >= gEngfuncs.GetLocalPlayer()->index)
+	// bacontsu - WEIRD AS HELL BONE INTERPOLATION SYSTEM BUT IT WORKS
+	if(m_pCurrentEntity->index <= gEngfuncs.GetMaxClients() && m_pCurrentEntity->index >= gEngfuncs.GetLocalPlayer()->index && m_pCurrentEntity != gEngfuncs.GetViewModel())
 		for (i = 0; i < m_pStudioHeader->numbones; i++, pbone++, panim++) 
 		{
 			vec4_t ang;
@@ -3371,7 +3372,7 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	Vector ang;
 	VectorAngles(est_velocity, ang);
 
-	if (est_velocity.Length2D() > 0.1f && !gHUD.m_bIsAimingTPS)
+	if (est_velocity.Length2D() > 0.1f /* && !gHUD.m_bIsAimingTPS*/)
 	{
 		float& currentYaw = m_pCurrentEntity->baseline.angles[YAW];
 		float targetYaw = ang[YAW];
@@ -3467,16 +3468,16 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 
 	//gEngfuncs.Con_Printf("is ducking %s\n", gEngfuncs.GetLocalPlayer()->curstate.usehull == 1 ? "yes" : "no");
 
+	
 	// only do on local player
-	if(m_pCurrentEntity == gEngfuncs.GetLocalPlayer())
-	{
-		if(gEngfuncs.GetLocalPlayer()->curstate.usehull == 1)
-			m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37/2.0f;
-		else
-			m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37;
-	}
+	if (m_pCurrentEntity->prevstate.origin == vec3_origin)
+		m_pCurrentEntity->prevstate.origin = m_pCurrentEntity->origin;
+
+	if (gEngfuncs.GetLocalPlayer()->curstate.usehull == 1)
+		m_pCurrentEntity->origin.z = m_pCurrentEntity->prevstate.origin.z - 37 / 2.0f;
 	else
-		m_pCurrentEntity->origin.z = m_pCurrentEntity->origin.z - 37/2.0f;
+		m_pCurrentEntity->origin.z = m_pCurrentEntity->prevstate.origin.z - 37;
+		
 
 	m_bExternalEntity = false;
 

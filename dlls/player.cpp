@@ -96,6 +96,20 @@ extern CGraph	WorldGraph;
 #define	FLASH_DRAIN_TIME	 1.2 //100 units/3 minutes
 #define	FLASH_CHARGE_TIME	 0.2 // 100 units/20 seconds  (seconds per unit)
 
+
+// PARISH ANIM SYSTEM
+#define ANIM_PLAYER_IDLE 0
+#define ANIM_PLAYER_WALK 10
+#define ANIM_PLAYER_JUMP 23
+#define ANIM_PLAYER_RUN 18
+#define ANIM_PLAYER_CROUCH 2
+#define ANIM_PLAYER_CROUCH_WALK 12
+#define ANIM_PLAYER_SLIDING 26
+#define ANIM_PLAYER_WALLRUN_LEFT 28
+#define ANIM_PLAYER_WALLRUN_RIGHT 29
+#define ANIM_PLAYER_SWIM_IDLE 16
+#define ANIM_PLAYER_SWIM_MOVE 17
+
 //#ifdef XENWARRIOR
 //  float g_fEnvFadeTime = 0;    // flashlight can't be used until this time expires.
 //							// this is just a big hack, doesn't work with saverestore, etc...
@@ -1210,13 +1224,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		{
 			m_IdealActivity = m_Activity;
 		}
-		else if (pev->waterlevel > 1 && pev->watertype != CONTENT_FOG)
-		{
-			if (speed == 0)
-				m_IdealActivity = ACT_HOVER;
-			else
-				m_IdealActivity = ACT_SWIM;
-		}
 		else
 		{
 			m_IdealActivity = ACT_IDLE;
@@ -1227,13 +1234,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		if ( !FBitSet( pev->flags, FL_ONGROUND ) && (m_Activity == ACT_HOP || m_Activity == ACT_LEAP) )	// Still jumping
 		{
 			m_IdealActivity = m_Activity;
-		}
-		else if ( pev->waterlevel > 1 && pev->watertype != CONTENT_FOG)
-		{
-			if ( speed == 0 )
-				m_IdealActivity = ACT_HOVER;
-			else
-				m_IdealActivity = ACT_SWIM;
 		}
 		else
 		{
@@ -1321,30 +1321,27 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 	case ACT_WALK:
 
 		if (m_iSlidingStage == 1)
-			animDesired = 26;
-		else if (pev->velocity.Length2D() > 300)
-			animDesired = 18;
-		else if (isOnWall)
-			animDesired = 29;
+			animDesired = ANIM_PLAYER_SLIDING;
+		else if (FBitSet(pev->flags, FL_DUCKING))
+			animDesired = ANIM_PLAYER_CROUCH_WALK;
+		else if (pev->waterlevel >= 2)
+			animDesired = ANIM_PLAYER_SWIM_MOVE;
+		else if (pev->velocity.Length2D() > 120)
+			animDesired = ANIM_PLAYER_RUN;
 		else
-			animDesired = 10;
+			animDesired = ANIM_PLAYER_WALK;
 
 		break;
 	case ACT_HOP:
-		
-		if (pev->velocity.Length2D() < 20)
-		{
-			//ALERT(at_console, "IS JUMPNGGG\n");
-			animDesired = 46;
-		}
-		else
-			animDesired = 23;
+		animDesired = ANIM_PLAYER_JUMP;
 		break;
 	case ACT_IDLE:
 		if (FBitSet(pev->flags, FL_DUCKING))
-			animDesired = 2;
+			animDesired = ANIM_PLAYER_CROUCH;
+		else if (pev->waterlevel >= 2)
+			animDesired = ANIM_PLAYER_SWIM_IDLE;
 		else
-			animDesired = 0;
+			animDesired = ANIM_PLAYER_IDLE;
 		break;
 	}
 
@@ -1378,14 +1375,20 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 
 	if (isOnWall)
 	{
-		animDesired = 29;
-
-		/*
-		if(wallType == 1)
-			animDesired = 29
+		if (wallType == 1)
+			animDesired = ANIM_PLAYER_WALLRUN_RIGHT;
 		else if (wallType == 2)
-			animDesired =
-			*/
+			animDesired = ANIM_PLAYER_WALLRUN_LEFT;
+	}
+
+	ALERT(at_console, "waterlevel is %i\n", pev->waterlevel);
+
+	if (pev->waterlevel >= 2)
+	{
+		if (pev->velocity.Length2D() > 50)
+			animDesired = ANIM_PLAYER_SWIM_MOVE;
+		else
+			animDesired = ANIM_PLAYER_SWIM_IDLE;
 	}
 
 	// Already using the desired animation?
@@ -2255,6 +2258,7 @@ void CBasePlayer::PreThink()
 		targetFov = 0;
 		wasAimingTPS = false;
 	}
+
 
 	// animated fov stuff
 	currFov = CVAR_GET_FLOAT("default_fov");

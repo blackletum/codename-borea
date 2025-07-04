@@ -947,7 +947,7 @@ void CWaterShader::DrawScene( ref_params_t *pparams, bool isrefracting )
 				g_StudioRenderer.m_pCurrentEntity = gBSPRenderer.m_pRenderEntities[i];
 				g_StudioRenderer.StudioDrawModel(STUDIO_RENDER);
 			}
-			else if(gBSPRenderer.m_pRenderEntities[i] != gEngfuncs.GetLocalPlayer())
+			else /*if (gBSPRenderer.m_pRenderEntities[i] != gEngfuncs.GetLocalPlayer())*/
 			{
 				entity_state_t *pPlayer = IEngineStudio.GetPlayerState((gBSPRenderer.m_pRenderEntities[i]->index-1));
 				g_StudioRenderer.m_pCurrentEntity = gBSPRenderer.m_pRenderEntities[i];
