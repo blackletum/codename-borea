@@ -6517,13 +6517,18 @@ void CBasePlayer::WallrunThink()
 	// atleast 100u/s speed to init wallrun
 	if(pev->velocity.Length2D() > 100.0f && !hitsWall)
 	{
+		Vector angRight, angLeft;
+		VectorAngles(wallRightTr.vecPlaneNormal, angRight);
+		VectorAngles(wallLeftTr.vecPlaneNormal, angLeft);
+		ALERT(at_console, "degree right %f left %f\n", angRight[PITCH], angLeft[PITCH]);
+
 		// right traceline
-		if (wallRightTr.flFraction < 1 && !(pev->flags & FL_ONGROUND))
+		if (wallRightTr.flFraction < 1 && !(pev->flags & FL_ONGROUND) && (angRight[PITCH] < 10.0f || angRight[PITCH] > 350.0f))
 		{
 			hitsWall = 1;
 		}
 		// left traceline
-		else if (wallLeftTr.flFraction < 1 && !(pev->flags & FL_ONGROUND))
+		else if (wallLeftTr.flFraction < 1 && !(pev->flags & FL_ONGROUND) && (angLeft[PITCH] < 10.0f || angLeft[PITCH] > 350.0f ))
 		{
 			hitsWall = 2;
 		}
