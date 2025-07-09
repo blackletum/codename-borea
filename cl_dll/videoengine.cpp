@@ -5,12 +5,16 @@
 #include "rendererdefs.h"
 #include "videoengine.h"
 
+#include "cl_util.h"
+
 #include "openal/OpenAL_System.h"
 extern CSoundSystem gSoundSystem;
 
 double start_time = 0;
 
 bool first_init = true;
+
+float scale_X, scale_Y;
 
 ///////////////
 //ffmpeg start
@@ -496,10 +500,10 @@ void drawFrame(VideoData* data) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, -1.0f);
-    glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, 1.0f);
+    glTexCoord2f(0.0f, 1.0f); glVertex2f(-scale_X, -scale_Y);
+    glTexCoord2f(1.0f, 1.0f); glVertex2f(scale_X, -scale_Y);
+    glTexCoord2f(1.0f, 0.0f); glVertex2f(scale_X, scale_Y);
+    glTexCoord2f(0.0f, 0.0f); glVertex2f(-scale_X, scale_Y);
     glEnd();
 }
 
@@ -590,6 +594,19 @@ void CVideoEngine::LoadVideo(const char* video_path)
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, viddata.width, viddata.height,
         0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    float videoAspect = (float)viddata.width / (float)viddata.height;
+    float screenAspect = (float)ScreenWidth / (float)ScreenHeight;
+
+    scale_X = 1.0f;
+    scale_Y = 1.0f;
+
+    if (videoAspect > screenAspect) {
+        scale_Y = screenAspect / videoAspect;
+    }
+    else {
+        scale_X = videoAspect / screenAspect;
+    }
 }
 
 void CVideoEngine::DrawVideo(float flTime)
