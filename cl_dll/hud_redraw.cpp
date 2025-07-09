@@ -30,6 +30,8 @@
 
 #include "bsprenderer.h"
 
+#include "videoengine.h"
+
 extern bool m_bLensEffect;
 
 extern cl_texture_t* scopetexture;
@@ -118,6 +120,13 @@ void CHud::Think()
 // returns 1 if they've changed, 0 otherwise
 int CHud :: Redraw( float flTime, int intermission )
 {
+	if (!gVideoEngine.videoended)
+	{
+		gVideoEngine.DrawVideo(flTime);
+		static wrect_t nullrc;
+		SetCrosshair(0, nullrc, 0, 0, 0); //hide crosshair
+		return true;
+	}
 	//RENDERERS START
 	gHUD.gBloomRenderer.Draw();
 	gPostProcess.ApplyPostEffects(); //PostProcessing

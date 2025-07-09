@@ -91,9 +91,10 @@ public:
 
 	virtual int ObjectCaps(void)
 	{
-		return (CBaseEntity::ObjectCaps() | FCAP_IMPULSE_USE);
+		return (FCAP_IMPULSE_USE);
 	}
 	bool activated;
+	string_t readable_model;
 
 	//keyvalues for fgd:
 	//opensound: string
@@ -123,6 +124,10 @@ void CReadable::KeyValue(KeyValueData* pkvd)
 
 void CReadable::Spawn()
 {
+	//if (pev->noise != 0)
+	//	PRECACHE_SOUND(STRING(pev->noise));
+	//if (pev->noise1 != 0)
+	//	PRECACHE_SOUND(STRING(pev->noise1));
 	pev->movetype = MOVETYPE_PUSH;
 	pev->solid = SOLID_BSP;
 	SET_MODEL(ENT(pev), STRING(pev->model));
@@ -142,10 +147,10 @@ void CReadable::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useT
 		MESSAGE_END();
 		activated = true;
 		if(pev->noise != 0)
-			EMIT_SOUND(pActivator->edict(), CHAN_STATIC, STRING(pev->noise), VOL_NORM, ATTN_NORM);
+			EMIT_SOUND(pActivator->edict(), CHAN_STREAM, STRING(pev->noise), VOL_NORM, ATTN_NORM);
 		return;
 	}
 	activated = false;
 	if (pev->noise1 != 0)
-		EMIT_SOUND(pActivator->edict(), CHAN_STATIC, STRING(pev->noise1), VOL_NORM, ATTN_NORM);
+		EMIT_SOUND(pActivator->edict(), CHAN_STREAM, STRING(pev->noise1), VOL_NORM, ATTN_NORM);
 }

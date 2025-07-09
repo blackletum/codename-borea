@@ -36,6 +36,10 @@
 #include "blur.h"
 #include "SDL2/SDL_syswm.h"
 
+#include "videoengine.h"
+#include "openal/OpenAL_System.h"
+extern CSoundSystem gSoundSystem;
+
 hud_player_info_t	 g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
 extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
 //RENDERERS START
@@ -269,6 +273,13 @@ int __MsgFunc_SendAnim(const char* pszName, int iSize, void* pbuf)
 
 }
 
+int __MsgFunc_PlayVideo(const char* pszName, int iSize, void* pbuf)
+{
+	BEGIN_READ(pbuf, iSize);
+	gVideoEngine.LoadVideo(READ_STRING());
+	return true;
+}
+
 // TFFree Command Menu
 void __CmdFunc_OpenCommandMenu()
 {
@@ -463,6 +474,10 @@ int __MsgFunc_Particle(const char *pszName, int iSize, void *pbuf )
 {
 	return gParticleEngine.MsgCreateSystem( pszName, iSize, pbuf );
 }
+int __MsgFunc_WaterInfo(const char* pszName, int iSize, void* pbuf)
+{
+	return gWaterShader.MsgWaterInfo(pszName, iSize, pbuf);
+}
 int __MsgFunc_PPGray(const char* pszName, int iSize, void* pbuf)
 {
 	gHUD.MsgFunc_PPGray(pszName, iSize, pbuf);
@@ -615,10 +630,12 @@ void CHud :: Init()
 	HOOK_MESSAGE( DynLight );
 	HOOK_MESSAGE( FreeEnt );
 	HOOK_MESSAGE( Particle );
+	HOOK_MESSAGE( WaterInfo );
 	HOOK_MESSAGE( PPGray );
 	HOOK_MESSAGE( WpnSkn );
 	HOOK_MESSAGE(UseEnt);
 	HOOK_MESSAGE(SendAnim);
+	HOOK_MESSAGE(PlayVideo);
 
 	gPropManager.Init();
 	gTextureLoader.Init();
@@ -630,7 +647,10 @@ void CHud :: Init()
 	gBlur.InitScreen();
 	gLensflare.Init();
 	gBloomRenderer.Init();
+	gVideoEngine.Init();
 	//RENDERERS END
+
+	gSoundSystem.Init();
 
 	// Aynekko
 	HOOK_MESSAGE( KickPunch );
@@ -957,6 +977,8 @@ void CHud :: VidInit()
 	g_DiscordRPC.VidInit();
 
 	m_PointMessage.VidInit();
+
+	gVideoEngine.VidInit();
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)

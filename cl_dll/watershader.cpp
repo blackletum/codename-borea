@@ -71,6 +71,8 @@ R"(
 	attribute vec4 vertexPosition;  // vertex.position
 	attribute vec2 vertexTexCoord;  // vertex.texcoord
 
+	uniform int underwater;
+
 	varying vec4 texcoord0;
 	varying vec4 texcoord1;
 	varying vec3 texcoord2;
@@ -113,10 +115,32 @@ R"(
 	uniform sampler2D texture2;  // reflection texture
 	uniform sampler2D texture3;  // original water texture
 
+	uniform float normalscale;
+	uniform float watertex_scale;
+	uniform float refraction_scale;
+	uniform float reflection_scale;
+
+	uniform int underwater;
+
+	uniform float texelSize; //float because water texture is square
 	
 	varying vec4 texcoord0;
 	varying vec4 texcoord1;
 	varying vec3 texcoord2;
+
+	float getaveragebrightness(sampler2D tex, vec2 uv) {
+	    float brightness = 0.0;
+	
+	    for (int x = -4; x <= 4; ++x) {
+	        for (int y = -4; y <= 4; ++y) {
+	            vec2 offset = vec2(x, y) * texelSize;
+	            vec4 sample = texture2D(tex, uv + offset);
+	            brightness += dot(sample.rgb, vec3(0.299, 0.587, 0.114));
+	        }
+	    }
+	
+	    return brightness / 16.0; // 4x4 kernel
+	}
 	
 	void main() {
 		const vec4 c4 = vec4(1.3, 0.97, 0.5, 0.0);
@@ -124,52 +148,87 @@ R"(
 		const vec4 c6 = vec4(0.17, 0.14, 0.16, 1.0);
 		const vec2 c7 = vec2(0.23, 0.33333334);
 
-		float normalscale = 0.53;
+		// --- Animated Normal Sampling (4 samples) ---
+		vec2 offsets[4];
+		offsets[0] = texcoord0.xy + c5.xy * flTime;
+		offsets[1] = texcoord0.xy + vec2(c5.w * flTime, c5.z * -flTime);
+		offsets[2] = texcoord0.xy + vec2(c6.x * flTime, -c6.yz * flTime);
+		offsets[3] = texcoord0.xy + vec2(-c6.z * flTime, c6.y * flTime);
 
-		vec2 offset1 = texcoord0.xy + c5.xy * flTime;
-		vec2 offset2 = texcoord0.xy + vec2(c5.w * flTime, c5.z * -flTime);
-		vec2 offset3 = texcoord0.xy + vec2(c6.x * flTime, -c6.yz * flTime);
-		vec2 offset4 = texcoord0.xy + vec2(-c6.z * flTime, c6.y * flTime);
-		
-		vec3 normal1 = texture2D(texture0, offset1).xyz;
-		vec3 normal2 = texture2D(texture0, offset2).xyz;
-		vec3 normal3 = texture2D(texture0, offset3).xyz;
-		vec3 normal4 = texture2D(texture0, offset4).xyz;
-		
-		vec3 combinedNormal = (normal1 + normal2 + normal3 + normal4) * c4.z;
-		combinedNormal -= c6.w;
-		
+		vec3 normal = vec3(0.0);
+		for (int i = 0; i < 4; ++i) {
+		    normal += texture2D(texture0, offsets[i]).rgb;
+		}
+		normal *= c4.z;
+		normal -= c6.w;
+		normal = normal / length(normal);
+		normal.xy *= normalscale;
 
-		float normalLen = length(combinedNormal);
-		vec2 finalNormal = combinedNormal.xy / normalLen;
-		finalNormal *= normalscale;
-		
+		float depthFactor = clamp(-normal.y * 4, 0.0, 1.0); // Bigger when normal points down
+
+		// --- Wiggle effect (on distortion coords) ---
+		vec2 wiggle = vec2(
+		    sin(texcoord0.y * 15.0 + flTime * 3.0),
+		    cos(texcoord0.x * 15.0 + flTime * 3.0)
+		) * 0.01;
+
+		// --- Distorted UVs ---
 		float projW = 1.0 / texcoord1.w;
-		vec2 refractionCoord = texcoord1.xy * projW * c4.z + finalNormal;
-		refractionCoord += c4.z;
-		
-		vec2 reflectionCoord = vec2(texcoord1.x, -texcoord1.y) * projW * c4.z + finalNormal;
-		reflectionCoord += c4.z;
-		
+		vec2 refractUV = texcoord1.xy * projW + normal.xy;
+		vec2 reflectUV = vec2(texcoord1.x, -texcoord1.y) * projW + normal.xy;
 
-		vec4 refractionColor = texture2D(texture1, refractionCoord);
-		vec4 reflectionColor = texture2D(texture2, reflectionCoord);
+		// --- Sampling reflection/refraction ---
+		vec4 refraction = texture2D(texture1, refractUV * 0.5 + 0.5);
+		vec4 reflection = texture2D(texture2, reflectUV * 0.5 + 0.5);
 
-		float depthFactor = clamp(-finalNormal.y, 0.0, 1.0); // Bigger when normal points down
-		refractionColor.rgb *= exp(-depthFactor * 14.0);
+		//refraction
+		float brightness = dot(refraction.rgb, vec3(0.299, 0.587, 0.114));
+		float blendFactor = smoothstep(0.0, 0.6, brightness);
 
-		vec3 viewDir = renderorigin - texcoord2;
-		float viewDist = length(viewDir);
-		float fresnel = dot(normalize(viewDir), vec3(0, 0, 1)) * m_flFresnelTerm;
-		fresnel = min(fresnel * c4.x, c4.y);
+		//reflection
+		float brightness2 = dot(reflection.rgb, vec3(0.299, 0.587, 0.114));
+		float blendFactor2 = smoothstep(0.0, 0.6, brightness2);
 
-		vec4 waterColor = mix(reflectionColor, refractionColor, fresnel);
-		waterColor = mix(waterColor, texture2D(texture3, texcoord0.xy), 0.2);
+		// --- Blend with base texture (wiggled) ---
+		vec4 base = texture2D(texture3, texcoord0.xy + normal.xy * 0.8);
+		float refractionbrightness = getaveragebrightness(texture1, refractUV * 0.5 + 0.5);
+		float reflectionbrightness = getaveragebrightness(texture2, reflectUV * 0.5 + 0.5);
+		base.rgb *= clamp( ( ( refractionbrightness + reflectionbrightness )) * 2, 0.0, 1.0);
+		base.rgb *= exp(-depthFactor * normalscale);
+		base *= clamp(watertex_scale, 0.0, 1.0);
 
-		float fogIntensity = (waterColor.r + waterColor.g + waterColor.b) / 3;
-		vec3 fogColor = fogIntensity * waterfog;
+		// Base + Refraction
+		//refraction = mix(base, refraction, blendFactor * refraction_scale);
+		//reflection = mix(base, reflection, blendFactor2 * reflection_scale);
 
-		gl_FragColor = mix(waterColor, vec4(fogColor, c6.w), c5.x);
+		refraction = mix(refraction, base, watertex_scale);
+		reflection = mix(reflection, base, watertex_scale);
+
+		refraction.rgb *= exp(-depthFactor * 4);
+		reflection.rgb *= exp(-depthFactor * 4);
+
+		//refraction *= refraction_scale;
+		reflection *= reflection_scale;
+
+		// --- Fresnel ---
+		vec3 viewDir = normalize(renderorigin - texcoord2);
+		float fresnel = pow(1.0 - max(dot(viewDir, vec3(0, 0, 1)), 0.0), 2.0);
+		fresnel = clamp(fresnel * m_flFresnelTerm, 0.0, 1.0);
+
+		// --- Final Color ---
+		vec4 waterColor; 
+		if(underwater == 0)
+			waterColor = mix(refraction, reflection, fresnel);
+		else
+			waterColor = refraction;
+
+		waterColor.rgb *= 1.1;
+
+		// --- Fog ---
+		float fogFactor = clamp((waterColor.r + waterColor.g + waterColor.b) / 3.0, 0.0, 1.0);
+		vec3 fogged = mix(waterColor.rgb, waterfog, fogFactor * 0.3);
+
+		gl_FragColor = vec4(fogged, 1.0);
 	}
 	
 	)";
@@ -260,6 +319,9 @@ void CWaterShader::ClearEntities(void)
 
 	memset(m_pWaterEntities, NULL, sizeof(m_pWaterEntities));
 	m_iNumWaterEntities = NULL;
+
+	memset(m_pWaterEntInfo, NULL, sizeof(m_pWaterEntInfo));
+	m_iNumWaterData = NULL;
 }
 
 /*
@@ -392,8 +454,8 @@ void CWaterShader::LoadScript(void)
 	else
 		m_pWaterFogSettings.active = true;
 
-	if (m_flFresnelTerm <= 0)
-		m_flFresnelTerm = 1;
+	//if (m_flFresnelTerm <= 0)
+	//	m_flFresnelTerm = 1;
 }
 
 /*
@@ -404,18 +466,18 @@ ShouldReflect
 */
 bool CWaterShader::ShouldReflect(int index)
 {
-	if (GetWaterOrigin().z > m_vViewOrigin.z)
-		return false;
+	//if (ViewInWater())
+		return true;
 
 	// Optimization: Try and find a water entity on the same z coord
-	for (int i = 0; i < index; i++)
-	{
-		if (m_pWaterEntities[i].draw)
-		{
-			if (GetWaterOrigin(&m_pWaterEntities[i]).z == GetWaterOrigin().z)
-				return false;
-		}
-	}
+	//for (int i = 0; i < index; i++)
+	//{
+	//	if (m_pWaterEntities[i].draw)
+	//	{
+	//		if (GetWaterOrigin(&m_pWaterEntities[i]).z == GetWaterOrigin().z)
+	//			return false;
+	//	}
+	//}
 	return true;
 }
 
@@ -721,19 +783,36 @@ void CWaterShader::DrawWaterPasses(ref_params_t* pparams)
 	VectorCopy(pparams->vieworg, m_vViewOrigin);
 	memcpy(&m_pWaterParams, m_pViewParams, sizeof(ref_params_t));
 
+	bool onlyrenderthiswater = false;
+
 	for (int i = 0; i < m_iNumWaterEntities; i++)
 	{
 		m_pCurWater = &m_pWaterEntities[i];
 
+		if (ViewInWater())
+		{
+			onlyrenderthiswater = true;
+		}
 		if (!m_pCurWater->draw)
 			continue;
 
 		gHUD.viewFrustum.SetFrustum(pparams->viewangles, pparams->vieworg, gHUD.m_iFOV, gHUD.m_pFogSettings.end, true);
-		if (gHUD.viewFrustum.CullBox(m_pCurWater->mins, m_pCurWater->maxs))
+		if (gHUD.viewFrustum.CullBox(m_pCurWater->mins, m_pCurWater->maxs) && !onlyrenderthiswater)
 		{
 			// YOU MUST DIE
 			m_pCurWater->draw = false;
 			continue;
+		}
+
+		for (int j = 0; j < m_iNumWaterData; j++)
+		{
+			if (m_pWaterEntInfo[j].entity == m_pCurWater->entity)
+			{
+				m_pWaterFogSettings.color = m_pWaterEntInfo[j].waterfog_color;
+				m_pWaterFogSettings.start = m_pWaterEntInfo[j].waterfog_start;
+				m_pWaterFogSettings.end = m_pWaterEntInfo[j].waterfog_end;
+			}
+
 		}
 
 		SetupRefract();
@@ -746,6 +825,8 @@ void CWaterShader::DrawWaterPasses(ref_params_t* pparams)
 			DrawScene(&m_pWaterParams, false);
 			FinishReflect();
 		}
+		if (ViewInWater())
+			break;
 	}
 
 	for (int i = 0; i < m_iNumWaterEntities; i++)
@@ -872,12 +953,12 @@ void CWaterShader::SetupRefract(void)
 	else
 		glViewport(GL_ZERO, GL_ZERO, m_pCurWater->res, m_pCurWater->res);
 
-	if (GetWaterOrigin().z < m_vViewOrigin[2])
-	{
-		SetupClipping(m_pViewParams, false);
+	gHUD.m_pFogSettings = m_pWaterFogSettings;
 
+	if (!ViewInWater())
+	{
 		gHUD.viewFrustum.SetExtraCullBox(m_pCurWater->entity->curstate.mins, m_pCurWater->entity->curstate.maxs);
-		gHUD.m_pFogSettings = m_pWaterFogSettings;
+		SetupClipping(m_pViewParams, false);
 	}
 	else
 	{
@@ -888,6 +969,7 @@ void CWaterShader::SetupRefract(void)
 
 		gHUD.viewFrustum.SetExtraCullBox(vMins, vMaxs);
 		SetupClipping(m_pViewParams, true);
+		//gHUD.m_pFogSettings = m_pMainFogSettings;
 	}
 
 	RenderFog();
@@ -1054,25 +1136,49 @@ void CWaterShader::DrawWater(void)
 
 	glUseProgram(m_WaterFragmentShader);
 
-	//if (gBSPRenderer.m_bRadialFogSupport && gBSPRenderer.m_pCvarRadialFog->value > 0)
-	//	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexPrograms[1]);
-	//else
-	//	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexPrograms[0]);
-
 	glGetFloatv(GL_PROJECTION_MATRIX, flMatrix);
 	glUniformMatrix4fv(glGetUniformLocation(m_WaterFragmentShader, "projectionMatrix"), 1, GL_FALSE, flMatrix);
-	glUniform1i(glGetUniformLocation(m_WaterFragmentShader, "cvarwatershader"), 1);
 
+	glUniform1i(glGetUniformLocation(m_WaterFragmentShader, "underwater"), m_bViewInWater? 1 : 0);
+
+
+	bool onlyrenderthiswater = false;
 
 	for (int i = 0; i < m_iNumWaterEntities; i++)
 	{
 		m_pCurWater = &m_pWaterEntities[i];
 
-		if (!m_pWaterEntities[i].draw)
+		if (ViewInWater())
+		{
+			onlyrenderthiswater = true;
+		}
+		else if (!m_pWaterEntities[i].draw)
 			continue;
 
-		if (gHUD.viewFrustum.CullBox(m_pCurWater->mins, m_pCurWater->maxs))
+		if (gHUD.viewFrustum.CullBox(m_pCurWater->mins, m_pCurWater->maxs) && !onlyrenderthiswater)
 			continue;
+
+		for (int j = 0; j < m_iNumWaterData; j++)
+		{
+
+			if (m_pWaterEntInfo[j].entity == m_pCurWater->entity)
+			{
+				m_pWaterFogSettings.color = m_pWaterEntInfo[j].waterfog_color;
+				m_pWaterFogSettings.start = m_pWaterEntInfo[j].waterfog_start;
+				m_pWaterFogSettings.end = m_pWaterEntInfo[j].waterfog_end;
+
+				glUniform1f(glGetUniformLocation(m_WaterFragmentShader, "normalscale"), m_pWaterEntInfo[j].normal_scale);
+
+				glUniform1f(glGetUniformLocation(m_WaterFragmentShader, "watertex_scale"), m_pWaterEntInfo[j].watertex_scale);
+
+				glUniform1f(glGetUniformLocation(m_WaterFragmentShader, "refraction_scale"), m_pWaterEntInfo[j].refraction_scale);
+
+				glUniform1f(glGetUniformLocation(m_WaterFragmentShader, "reflection_scale"), m_pWaterEntInfo[j].reflection_scale);
+
+				glUniform1f(glGetUniformLocation(m_WaterFragmentShader, "m_flFresnelTerm"), m_pWaterEntInfo[j].fresnel);
+			}
+
+		}
 
 		float modelMatrix[16];
 		float modelViewMatrix[16];
@@ -1095,64 +1201,60 @@ void CWaterShader::DrawWater(void)
 
 		glUniformMatrix4fv(glGetUniformLocation(m_WaterFragmentShader, "modelMatrix"), 1, GL_FALSE, modelViewMatrix);
 
-		//if (m_vViewOrigin[2] > GetWaterOrigin().z)
-		//{
-		glCullFace(GL_FRONT);
-		//if (gHUD.m_pFogSettings.active)
-		//	gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentPrograms[1]);
-		//else
-		//	gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentPrograms[0]);
+		if (ViewInWater())
+			glCullFace(GL_BACK);
 
 		glUniform3fv(glGetUniformLocation(m_WaterFragmentShader, "renderorigin"), 1, gBSPRenderer.m_vRenderOrigin);
 		glUniform3fv(glGetUniformLocation(m_WaterFragmentShader, "waterfog"), 1, m_pWaterFogSettings.color);
-		glUniform1f(glGetUniformLocation(m_WaterFragmentShader, "m_flFresnelTerm"), m_flFresnelTerm);
 		glUniform1f(glGetUniformLocation(m_WaterFragmentShader, "flTime"), flTime);
 		glUniform1i(glGetUniformLocation(m_WaterFragmentShader, "texture0"), 0);
 		glUniform1i(glGetUniformLocation(m_WaterFragmentShader, "texture1"), 1);
 		glUniform1i(glGetUniformLocation(m_WaterFragmentShader, "texture2"), 2);
 		glUniform1i(glGetUniformLocation(m_WaterFragmentShader, "texture3"), 3); //original water texture
 
-		//}
-		//else
-		//{
-		//	glCullFace(GL_BACK);
-		//	if (gHUD.m_pFogSettings.active)
-		//		gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentPrograms[3]);
-		//	else
-		//		gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentPrograms[2]);
-		//	
-		//	gBSPRenderer.glProgramLocalParameter4fARB(GL_FRAGMENT_PROGRAM_ARB, 0, m_pWaterFogSettings.color[0], m_pWaterFogSettings.color[1], m_pWaterFogSettings.color[2], 0);
-		//	gBSPRenderer.glProgramLocalParameter4fARB(GL_FRAGMENT_PROGRAM_ARB, 1, flTime, 0, 0, 0);
-		//}
-
 		gBSPRenderer.Bind2DTexture(GL_TEXTURE0_ARB, m_pNormalTexture->iIndex);
 		gBSPRenderer.Bind2DTexture(GL_TEXTURE1_ARB, m_pCurWater->refract);
-		gBSPRenderer.Bind2DTexture(GL_TEXTURE3_ARB, m_pCurWater->surfaces[0]->texinfo->texture->gl_texturenum);
+		//gBSPRenderer.Bind2DTexture(GL_TEXTURE3_ARB, m_pCurWater->surfaces[0]->texinfo->texture->gl_texturenum);
+		int idx = GL_TEXTURE3_ARB - GL_TEXTURE0_ARB;
+		gBSPRenderer.m_uiCurrentBinds[idx] = m_pCurWater->surfaces[0]->texinfo->texture->gl_texturenum;
+		glActiveTextureARB(GL_TEXTURE3_ARB);
+		glBindTexture(GL_TEXTURE_2D, m_pCurWater->surfaces[0]->texinfo->texture->gl_texturenum);
+		glEnable(GL_TEXTURE_2D);
 
 		// Optimization: Try and find a water entity on the same z coord
-		int j = 0;
-		for (; j < i; j++)
-		{
-			if (m_pWaterEntities[j].draw)
-			{
-				if (GetWaterOrigin(&m_pWaterEntities[j]).z == GetWaterOrigin().z)
-				{
-					gBSPRenderer.Bind2DTexture(GL_TEXTURE2_ARB, m_pWaterEntities[j].reflect);
-					break;
-				}
-			}
-		}
-
-		if (j == i)
+		//int j = 0;
+		//for (; j < i; j++)
+		//{
+		//	if (m_pWaterEntities[j].draw)
+		//	{
+		//		if (GetWaterOrigin(&m_pWaterEntities[j]).z == GetWaterOrigin().z)
+		//		{
+		//			gBSPRenderer.Bind2DTexture(GL_TEXTURE2_ARB, m_pWaterEntities[j].reflect);
+		//			break;
+		//		}
+		//	}
+		//}
+		//
+		//if (j == i)
 			gBSPRenderer.Bind2DTexture(GL_TEXTURE2_ARB, m_pCurWater->reflect);
 
 		for (int j = 0; j < m_pCurWater->numsurfaces; j++)
+		{
 			gBSPRenderer.DrawPolyFromArray(m_pCurWater->surfaces[j]->polys);
+		}
+		if (onlyrenderthiswater)
+			break;
 	}
 
 	glCullFace(GL_FRONT);
 
 	glUseProgram(0);
+
+	int idx = GL_TEXTURE3_ARB - GL_TEXTURE0_ARB;
+	gBSPRenderer.m_uiCurrentBinds[idx] = 0;
+	glActiveTextureARB(GL_TEXTURE3_ARB);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 
 	gBSPRenderer.DisableVertexArray();
 }
@@ -1169,4 +1271,56 @@ Vector CWaterShader::GetWaterOrigin(cl_water_t* pwater)
 		return pwater->origin + pwater->entity->curstate.origin;
 	else
 		return m_pCurWater->origin + m_pCurWater->entity->curstate.origin;
+}
+
+int CWaterShader::MsgWaterInfo(const char* pszName, int iSize, void* pbuf)
+{
+	//order:
+	// entindex
+	// waterfog_color
+	// waterfog_start
+	// waterfog_end
+	// watertex_scale
+	// normal_scale
+	// fresnel
+
+	cl_waterinfo_t *waterinfo = &m_pWaterEntInfo[m_iNumWaterData];
+	m_iNumWaterData++;
+	BEGIN_READ(pbuf, iSize);
+	waterinfo->entity = gEngfuncs.GetEntityByIndex(READ_LONG());
+	waterinfo->waterfog_color.x = READ_FLOAT() / 255;
+	waterinfo->waterfog_color.y = READ_FLOAT() / 255;
+	waterinfo->waterfog_color.z = READ_FLOAT() / 255;
+	waterinfo->waterfog_start = READ_LONG();
+	waterinfo->waterfog_end = READ_LONG();
+	waterinfo->watertex_scale = atof(READ_STRING());
+	waterinfo->refraction_scale = atof(READ_STRING());
+	waterinfo->reflection_scale = atof(READ_STRING());
+	waterinfo->normal_scale = atof(READ_STRING());
+	waterinfo->fresnel = atof(READ_STRING());
+	if (waterinfo->waterfog_color == Vector(0, 0, 0))
+		waterinfo->waterfog_color = Vector(70.f / 255.f, 155.f / 255.f, 155.f / 255.f); //default water fog color
+
+	if (!waterinfo->waterfog_start)
+		waterinfo->waterfog_start = 200;
+
+	if (!waterinfo->waterfog_end)
+		waterinfo->waterfog_end = 600;
+
+	if (!waterinfo->watertex_scale)
+		waterinfo->watertex_scale = 0.9;
+
+	if (!waterinfo->refraction_scale)
+		waterinfo->refraction_scale = 1.4;
+
+	if (!waterinfo->reflection_scale)
+		waterinfo->reflection_scale = 2.4;
+
+	if (!waterinfo->normal_scale)
+		waterinfo->normal_scale = 0.13;
+
+	if (!waterinfo->fresnel)
+		waterinfo->fresnel = 0.5;
+
+	return 1;
 }

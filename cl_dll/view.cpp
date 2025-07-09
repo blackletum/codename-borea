@@ -86,6 +86,7 @@ float		v_cameraFocusAngle	= 35.0f;
 int			v_cameraMode = CAM_MODE_FOCUS;
 qboolean	v_resetCamera = 1;
 bool m_bLensEffect = false;
+bool g_Paused = false;
 
 Vector v_client_aimangles;
 Vector ev_punchangle;
@@ -2153,6 +2154,7 @@ void V_CalcThirdPersonRefdef( struct ref_params_s * pparams )
 void DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams )
 {
 //	RecClCalcRefdef(pparams);
+	g_Paused = pparams->paused ? true : false;
 
 	// intermission / finale rendering
 	if ( pparams->intermission )

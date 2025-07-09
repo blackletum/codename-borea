@@ -3213,6 +3213,80 @@ void CTargetCDAudio::Play()
 }
 
 //=====================================
+//trigger_videoplayer
+//plays a video when player walks into it,
+//and fires its target when specified amount of time has been passed (pev->health).
+//
+//if after 5 seconds of the video starting the player presses the spacebar, the player entity
+//will m_videoPlayer->Use() so trigger_videoplayer will stop playback.
+
+class CTriggerVideo : public CBaseTrigger
+{
+public:
+	void Spawn() override;
+	void Touch(CBaseEntity* pOther) override;
+	void Think() override;
+	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+
+	void StopVideo();
+
+	float m_fSkipTime;
+};
+
+LINK_ENTITY_TO_CLASS(trigger_videoplayer, CTriggerVideo);
+
+void CTriggerVideo::Spawn()
+{
+	InitTrigger();
+}
+
+void CTriggerVideo::Touch(CBaseEntity* pOther)
+{
+	if (!pOther->IsPlayer() || m_hActivator)
+	{// only clients may trigger these events
+		return;
+	}
+
+	MESSAGE_BEGIN(MSG_ONE, gmsgPlayVideo, nullptr, pOther->edict());
+		WRITE_STRING(STRING(pev->message)); //example: media/intro_video.mp4
+	MESSAGE_END();
+
+	m_hActivator = pOther;
+
+	((CBasePlayer*)(pOther))->m_videoPlayer = this;
+	//this disables controls completely including pev->buttons which is not ideal since
+	//we need to know if player pressed spacebar or not
+	//((CBasePlayer*)(pOther))->EnableControl(false);
+
+	pev->nextthink = gpGlobals->time + pev->health;
+	m_fSkipTime = gpGlobals->time + 5;
+}
+
+void CTriggerVideo::Think()
+{
+	StopVideo();
+}
+
+void CTriggerVideo::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	if (m_fSkipTime > gpGlobals->time)
+		return;
+	StopVideo();
+	SetThink(NULL);
+}
+
+void CTriggerVideo::StopVideo()
+{
+	MESSAGE_BEGIN(MSG_ONE, gmsgPlayVideo, nullptr, m_hActivator->edict());
+		WRITE_STRING("STOP"); //example: media/intro_video.mp4
+	MESSAGE_END();
+
+	FireTargets(STRING(pev->target), m_hActivator, this, USE_ON, 0);
+	((CBasePlayer*)(m_hActivator.Get()))->m_videoPlayer = nullptr;
+	UTIL_Remove(this);
+}
+
+//=====================================
 //trigger_multiple
 
 class CTriggerMultiple : public CBaseTrigger

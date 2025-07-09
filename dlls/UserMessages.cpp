@@ -32,6 +32,7 @@ int gmsgSetSky = 0;		//LRC
 //int gmsgHUDColor = 0;	//LRC
 int gmsgClampView = 0;	//LRC 1.8
 int gmsgPlayMP3 = 0;	//Killar
+int gmsgPlayVideo = 0;  //Salsa :: ffmpeg implementation
 int gmsgShowGameTitle = 0;
 int gmsgCurWeapon = 0;
 int gmsgHealth = 0;
@@ -84,6 +85,7 @@ int gmsgViewmodelSkin	= 0; // Weapon Model Skinfamilies
 int gmsgLensFlare = 0;
 int gmsgUseEnt = 0;
 int gmsgChapterName;
+int gmsgWaterInfo;
 //RENDERERS END
 
 int gmsgSpectator = 0;
@@ -164,6 +166,7 @@ void LinkUserMessages()
 	gmsgStatusValue = REG_USER_MSG("StatusValue", 3);
 	gmsgCamData = REG_USER_MSG("CamData", -1);
 	gmsgPlayMP3 = REG_USER_MSG("PlayMP3", -1);	//Killar
+	gmsgPlayVideo = REG_USER_MSG("PlayVideo", -1); //Salsa :: ffmpeg implementation
 	gmsgRainData = REG_USER_MSG("RainData", 16);
 	gmsgInventory = REG_USER_MSG("Inventory", -1);	//AJH Inventory system
 	
@@ -184,6 +187,7 @@ void LinkUserMessages()
 	gmsgUseEnt = REG_USER_MSG("UseEnt", -1);
 	gmsgChapterName = REG_USER_MSG("ChapterName", -1);
 	gmsgSendAnim = REG_USER_MSG("SendAnim", -1);
+	gmsgWaterInfo = REG_USER_MSG("WaterInfo", -1);
 	//RENDERERS END
 
 	gmsgSpectator = g_engfuncs.pfnRegUserMsg("Spectator", 2);

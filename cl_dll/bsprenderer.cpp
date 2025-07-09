@@ -1360,7 +1360,7 @@ RendererRefDef
 */
 void CBSPRenderer::RendererRefDef ( ref_params_t *pparams )
 {
-	gHUD.viewFrustum.SetFrustum(pparams->viewangles, pparams->vieworg, gHUD.m_iFOV, gHUD.m_pFogSettings.end, true);
+	gHUD.viewFrustum.SetFrustum(pparams->viewangles, pparams->vieworg, gHUD.m_iFOV, gHUD.m_pFogSettings.end, true); //gHUD.m_pFogSettings.end * 1000, true); dont use fogsettings for far plane
 	VectorCopy( pparams->viewangles,	m_vViewAngles	);
 	VectorCopy( pparams->vieworg,		m_vRenderOrigin	);
 
@@ -1969,7 +1969,7 @@ void CBSPRenderer::GenerateVertexArray( )
 							pVertexes[j].fogcoord = 0;
 					}
 
-					pVertexes[j].fogcoord *= gHUD.m_pFogSettings.end;
+					//pVertexes[j].fogcoord *= gHUD.m_pFogSettings.end;
 				}
 			}
 

@@ -71,19 +71,19 @@ void HWHook()
 	void* base;
 	size_t size;
 
-	if (!MemUtils::GetModuleInfo(L"hw.dll", &handle, &base, &size))
-	{
+	//if (!MemUtils::GetModuleInfo(L"hw.dll", &handle, &base, &size))
+	//{
 		//gEngfuncs.Con_DPrintf("HWHook: can't get module info about hw.dll! Stopping hooking...\n");
-		return;
-	}
+	//	return;
+	//}
 
-	utils = Utils::Utils(handle, base, size);
+	//utils = Utils::Utils(handle, base, size);
 
 	/* Hooking all necessary funcs */
-	Hook(Host_Quit_Restart_f);
-	Hook(S_ExtraUpdate);
-	Hook(R_DrawWorld);
-	Hook(Sys_Error);
+	//Hook(Host_Quit_Restart_f);
+	//Hook(S_ExtraUpdate);
+	//Hook(R_DrawWorld);
+	//Hook(Sys_Error);
 
-	MH_EnableHook(MH_ALL_HOOKS);
+	//MH_EnableHook(MH_ALL_HOOKS);
 }

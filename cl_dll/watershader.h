@@ -63,9 +63,14 @@ public:
 
 	Vector GetWaterOrigin(cl_water_t* pwater = nullptr);
 
+	int MsgWaterInfo(const char* pszName, int iSize, void* pbuf);
+
 public:
 	bool m_bViewInWater;
 	Vector m_vViewOrigin;
+
+	cl_waterinfo_t m_pWaterEntInfo[MAX_WATER_ENTITIES]; //each func_water can control how the shader works :)
+	int m_iNumWaterData;
 
 	cl_water_t m_pWaterEntities[MAX_WATER_ENTITIES];
 	int m_iNumWaterEntities;

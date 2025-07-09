@@ -63,6 +63,12 @@ extern engine_studio_api_t IEngineStudio;
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
 
+#include "filesystem_utils.h"
+
+#include "openal/OpenAL_System.h"
+extern CSoundSystem gSoundSystem;
+extern bool g_Paused;
+
 extern void HWHook();
 
 cl_enginefunc_t gEngfuncs;
@@ -165,6 +171,30 @@ void DLLEXPORT HUD_PlayerMove( struct playermove_s *ppmove, int server )
 //	RecClClientMove(ppmove, server);
 
 	PM_Move( ppmove, server );
+}
+
+static bool CL_InitClient()
+{
+	EV_HookEvents();
+
+	if (!FileSystem_LoadFileSystem())
+	{
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal Error",
+			"Failed to load filesystem_stdio on client.\n"
+			"\nThe game will now shut down", nullptr);
+		return false;
+	}
+
+	if (UTIL_IsValveGameDirectory())
+	{
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal Error",
+			"This mod has detected that it is being run from a Valve game directory which is not supported\n"
+			"Run this mod from its intended location\n\nThe game will now shut down", nullptr);
+		return false;
+	}
+
+	// get tracker interface, if any
+	return true;
 }
 
 int DLLEXPORT Initialize( cl_enginefunc_t *pEnginefuncs, int iVersion )
@@ -318,6 +348,13 @@ void DLLEXPORT HUD_Frame( double time )
 //	RecClHudFrame(time);
 
 	GetClientVoiceMgr()->Frame(time);
+
+	if (g_Paused)
+		gSoundSystem.Pause();
+	else
+		gSoundSystem.Resume();
+
+	gSoundSystem.Update();
 
 	// salsa - doing this so the window wont get stuck on top and i can actually alt + tab to debug
 	SDL_Window* window = nullptr;

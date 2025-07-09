@@ -80,6 +80,8 @@ extern int gmsgLensFlare;
 extern int gmsgUseEnt;
 extern int gmsgGetLight;
 inline int gmsgSendAnim = 0;
+extern int gmsgWaterInfo;
+extern int gmsgPlayVideo;
 //RENDERERS END
 
 extern int gmsgSpectator;

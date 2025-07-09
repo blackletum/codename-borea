@@ -483,6 +483,8 @@ public:
 		m_bIsClimbing = bIsClimbing;
 	}
 
+	EHANDLE m_videoPlayer;
+
 private:
 	CRope* m_pRope;
 	float m_flLastClimbTime = 0;

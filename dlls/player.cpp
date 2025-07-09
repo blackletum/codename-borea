@@ -2213,7 +2213,7 @@ void CBasePlayer::PreThink()
 //	CheckDesiredList( ); //LRC
 	//CheckAssistList(); //LRC
 
-	if ( g_fGameOver )
+	if ( g_fGameOver || m_videoPlayer != nullptr )
 		return;         // intermission or finale
 
 	UpdateShockEffect();
@@ -3151,6 +3151,16 @@ void CBasePlayer::PostThink()
 		}
 	}
 
+	if (m_videoPlayer != nullptr)
+	{
+		if (m_afButtonPressed & IN_JUMP)
+		{
+			m_videoPlayer->Use(this, this, USE_ON, 0);
+		}
+		pev->velocity = Vector(0, 0, 0);
+		return;
+	}
+
 // do weapon stuff
 	ItemPostFrame( );
 
@@ -3555,6 +3565,8 @@ void CBasePlayer::Spawn()
 
 	m_iFlashBattery = 99;
 	m_flFlashLightTime = 1; // force first message
+
+	m_videoPlayer = nullptr;
 
 // dont let uninitialized value here hurt the player
 	m_flFallVelocity = 0;

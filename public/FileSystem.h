@@ -1,4 +1,4 @@
-//========= Copyright � 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright ï¿½ 1996-2001, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -11,7 +11,7 @@
 #pragma once
 #endif
 
-#include "archtypes.h"     // DAL
+#include "steam/steamtypes.h"     // DAL
 #include "interface.h"
 
 //-----------------------------------------------------------------------------
@@ -115,7 +115,7 @@ public:
 	virtual int				Read( void* pOutput, int size, FileHandle_t file ) = 0;
 	virtual int				Write( void const* pInput, int size, FileHandle_t file ) = 0;
 	virtual char			*ReadLine( char *pOutput, int maxChars, FileHandle_t file ) = 0;
-	virtual int				FPrintf( FileHandle_t file, char *pFormat, ... ) = 0;
+	virtual int				FPrintf( FileHandle_t file, const char *pFormat, ... ) = 0;
 
 	// direct filesystem buffer access
 	// returns a handle to a buffer containing the file data
@@ -178,6 +178,12 @@ public:
 	virtual FileHandle_t	OpenFromCacheForRead( const char *pFileName, const char *pOptions, const char *pathID = 0L ) = 0;
 
 	virtual void			AddSearchPathNoWrite( const char *pPath, const char *pathID ) = 0;
+
+	//
+	// ABOVE: Pre-25th anniversary interface
+	//
+
+	virtual long			GetFileModificationTime(const char* pFileName) = 0;
 };
 
 // Steam3/Src compat

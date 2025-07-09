@@ -498,6 +498,19 @@ struct cl_water_t
 	float res = 0.0f;
 };
 
+struct cl_waterinfo_t
+{
+	cl_entity_s *entity;
+	Vector waterfog_color;
+	int waterfog_start;
+	int waterfog_end;
+	float watertex_scale;
+	float refraction_scale, reflection_scale;
+	float normal_scale;
+	float fresnel;
+
+};
+
 //==================================================
 //				MIRROR MANAGER DEFS
 //
