@@ -777,6 +777,8 @@ void CHudAmmo::UserCmd_NextWeapon()
 	if ( !gpActiveSel || gpActiveSel == (WEAPON*)1 )
 		gpActiveSel = m_pWeapon;
 
+	bool fastSwitch = CVAR_GET_FLOAT("hud_fastswitch") != 0;
+
 	int pos = 0;
 	int slot = 0;
 	if ( gpActiveSel )
@@ -796,6 +798,12 @@ void CHudAmmo::UserCmd_NextWeapon()
 				if ( wsp && gWR.HasAmmo(wsp) )
 				{
 					gpActiveSel = wsp;
+					if(fastSwitch)
+					{
+						ServerCmd(wsp->szName);
+						g_weaponselect = wsp->iId;
+						gpActiveSel = nullptr;
+					}
 					return;
 				}
 			}
@@ -818,6 +826,8 @@ void CHudAmmo::UserCmd_PrevWeapon()
 	if ( !gpActiveSel || gpActiveSel == (WEAPON*)1 )
 		gpActiveSel = m_pWeapon;
 
+	bool fastSwitch = CVAR_GET_FLOAT("hud_fastswitch") != 0;
+
 	int pos = MAX_WEAPON_POSITIONS-1;
 	int slot = MAX_WEAPON_SLOTS-1;
 	if ( gpActiveSel )
@@ -837,6 +847,12 @@ void CHudAmmo::UserCmd_PrevWeapon()
 				if ( wsp && gWR.HasAmmo(wsp) )
 				{
 					gpActiveSel = wsp;
+					if (fastSwitch)
+					{
+						ServerCmd(wsp->szName);
+						g_weaponselect = wsp->iId;
+						gpActiveSel = nullptr;
+					}
 					return;
 				}
 			}

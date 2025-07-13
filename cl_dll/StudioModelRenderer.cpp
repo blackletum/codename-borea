@@ -66,6 +66,8 @@ struct cl_stored_light
 
 std::vector<cl_stored_light>StoredLightBuffer;
 
+extern float weaponstarttime;
+
 //===========================================
 //	ARB SHADER
 //===========================================
@@ -2960,7 +2962,11 @@ int CStudioModelRenderer::StudioDrawModel( int flags )
 	// bluenighthawk - viewmodel animation interpolating
 	if (m_pCurrentEntity == gEngfuncs.GetViewModel())
 	{
+		if (weaponstarttime == 0.0f)
+			weaponstarttime = gEngfuncs.GetClientTime();
 		static model_s* pPrevModel = nullptr;
+
+		m_pCurrentEntity->curstate.animtime = weaponstarttime;
 
 		m_pCurrentEntity->latched.sequencetime = m_pCurrentEntity->curstate.animtime;
 

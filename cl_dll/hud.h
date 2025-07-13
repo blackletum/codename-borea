@@ -1003,7 +1003,7 @@ public:
 	void _cdecl MsgFunc_ClampView( const char *pszName, int iSize, void *pbuf );	//LRC 1.8
 
 	// Aynekko: kick punch
-	int KickStage;
+	int KickStage; // 0 = lower down weapon, 1 = play kick anim, 2 = bring weapon up, 3 = restore to normal
 
 	// Screen information
 	SCREENINFO	m_scrinfo;

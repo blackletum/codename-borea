@@ -62,6 +62,11 @@ void ClearEventList();
 extern float g_clampMinYaw, g_clampMaxYaw, g_clampMinPitch, g_clampMaxPitch;
 extern float g_clampTurnSpeed;
 
+
+float saved_vm_frame = 0;
+int saved_vm_sequence = -1;
+extern float weaponstarttime;
+
 /// USER-DEFINED SERVER MESSAGE HANDLERS
 
 int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
@@ -416,6 +421,14 @@ int CHud::MsgFunc_KickPunch( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pbuf, iSize );
 	gHUD.KickStage = READ_BYTE();
+
+	if (gHUD.KickStage == 1)
+	{
+		cl_entity_s* vm = gEngfuncs.GetViewModel();
+		saved_vm_sequence = vm->curstate.sequence;
+		saved_vm_frame = weaponstarttime;
+	}
+
 	return 1;
 }
 

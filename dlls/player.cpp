@@ -3256,7 +3256,7 @@ pt_end:
 
 				gun = (CBasePlayerWeapon *)pPlayerItem->GetWeaponPtr();
 				
-				if ( gun && gun->UseDecrement() )
+				if ( gun && gun->UseDecrement() && !(!KickStage && gun->m_fInReload) )
 				{
 					gun->m_flNextPrimaryAttack		= V_max( gun->m_flNextPrimaryAttack - gpGlobals->frametime, -1.0 );
 					gun->m_flNextSecondaryAttack	= V_max( gun->m_flNextSecondaryAttack - gpGlobals->frametime, -0.001 );
@@ -4216,20 +4216,7 @@ void CBasePlayer::ImpulseCommands( )
 			break;
 		}
 	case 206:
-		{
-			if( m_pActiveItem )
-			{
-				CBasePlayerWeapon *gun;
-				gun = (CBasePlayerWeapon *)m_pActiveItem->GetWeaponPtr();
-				if( gun )
-				{
-				//	ALERT( at_console, "%f %f \n", gpGlobals->time, gpGlobals->time + gun->m_flNextSecondaryAttack );
-					if( gpGlobals->time < gpGlobals->time + gun->m_flNextPrimaryAttack || gpGlobals->time < gpGlobals->time + gun->m_flNextSecondaryAttack )
-					{
-						break;
-					}
-				}
-			}		
+		{		
 			if( !DoPlayerKickPunch && !IsOnLadder() && !FBitSet(pev->flags, FL_DUCKING))
 			{
 				DoPlayerKickPunch = true;
@@ -4752,21 +4739,33 @@ Called every frame by the player PostThink
 void CBasePlayer::ItemPostFrame()
 {
 	static int fInSelect = FALSE;
+	bool inreload = false;
 
 	// check if the player is using a tank
 	if ( m_pTank != nullptr )
 		return;
 
-	if (!oldweapons.value)
+	//if (!oldweapons.value)
+	//{
+	//	if (m_flNextAttack > 0)
+	//	{
+	//		return;
+	//	}
+	//}
+	/*else*/ if (gpGlobals->time < m_flNextAttack)
 	{
-		if (m_flNextAttack > 0)
-		{
+		if (!m_pActiveItem)
 			return;
-		}
-	}
-	else if ( gpGlobals->time < m_flNextAttack )
-	{
-		return;
+		
+		CBasePlayerWeapon* gun;
+		gun = (CBasePlayerWeapon*)m_pActiveItem->GetWeaponPtr();
+		if (!gun)
+			return;
+		
+		if (!gun->m_fInReload)
+				return;
+		
+		inreload = true;
 	}
 
 	ImpulseCommands();
@@ -4909,6 +4908,9 @@ void CBasePlayer::ItemPostFrame()
 
 		return; // skip weapon functions, can't shoot, reload etc.
 	}
+
+	if (inreload)
+		return;
 
 	m_pActiveItem->ItemPostFrame( );
 }

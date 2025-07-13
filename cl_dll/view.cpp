@@ -88,6 +88,10 @@ qboolean	v_resetCamera = 1;
 bool m_bLensEffect = false;
 bool g_Paused = false;
 
+extern float saved_vm_frame;
+extern int saved_vm_sequence;
+extern float weaponstarttime;
+
 Vector v_client_aimangles;
 Vector ev_punchangle;
 
@@ -1012,6 +1016,22 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 			kick_wpn_angle = 0;
 
 		view->angles[PITCH] -= kick_wpn_angle;
+
+		if (saved_vm_sequence != -1)
+		{
+			gEngfuncs.pfnWeaponAnim(saved_vm_sequence, view->curstate.body);
+			view->curstate.sequence = saved_vm_sequence;
+		}
+
+		if (saved_vm_frame)
+		{
+			weaponstarttime = saved_vm_frame;
+			view->latched.prevframe = saved_vm_frame;
+			view->latched.sequencetime = saved_vm_frame;
+		}
+
+		saved_vm_frame = 0;
+		saved_vm_sequence = -1;
 	}
 	else if( gHUD.KickStage == 2 )
 	{
@@ -1967,6 +1987,7 @@ void V_CalcSpectatorRefdef ( struct ref_params_s * pparams )
 				if ( lastViewModelIndex )
 				{
 					gEngfuncs.pfnWeaponAnim(0,0);	// reset weapon animation
+					weaponstarttime = 0;
 				}
 				else
 				{

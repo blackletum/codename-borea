@@ -25,6 +25,8 @@
 #include "event_api.h"
 #include "pm_shared.h"
 
+extern float weaponstarttime;
+
 extern Vector v_angles;
 
 #define IS_FIRSTPERSON_SPEC ( g_iUser1 == OBS_IN_EYE || (g_iUser1 && (gHUD.m_Spectator.m_pip->value == INSET_IN_EYE)) )
@@ -206,4 +208,10 @@ void EV_MuzzleFlash()
 
 	// Or in the muzzle flash
 	ent->curstate.effects |= EF_MUZZLEFLASH;
+}
+
+void EV_WeaponAnimation(int sequence, int body)
+{
+	weaponstarttime = 0;
+	gEngfuncs.pEventAPI->EV_WeaponAnimation(sequence, body);
 }
