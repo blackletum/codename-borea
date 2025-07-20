@@ -799,7 +799,6 @@ private:
 	float m_flNextGrenadeLoad;
 	float m_flLens_on;
 	unsigned short m_usMP5;
-	unsigned short m_usMP52;
 
 	// Aynekko: burst fire stuff
 	int m_iRifleShotsFired;

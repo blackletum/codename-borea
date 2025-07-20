@@ -4741,6 +4741,13 @@ void CMonsterGangster::Pistol( void )
 void CMonsterGangster::MonsterThink()
 {
 	CSquadMonster::MonsterThink();
+
+	if (pev->health <= 0)
+	{
+		SetBoneController(3, 0);
+		return;
+	}
+
 	if (m_hEnemy && !HasConditions(bits_COND_ENEMY_OCCLUDED) && m_cAmmoLoaded > 0)
 	{
 

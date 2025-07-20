@@ -73,6 +73,28 @@ enum
 #define		HOUND_AE_HOPBACK		6
 #define		HOUND_AE_CLOSE_EYE		7
 
+Task_t	tlDogRangeAttack1[] =
+{
+	{ TASK_STOP_MOVING,			(float)0		},
+	{ TASK_FACE_IDEAL,			(float)0		},
+	{ TASK_RANGE_ATTACK1,		(float)0		},
+	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE	},
+	{ TASK_FACE_IDEAL,			(float)0		},
+	{ TASK_WAIT_RANDOM,			(float)0.5		},
+};
+
+Schedule_t	slDogRangeAttack1[] =
+{
+	{
+		tlDogRangeAttack1,
+		ARRAYSIZE(tlDogRangeAttack1),
+		bits_COND_ENEMY_OCCLUDED |
+		bits_COND_NO_AMMO_LOADED,
+		0,
+		"DogRangeAttack1"
+	},
+};
+
 class CHoundeye : public CSquadMonster
 {
 public:
@@ -94,11 +116,15 @@ public:
 	void SetActivity ( Activity NewActivity ) override;
 	void WriteBeamColor ();
 	BOOL CheckRangeAttack1 ( float flDot, float flDist ) override;
+	BOOL CheckRangeAttack2(float flDot, float flDist) override { return CheckRangeAttack1(flDot, flDist); };
 	BOOL CheckMeleeAttack1( float flDot, float flDist ) override;
 	BOOL FValidateHintType ( short sHint ) override;
 	BOOL FCanActiveIdle () override;
 	Schedule_t *GetScheduleOfType ( int Type ) override;
 	Schedule_t *GetSchedule() override;
+
+	void LungeAttack();
+	void EXPORT LungeTouch(CBaseEntity* pOther);
 
 	int	Save( CSave &save ) override; 
 	int Restore( CRestore &restore ) override;
@@ -219,19 +245,29 @@ BOOL CHoundeye :: FCanActiveIdle ()
 //=========================================================
 BOOL CHoundeye :: CheckRangeAttack1 ( float flDot, float flDist )
 {
-	return FALSE; // Aynekko: no range for the dog
-
-	if ( flDist <= ( HOUNDEYE_MAX_ATTACK_RADIUS * 0.5 ) && flDot >= 0.3 )
+	if (FBitSet(pev->flags, FL_ONGROUND) && flDist <= 256 && flDot >= 0.65)
 	{
-		return TRUE;
+		if(m_flNextAttack + 3.5 < gpGlobals->time)
+			return TRUE;
 	}
 	return FALSE;
+}
+
+bool IsStillEnough(Vector velocity)
+{
+	bool x_axis = (velocity.x < 90 && velocity.x > -90);
+	bool y_axis = (velocity.y < 90 && velocity.y > -90);
+
+	if (x_axis && y_axis)
+		return true;
+
+	return false;
 }
 
 // Aynekko: bite attack check
 BOOL CHoundeye::CheckMeleeAttack1( float flDot, float flDist )
 {
-	if( flDist <= 64 && flDot >= 0.7 )
+	if( flDist <= 64 && flDot >= 0.7 && IsStillEnough(m_hEnemy->pev->velocity))
 		return TRUE;
 
 	return FALSE;
@@ -279,6 +315,9 @@ void CHoundeye :: SetActivity ( Activity NewActivity )
 
 	if ( NewActivity == m_Activity )
 		return;
+
+	if (NewActivity == ACT_RANGE_ATTACK1)
+		NewActivity = ACT_RANGE_ATTACK2;
 
 	if ( m_MonsterState == MONSTERSTATE_COMBAT && NewActivity == ACT_IDLE && RANDOM_LONG(0,1) )
 	{
@@ -440,7 +479,7 @@ void CHoundeye :: Precache()
 	PRECACHE_SOUND( "dog/dog_bite.wav" );
 
 	PRECACHE_SOUND("dog/dog_attack1.wav");
-	PRECACHE_SOUND("dog/dog_attack3.wav");
+	PRECACHE_SOUND("dog/dog_attack2.wav");
 
 	PRECACHE_SOUND("dog/dog_blast1.wav");
 	PRECACHE_SOUND("dog/dog_blast2.wav");
@@ -722,6 +761,90 @@ void CHoundeye :: SonicAttack ()
 		}
 	}
 }
+
+#define LUNGE_DISTANCE 400
+
+void CHoundeye::LungeAttack()
+{
+	ClearBits(pev->flags, FL_ONGROUND);
+
+	UTIL_SetOrigin(this, pev->origin + Vector(0, 0, 1));// take him off ground so engine doesn't instantly reset onground 
+	UTIL_MakeVectors(pev->angles);
+
+	Vector vecJumpDir;
+	if (m_hEnemy != nullptr)
+	{
+		float gravity = g_psv_gravity->value;
+		if (gravity <= 1)
+			gravity = 1;
+
+		// How fast does the headcrab need to travel to reach that height given gravity?
+		float height = (m_hEnemy->pev->origin.z + m_hEnemy->pev->view_ofs.z - pev->origin.z);
+		if (height < 8)
+			height = 8;
+		float speed = sqrt(2 * gravity * height);
+		float time = speed / gravity;
+
+		// Scale the sideways velocity to get there at the right time
+		vecJumpDir = (m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs - pev->origin);
+		vecJumpDir = vecJumpDir.Normalize();
+
+		vecJumpDir = vecJumpDir * LUNGE_DISTANCE;
+
+		// Speed to offset gravity at the desired height
+		vecJumpDir.z = speed * 0.5;
+
+		// Don't jump too far/fast
+		float distance = vecJumpDir.Length();
+
+		if (distance > 500)
+		{
+			vecJumpDir = vecJumpDir * (500.0 / distance);
+		}
+	}
+	else
+	{
+		// jump hop, don't care where
+		vecJumpDir = Vector(gpGlobals->v_forward.x, gpGlobals->v_forward.y, gpGlobals->v_up.z) * 350;
+	}
+
+	if(RANDOM_LONG(0,1))
+		EMIT_SOUND_DYN(edict(), CHAN_WEAPON, "dog/dog_attack1.wav", VOL_NORM, ATTN_IDLE, 0, PITCH_NORM);
+	else
+		EMIT_SOUND_DYN(edict(), CHAN_WEAPON, "dog/dog_attack2.wav", VOL_NORM, ATTN_IDLE, 0, PITCH_NORM);
+
+	int iSound = RANDOM_LONG(0, 2);
+	//if (iSound != 0)
+	//	EMIT_SOUND_DYN(edict(), CHAN_VOICE, pAttackSounds[iSound], GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch());
+
+	pev->velocity = vecJumpDir;
+	m_flNextAttack = gpGlobals->time + 2;
+
+	SetTouch(&CHoundeye::LungeTouch);
+}
+
+void EXPORT CHoundeye::LungeTouch(CBaseEntity* pOther)
+{
+	if (!pOther->pev->takedamage)
+	{
+		return;
+	}
+
+	if (pOther->Classify() == Classify())
+	{
+		return;
+	}
+
+	// Don't hit if back on ground
+	if (!FBitSet(pev->flags, FL_ONGROUND))
+	{
+		EMIT_SOUND_DYN(edict(), CHAN_WEAPON, "dog/dog_bite.wav", VOL_NORM, ATTN_IDLE, 0, PITCH_NORM);
+
+		pOther->TakeDamage(pev, pev, 10, DMG_SLASH);
+	}
+
+	SetTouch(nullptr);
+}
 		
 //=========================================================
 // start task
@@ -768,7 +891,9 @@ void CHoundeye :: StartTask ( Task_t *pTask )
 		}
 	case TASK_RANGE_ATTACK1:
 		{
-			m_IdealActivity = ACT_RANGE_ATTACK1;
+			m_IdealActivity = ACT_RANGE_ATTACK2;
+
+			LungeAttack();
 
 /*
 			if ( InSquad() )
@@ -1203,6 +1328,7 @@ DEFINE_CUSTOM_SCHEDULES( CHoundeye )
 	slHoundHopRetreat,
 	slHoundCombatFailPVS,
 	slHoundCombatFailNoPVS,
+	slDogRangeAttack1,
 };
 
 IMPLEMENT_CUSTOM_SCHEDULES( CHoundeye, CSquadMonster );
@@ -1262,17 +1388,10 @@ Schedule_t* CHoundeye :: GetScheduleOfType ( int Type )
 			}
 		}
 	case SCHED_RANGE_ATTACK1:
-		{
-			return &slHoundRangeAttack[ 0 ];
-/*
-			if ( InSquad() )
-			{
-				return &slHoundRangeAttack[ RANDOM_LONG( 0, 1 ) ];
-			}
-
-			return &slHoundRangeAttack[ 1 ];
-*/
-		}
+	case SCHED_RANGE_ATTACK2:
+	{
+		return &slDogRangeAttack1[0];
+	}
 	case SCHED_SPECIAL_ATTACK1:
 		{
 			return &slHoundSpecialAttack1[ 0 ];
@@ -1323,7 +1442,7 @@ Schedule_t *CHoundeye :: GetSchedule()
 {
 	if( HasConditions( bits_COND_HEAR_SOUND ) )
 	{
-		ALERT( at_console, "sasffasfasSOUND\n" );
+		//ALERT( at_console, "sasffasfasSOUND\n" ); what
 		CSound *pSound;
 		pSound = PBestSound();
 

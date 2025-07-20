@@ -472,18 +472,32 @@ LINK_ENTITY_TO_CLASS(point_clientcommand, CClientCommand);
 
 void CClientCommand::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
 {
-		char command[64];
-		int cmdvalue;
-		std::istringstream iss(STRING(pev->message));
-		std::string word;
+	char command[64];
+	int cmdvalue;
+	std::istringstream iss(STRING(pev->message));
+	std::string word;
 
-		iss >> word;
-		strcpy(command, word.c_str());
-		iss >> word;
-		cmdvalue = atoi(word.c_str());
+	iss >> word;
+	strcpy(command, word.c_str());
+	iss >> word;
+	cmdvalue = atoi(word.c_str());
+
+	if(word.at(0) == '+')
+	{
+		std::string unpress_button;
+		word += '\n';
+		unpress_button = word;
+		unpress_button.replace(unpress_button.begin(), unpress_button.begin() + 1, "-");
+		CLIENT_COMMAND(pActivator->edict(), word.c_str());
+		CLIENT_COMMAND(pActivator->edict(), unpress_button.c_str());
+	}
+	else
+	{
+
 
 		sprintf(command, "%s %d\n", command, cmdvalue);
 		CLIENT_COMMAND(pActivator->edict(), command);
+	}
 }
 
 

@@ -20,7 +20,7 @@
 #include "cbase.h"
 #include "monsters.h"
 #include "weapons.h"
-#include "CPipewrench.h"
+#include "fists.h"
 #include "nodes.h"
 #include "player.h"
 #include "gamerules.h"

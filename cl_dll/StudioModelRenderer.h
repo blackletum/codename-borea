@@ -260,9 +260,6 @@ public:
 	int				m_iCurrentBinding;
 	int				m_iEngineBinding;
 
-	GLuint			m_uiVertexShaders[MAX_MODEL_SHADERS];
-	GLuint			m_uiFragmentShaders[MAX_FRAGMENT_SHADERS];
-
 	cvar_t			*m_pCvarDrawModels;
 	cvar_t			*m_pCvarModelsBBoxDebug;
 	cvar_t			*m_pCvarModelsLightDebug;
@@ -361,6 +358,25 @@ public:
 	Vector			m_vertexTransform[MAXSTUDIOVERTS * 2];
 
 	Vector m_vShadowLightOrigin;
+
+	//glsl start
+
+	GLuint m_ModelShader;
+
+	GLuint m_uiUniformLoc_modelviewmatrix;
+	GLuint m_uiUniformLoc_projectionmatrix;
+	GLuint m_uiUniformLoc_lightdir;
+	GLuint m_uiUniformLoc_ambientlight;
+	GLuint m_uiUniformLoc_diffuselight;
+	GLuint m_uiUniformLoc_numlights;
+	GLuint m_uiUniformLoc_fog;
+	GLuint m_uiUniformLoc_texture0;
+
+	GLuint m_uiUniformLoc_texturescale;
+
+	GLuint m_uiUniformLoc_texturematrix;
+
+	//glsl end
 
 
 private:

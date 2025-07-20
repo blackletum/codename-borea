@@ -392,6 +392,8 @@ void CDeadGenericMonster :: Spawn()
 	pev->yaw_speed		= 8; //LRC -- what?
 	pev->sequence		= 0;
 
+	if (!m_bloodColor) m_bloodColor = BLOOD_COLOR_RED;
+
 	if (pev->netname)
 	{
 		pev->sequence = LookupSequence( STRING(pev->netname) );

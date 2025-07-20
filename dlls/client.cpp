@@ -939,6 +939,10 @@ void ClientCommand( edict_t *pEntity )
 				player->pev->health = 100;
 		}
 	}
+	else if (FStrEq(pcmd, "+jump"))
+	{
+		player->pev->button |= IN_JUMP;
+	}
 	else
 	{
 		// tell the user they entered an unknown command

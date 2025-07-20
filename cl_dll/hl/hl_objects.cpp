@@ -26,9 +26,6 @@
 #include "entity_types.h"
 #include "r_efx.h"
 
-extern BEAM *pBeam;
-extern BEAM *pBeam2;
-extern TEMPENTITY* pFlare;	// Vit_amiN: egon's energy flare
 void HUD_GetLastOrg( float *org );
 
 void UpdateBeams ()
@@ -64,6 +61,7 @@ void UpdateBeams ()
 
 	gEngfuncs.pEventAPI->EV_PopPMStates();
 
+	/*
 	if ( pBeam )
 	{
 		pBeam->target = tr.endpos;
@@ -97,6 +95,7 @@ void UpdateBeams ()
 			}
 		}
 	}
+	*/
 }
 
 /*
@@ -108,6 +107,8 @@ Add game specific, client-side objects here
 */
 void Game_AddObjects()
 {
+	/*
 	if ( pBeam || pBeam2 || pFlare)
 		UpdateBeams();
+	*/
 }

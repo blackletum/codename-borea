@@ -233,53 +233,6 @@ R"(
 	
 	)";
 
-
-
-
-GLuint compileShader(const char* source, GLenum type)
-{
-	GLuint shader = glCreateShader(type);
-	glShaderSource(shader, 1, &source, nullptr);
-	glCompileShader(shader);
-
-	// Check compile status
-	GLint success;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		char log[512];
-		glGetShaderInfoLog(shader, 512, nullptr, log);
-		gEngfuncs.Con_Printf("Shader compile error: %s\n", log);
-	}
-	return shader;
-}
-
-GLuint createShaderProgram(const char* vertexSrc, const char* fragmentSrc)
-{
-	GLuint vertexShader = compileShader(vertexSrc, GL_VERTEX_SHADER);
-	GLuint fragmentShader = compileShader(fragmentSrc, GL_FRAGMENT_SHADER);
-
-	GLuint program = glCreateProgram();
-	glAttachShader(program, vertexShader);
-	glAttachShader(program, fragmentShader);
-	glLinkProgram(program);
-
-	// Check link status
-	GLint success;
-	glGetProgramiv(program, GL_LINK_STATUS, &success);
-	if (!success)
-	{
-		char log[512];
-		glGetProgramInfoLog(program, 512, nullptr, log);
-		gEngfuncs.Con_Printf("Shader link error: %s\n", log);
-	}
-
-	// Cleanup
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-	return program;
-}
-
 /*
 ====================
 Init
@@ -296,7 +249,7 @@ void CWaterShader::Init(void)
 	if (!gBSPRenderer.m_bShaderSupport)
 		return;
 
-	m_WaterFragmentShader = createShaderProgram(water_depth_vertex, water_fragment_water_regular);
+	m_WaterFragmentShader = gBSPRenderer.createShaderProgram(water_depth_vertex, water_fragment_water_regular);
 }
 
 /*

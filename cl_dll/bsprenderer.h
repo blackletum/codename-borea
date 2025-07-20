@@ -146,6 +146,10 @@ public:
 	void LoadGLSLShaders();
 	void DrawGLSLTextures();
 
+	GLuint compileShader(const char* source, GLenum type);
+
+	GLuint createShaderProgram(const char* vertexSrc, const char* fragmentSrc);
+
 
 public:
 	void DrawDecals( );

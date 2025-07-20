@@ -270,6 +270,50 @@ void ShaderUtil::Delete()
 	glDeleteProgram(mProgramId);
 }
 
+GLuint CBSPRenderer::compileShader(const char* source, GLenum type)
+{
+	GLuint shader = glCreateShader(type);
+	glShaderSource(shader, 1, &source, nullptr);
+	glCompileShader(shader);
+
+	// Check compile status
+	GLint success;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		char log[512];
+		glGetShaderInfoLog(shader, 512, nullptr, log);
+		gEngfuncs.Con_Printf("Shader compile error: %s\n", log);
+	}
+	return shader;
+}
+
+GLuint CBSPRenderer::createShaderProgram(const char* vertexSrc, const char* fragmentSrc)
+{
+	GLuint vertexShader = compileShader(vertexSrc, GL_VERTEX_SHADER);
+	GLuint fragmentShader = compileShader(fragmentSrc, GL_FRAGMENT_SHADER);
+
+	GLuint program = glCreateProgram();
+	glAttachShader(program, vertexShader);
+	glAttachShader(program, fragmentShader);
+	glLinkProgram(program);
+
+	// Check link status
+	GLint success;
+	glGetProgramiv(program, GL_LINK_STATUS, &success);
+	if (!success)
+	{
+		char log[512];
+		glGetProgramInfoLog(program, 512, nullptr, log);
+		gEngfuncs.Con_Printf("Shader link error: %s\n", log);
+	}
+
+	// Cleanup
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+	return program;
+}
+
 void CBSPRenderer::LoadGLSLShaders()
 {
 	// create a load of blank pixels to create textures with
@@ -1360,7 +1404,7 @@ RendererRefDef
 */
 void CBSPRenderer::RendererRefDef ( ref_params_t *pparams )
 {
-	gHUD.viewFrustum.SetFrustum(pparams->viewangles, pparams->vieworg, gHUD.m_iFOV, gHUD.m_pFogSettings.end, true); //gHUD.m_pFogSettings.end * 1000, true); dont use fogsettings for far plane
+	gHUD.viewFrustum.SetFrustum(pparams->viewangles, pparams->vieworg, gHUD.m_iFOV, 8192 /*gHUD.m_pFogSettings.end dont use fogsetting's far plane, it breaks stuff*/, true);
 	VectorCopy( pparams->viewangles,	m_vViewAngles	);
 	VectorCopy( pparams->vieworg,		m_vRenderOrigin	);
 

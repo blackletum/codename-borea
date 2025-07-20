@@ -20,6 +20,8 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include <cmath>
 
 #include <windows.h>
+
+#include "gl/glew.h"
 #include <gl/gl.h>
 #include "gl/glext.h"
 
@@ -46,6 +48,7 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "propmanager.h"
 #include "bsprenderer.h"
 #include "StudioModelRenderer.h"
+
 #include "mathlib.h"
 
 int g_iViewmodelSkin;
@@ -69,1505 +72,123 @@ std::vector<cl_stored_light>StoredLightBuffer;
 extern float weaponstarttime;
 
 //===========================================
-//	ARB SHADER
+// GLSL SHADER
+// finally no more assembly arb shaders
 //===========================================
-char arb_basic_depth [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
 
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-"DP4 R0.x, program.local[9], R0;"
-
-"MOV result.position.z, R0.x;"
-"MOV result.fogcoord.x, R0.x;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_1light_depth [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-"DP4 R0.x, program.local[9], R0;"
-
-"MOV result.position.z, R0.x;"
-"MOV result.fogcoord.x, R0.x;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_2lights_depth [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-"DP4 R0.x, program.local[9], R0;"
-
-"MOV result.position.z, R0.x;"
-"MOV result.fogcoord.x, R0.x;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_3lights_depth [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-"DP4 R0.x, program.local[9], R0;"
-
-"MOV result.position.z, R0.x;"
-"MOV result.fogcoord.x, R0.x;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_4lights_depth [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-// Light 4
-"SUB R1.xyz, vertex.position, program.local[21];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[23];"
-"SUB R2.x, 1, program.local[23].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[23].w;"
-"MUL R2.x, program.local[22].w, program.local[22].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[21].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[22], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-"DP4 R0.x, program.local[9], R0;"
-
-"MOV result.position.z, R0.x;"
-"MOV result.fogcoord.x, R0.x;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_5lights_depth [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-// Light 4
-"SUB R1.xyz, vertex.position, program.local[21];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[23];"
-"SUB R2.x, 1, program.local[23].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[23].w;"
-"MUL R2.x, program.local[22].w, program.local[22].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[21].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[22], R1.x, R0;"
-
-// Light 5
-"SUB R1.xyz, vertex.position, program.local[24];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[26];"
-"SUB R2.x, 1, program.local[26].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[26].w;"
-"MUL R2.x, program.local[25].w, program.local[25].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[24].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[25], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-"DP4 R0.x, program.local[9], R0;"
-
-"MOV result.position.z, R0.x;"
-"MOV result.fogcoord.x, R0.x;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_6lights_depth [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-// Light 4
-"SUB R1.xyz, vertex.position, program.local[21];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[23];"
-"SUB R2.x, 1, program.local[23].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[23].w;"
-"MUL R2.x, program.local[22].w, program.local[22].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[21].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[22], R1.x, R0;"
-
-// Light 5
-"SUB R1.xyz, vertex.position, program.local[24];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[26];"
-"SUB R2.x, 1, program.local[26].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[26].w;"
-"MUL R2.x, program.local[25].w, program.local[25].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[24].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[25], R1.x, R0;"
-
-// Light 5
-"SUB R1.xyz, vertex.position, program.local[27];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[29];"
-"SUB R2.x, 1, program.local[29].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[29].w;"
-"MUL R2.x, program.local[28].w, program.local[28].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[27].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[28], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-"DP4 R0.x, program.local[9], R0;"
-
-"MOV result.position.z, R0.x;"
-"MOV result.fogcoord.x, R0.x;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_basic_radial [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP3 R1.x, R0, R0;"
-"RSQ R1.x, R1.x;"
-"RCP result.fogcoord.x, R1.x;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.z, program.local[9], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_1light_radial [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP3 R1.x, R0, R0;"
-"RSQ R1.x, R1.x;"
-"RCP result.fogcoord.x, R1.x;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.z, program.local[9], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_2lights_radial [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP3 R1.x, R0, R0;"
-"RSQ R1.x, R1.x;"
-"RCP result.fogcoord.x, R1.x;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.z, program.local[9], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_3lights_radial [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP3 R1.x, R0, R0;"
-"RSQ R1.x, R1.x;"
-"RCP result.fogcoord.x, R1.x;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.z, program.local[9], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_4lights_radial [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-// Light 4
-"SUB R1.xyz, vertex.position, program.local[21];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[23];"
-"SUB R2.x, 1, program.local[23].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[23].w;"
-"MUL R2.x, program.local[22].w, program.local[22].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[21].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[22], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP3 R1.x, R0, R0;"
-"RSQ R1.x, R1.x;"
-"RCP result.fogcoord.x, R1.x;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.z, program.local[9], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_5lights_radial [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-// Light 4
-"SUB R1.xyz, vertex.position, program.local[21];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[23];"
-"SUB R2.x, 1, program.local[23].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[23].w;"
-"MUL R2.x, program.local[22].w, program.local[22].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[21].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[22], R1.x, R0;"
-
-// Light 5
-"SUB R1.xyz, vertex.position, program.local[24];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[26];"
-"SUB R2.x, 1, program.local[26].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[26].w;"
-"MUL R2.x, program.local[25].w, program.local[25].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[24].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[25], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP3 R1.x, R0, R0;"
-"RSQ R1.x, R1.x;"
-"RCP result.fogcoord.x, R1.x;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.z, program.local[9], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_6lights_radial [] =
-"!!ARBvp1.0"
-"TEMP R0;"
-"TEMP R1;"
-"TEMP R2;"
-"DP3 R0.w, vertex.normal, program.local[0];"
-"MAD R0.xyz, program.local[2], -R0.w, program.local[1];"
-
-// Light 1
-"SUB R1.xyz, vertex.position, program.local[12];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[14];"
-"SUB R2.x, 1, program.local[14].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[14].w;"
-"MUL R2.x, program.local[13].w, program.local[13].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[12].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[13], R1.x, R0;"
-
-// Light 2
-"SUB R1.xyz, vertex.position, program.local[15];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[17];"
-"SUB R2.x, 1, program.local[17].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[17].w;"
-"MUL R2.x, program.local[16].w, program.local[16].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[15].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[16], R1.x, R0;"
-
-// Light 3
-"SUB R1.xyz, vertex.position, program.local[18];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[20];"
-"SUB R2.x, 1, program.local[20].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[20].w;"
-"MUL R2.x, program.local[19].w, program.local[19].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[18].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[19], R1.x, R0;"
-
-// Light 4
-"SUB R1.xyz, vertex.position, program.local[21];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[23];"
-"SUB R2.x, 1, program.local[23].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[23].w;"
-"MUL R2.x, program.local[22].w, program.local[22].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[21].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[22], R1.x, R0;"
-
-// Light 5
-"SUB R1.xyz, vertex.position, program.local[24];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[26];"
-"SUB R2.x, 1, program.local[26].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[26].w;"
-"MUL R2.x, program.local[25].w, program.local[25].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[24].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[25], R1.x, R0;"
-
-// Light 5
-"SUB R1.xyz, vertex.position, program.local[27];"
-"DP3 R1.w, R1, R1;"
-"RSQ R2.x, R1.w;"
-"MUL R1.xyz, R2.x, R1;"
-"DP3 R2.y, R1, program.local[29];"
-"SUB R2.x, 1, program.local[29].w;"
-"RCP R2.z, R2.x;"
-"MAX R2.y, R2, 0;"
-"SUB R2.y, R2, program.local[29].w;"
-"MUL R2.x, program.local[28].w, program.local[28].w;"
-"RCP R2.x, R2.x;"
-"MAD R1.w, R1, R2.x, -1;"
-"MUL R2.y, R2, R2.z;"
-"MIN R2.y, R2, 1;"
-"MAX R2.x, R2.y, 0;"
-"MAX R1.w, -R1, 0;"
-"ADD R2.x, -R2, 1;"
-"MUL R2.x, R2, R1.w;"
-"MAD R1.w, -R2.x, program.local[27].w, R1;"
-"DP3 R1.x, vertex.normal, R1;"
-"MUL R1.x, -R1, R1.w;"
-"MAX R1.x, R1, 0;"
-"MAD R0.xyz, program.local[28], R1.x, R0;"
-
-"MAX R0.xyz, R0, 0;"
-"MIN R0.xyz, R0, 1;"
-"MOV result.color.xyz, R0;"
-"MOV result.color.w, vertex.color.w;"
-
-"DP4 R0.x, program.local[3], vertex.position;"
-"DP4 R0.y, program.local[4], vertex.position;"
-"DP4 R0.z, program.local[5], vertex.position;"
-"DP4 R0.w, program.local[6], vertex.position;"
-
-"DP3 R1.x, R0, R0;"
-"RSQ R1.x, R1.x;"
-"RCP result.fogcoord.x, R1.x;"
-
-"DP4 result.position.x, program.local[7], R0;"
-"DP4 result.position.y, program.local[8], R0;"
-"DP4 result.position.z, program.local[9], R0;"
-"DP4 result.position.w, program.local[10], R0;"
-
-"MUL result.texcoord[0].x, vertex.texcoord[0].x, program.local[11].x;"
-"MUL result.texcoord[0].y, vertex.texcoord[0].y, program.local[11].y;"
-"END";
-
-char arb_frag_reg [] =
-"!!ARBfp1.0"
-"OPTION ARB_precision_hint_fastest;"
-"TEMP R0;"
-"TEX R0, fragment.texcoord[0], texture[0], 2D;"
-"MUL R0.xyz, R0, 2;"
-
-"MUL result.color, R0, fragment.color.primary;"
-"END";
-
-char arb_frag_fog [] =
-"!!ARBfp1.0"
-"OPTION ARB_precision_hint_fastest;"
-"OPTION ARB_fog_linear;"
-"TEMP R0;"
-"TEX R0, fragment.texcoord[0], texture[0], 2D;"
-"MUL R0.xyz, R0, 2;"
-
-"MUL result.color, R0, fragment.color.primary;"
-"END";
-//===========================================
-//	ARB SHADER
-//===========================================
+char glsl_model_lighting[] = R"(
+	#version 120
+
+	#define MAX_LIGHTS 6
+
+	uniform vec3 lightdir;
+	uniform vec3 ambientlight;
+	uniform vec3 diffuselight;
+	uniform vec2 texturescale;
+
+	uniform int numlights;
+
+	uniform vec4 modellight_origin[MAX_LIGHTS];
+	uniform vec4 modellight_color[MAX_LIGHTS];
+	uniform vec4 modellight_forward[MAX_LIGHTS];
+
+	uniform mat4 texturematrix;
+	uniform mat4 projectionmatrix;
+	uniform mat4 modelviewmatrix;
+	
+	varying vec4 vertexcolor;
+	varying vec2 texcoord;
+	varying float fogcoord;
+	varying vec2 texturecoord;
+
+	varying vec4 projectedCoord;
+
+	void main() {
+		float diffusefactor = dot(gl_Normal, lightdir);
+		vec3 lighting = ambientlight + (diffuselight * max(-diffusefactor, 0.0));
+
+		//Light 1
+
+		for (int i = 0; i < MAX_LIGHTS; ++i) 
+		{
+			if (i >= numlights) 
+				break;
+		
+			vec3 lightvector = gl_Vertex.xyz - modellight_origin[i].xyz;
+			float lightdistsquared = dot(lightvector, lightvector);
+			float lightdist = sqrt(lightdistsquared);
+			vec3 lightnormal = lightvector / lightdist;
+			
+			float cosangle = dot(lightnormal, modellight_forward[i].xyz);
+			float spotcosedge = modellight_forward[i].w;
+			float spotcosdiff = max(cosangle - spotcosedge, 0.0);
+			float spotcosrange = 1.0 - spotcosedge;
+			float spotattenuation = clamp(spotcosdiff / spotcosrange, 0.0, 1.0);
+		
+			float radiussquared = modellight_color[i].w * modellight_color[i].w;
+			float distattenuation = max(1.0 - (lightdistsquared / radiussquared), 0.0);
+			
+			float lightfactor = spotattenuation * distattenuation;
+			
+			float surfacedot = max(-dot(gl_Normal, lightnormal), 0.0);
+			float finallight = lightfactor * surfacedot;
+		
+			lighting += modellight_color[i].rgb * finallight;
+		}
+		
+		//
+
+		lighting = clamp(lighting, 0.0, 1.0);
+		vertexcolor.xyz = lighting;
+		vertexcolor.w = gl_Color.a;
+
+		projectedCoord = (texturematrix * gl_Vertex);
+
+
+		gl_Position = projectionmatrix * modelviewmatrix * gl_Vertex;
+
+		fogcoord = gl_Position.z;
+		
+		texcoord = gl_MultiTexCoord0.xy / texturescale;
+	}
+
+
+
+)";
+
+char glsl_frag_reg[] = R"(
+	#version 120
+
+	uniform sampler2D texture0;
+	uniform int fog;
+
+	varying vec2 texcoord;
+	varying vec4 projectedCoord;
+	varying float fogcoord;
+	varying vec4 vertexcolor;
+
+	void main()
+	{
+		vec4 texcolor = texture2D(texture0, texcoord);
+		texcolor.rgb *= 2;
+
+		if (fog != 0)
+		{
+			// emulate ARB_fog_linear
+			float fog = (gl_Fog.end - fogcoord) * gl_Fog.scale;
+			fog = clamp(fog, 0.0, 1.0);
+
+			vec4 fogColor = gl_Fog.color;
+
+			gl_FragColor = mix(fogColor, texcolor * vertexcolor, fog); // fog blend
+		}
+		else
+		{
+				gl_FragColor = texcolor * (vertexcolor);
+		}
+	}
+
+)";
 
 /*
 ====================
@@ -1620,249 +241,20 @@ void CStudioModelRenderer::Init()
 	if(!gBSPRenderer.m_bShaderSupport)
 		return;
 
-	// Load non-fog fragment shader
-	GLint iErrorPos, iIsNative;
-	glEnable(GL_FRAGMENT_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiFragmentShaders[0]);
-	gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentShaders[0]);
+	m_ModelShader = gBSPRenderer.createShaderProgram(glsl_model_lighting, glsl_frag_reg);
 
-	gBSPRenderer.glProgramStringARB(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_frag_reg)-1, arb_frag_reg);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_FRAGMENT_PROGRAM_ARB);
+	m_uiUniformLoc_modelviewmatrix = glGetUniformLocation(m_ModelShader, "modelviewmatrix");
+	m_uiUniformLoc_projectionmatrix = glGetUniformLocation(m_ModelShader, "projectionmatrix");
+	m_uiUniformLoc_lightdir = glGetUniformLocation(m_ModelShader, "lightdir");
+	m_uiUniformLoc_ambientlight = glGetUniformLocation(m_ModelShader, "ambientlight");
+	m_uiUniformLoc_diffuselight = glGetUniformLocation(m_ModelShader, "diffuselight");
+	m_uiUniformLoc_numlights = glGetUniformLocation(m_ModelShader, "numlights");
+	m_uiUniformLoc_fog = glGetUniformLocation(m_ModelShader, "fog");
+	m_uiUniformLoc_texture0 = glGetUniformLocation(m_ModelShader, "texture0");
 
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
+	m_uiUniformLoc_texturescale = glGetUniformLocation(m_ModelShader, "texturescale");
 
-	// Load fogged fragment shader
-	glEnable(GL_FRAGMENT_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiFragmentShaders[1]);
-	gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentShaders[1]);
-
-	gBSPRenderer.glProgramStringARB(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_frag_fog)-1, arb_frag_fog);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_FRAGMENT_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[0]); // No light depth
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[0]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_basic_depth)-1, arb_basic_depth);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[1]); // 1 light depth
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[1]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_1light_depth)-1, arb_1light_depth);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[2]); // 2 lights depth
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[2]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_2lights_depth)-1, arb_2lights_depth);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[3]); // 3 lights depth
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[3]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_3lights_depth)-1, arb_3lights_depth);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[4]); // 4 lights depth
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[4]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_4lights_depth)-1, arb_4lights_depth);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[5]); // 5 lights depth
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[5]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_5lights_depth)-1, arb_5lights_depth);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[6]); // 6 lights depth
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[6]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_6lights_depth)-1, arb_6lights_depth);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[7]);
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[7]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_basic_radial)-1, arb_basic_radial);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[8]); // 1 light radial
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[8]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_1light_radial)-1, arb_1light_radial);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[9]); // 2 lights radial
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[9]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_2lights_radial)-1, arb_2lights_radial);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[10]); // 3 lights radial
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[10]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_3lights_radial)-1, arb_3lights_radial);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[11]); // 4 lights radial
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[11]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_4lights_radial)-1, arb_4lights_radial);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[12]); // 5 lights radial
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[12]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_5lights_radial)-1, arb_5lights_radial);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
-	glEnable(GL_VERTEX_PROGRAM_ARB);
-	gBSPRenderer.glGenProgramsARB(1, &m_uiVertexShaders[13]); // 6 lights radial
-	gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[13]);
-
-	gBSPRenderer.glProgramStringARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, sizeof(arb_6lights_radial)-1, arb_6lights_radial);
-	glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &iErrorPos);
-	gBSPRenderer.glGetProgramivARB(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &iIsNative);
-	glDisable(GL_VERTEX_PROGRAM_ARB);
-
-	if(iErrorPos != -1 || !iIsNative)
-	{
-		gBSPRenderer.m_bShaderSupport = false;
-		gBSPRenderer.m_bDontPromptShadersError = false;
-		return;
-	}
+	m_uiUniformLoc_texturematrix = glGetUniformLocation(m_ModelShader, "texturematrix");
 }
 
 /*
@@ -3907,34 +2299,25 @@ void CStudioModelRenderer::StudioSetupRenderer( int rendermode )
 		if(gBSPRenderer.m_bShaderSupport && m_pCvarModelShaders->value > 0)
 		{
 			float flMatrix[16];
-			glEnable(GL_FRAGMENT_PROGRAM_ARB);
-			glEnable(GL_VERTEX_PROGRAM_ARB);
 
-			if(gHUD.m_pFogSettings.active)
-				gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentShaders[1]);
-			else
-				gBSPRenderer.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, m_uiFragmentShaders[0]);
-
-			if(!gBSPRenderer.m_bRadialFogSupport || gBSPRenderer.m_pCvarRadialFog->value < 1)
-				gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[m_iNumModelLights]);
-			else
-				gBSPRenderer.glBindProgramARB(GL_VERTEX_PROGRAM_ARB, m_uiVertexShaders[(7+m_iNumModelLights)]);
+			glUseProgram(m_ModelShader);
 
 			glGetFloatv(GL_MODELVIEW_MATRIX, flMatrix);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 3, flMatrix[0], flMatrix[4], flMatrix[8], flMatrix[12]);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 4, flMatrix[1], flMatrix[5], flMatrix[9], flMatrix[13]);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 5, flMatrix[2], flMatrix[6], flMatrix[10], flMatrix[14]);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 6, flMatrix[3], flMatrix[7], flMatrix[11], flMatrix[15]);
+
+			glUniformMatrix4fv(m_uiUniformLoc_modelviewmatrix, 1, GL_FALSE, flMatrix);
 
 			glGetFloatv(GL_PROJECTION_MATRIX, flMatrix);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 7, flMatrix[0], flMatrix[4], flMatrix[8], flMatrix[12]);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 8, flMatrix[1], flMatrix[5], flMatrix[9], flMatrix[13]);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 9, flMatrix[2], flMatrix[6], flMatrix[10], flMatrix[14]);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 10, flMatrix[3], flMatrix[7], flMatrix[11], flMatrix[15]);
-		
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 0, m_pLighting.lightdir[0], m_pLighting.lightdir[1], m_pLighting.lightdir[2], 0);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 1, m_pLighting.ambientlight[0], m_pLighting.ambientlight[1], m_pLighting.ambientlight[2], 0);
-			gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 2, m_pLighting.diffuselight[0], m_pLighting.diffuselight[1], m_pLighting.diffuselight[2], 0);
+			glUniformMatrix4fv(m_uiUniformLoc_projectionmatrix, 1, GL_FALSE, flMatrix);
+
+			//lightmap light
+			glUniform3fv(m_uiUniformLoc_lightdir, 1, m_pLighting.lightdir);
+			glUniform3fv(m_uiUniformLoc_ambientlight, 1, m_pLighting.ambientlight);
+			glUniform3fv(m_uiUniformLoc_diffuselight, 1, m_pLighting.diffuselight);
+
+			glUniform1i(m_uiUniformLoc_numlights, m_iNumModelLights);
+			glUniform1i(m_uiUniformLoc_fog, gHUD.m_pFogSettings.active);
+
+			glUniform1i(m_uiUniformLoc_texture0, 0);
 		}
 		else
 		{
@@ -3972,9 +2355,15 @@ void CStudioModelRenderer::StudioSetupRenderer( int rendermode )
 
 			if(gBSPRenderer.m_bShaderSupport && m_pCvarModelShaders->value > 0)
 			{
-				gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 12+(i*3), flPosition[0], flPosition[1], flPosition[2], m_pModelLights[i]->spotcos > 0 ? 1 : 0);
-				gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 13+(i*3), m_pModelLights[i]->color.x, m_pModelLights[i]->color.y, m_pModelLights[i]->color.z, m_pModelLights[i]->radius);
-				gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 14+(i*3), flForward[0], flForward[1], flForward[2], cos((m_pModelLights[i]->spotcos*2)*0.3*(M_PI*2/360)));
+				std::string origin = "modellight_origin[" + std::to_string(i) + "]";
+				std::string color = "modellight_color[" + std::to_string(i) + "]";
+				std::string forward = "modellight_forward[" + std::to_string(i) + "]";
+				glUniform4f(glGetUniformLocation(m_ModelShader, origin.c_str()),
+					flPosition[0], flPosition[1], flPosition[2], m_pModelLights[i]->spotcos > 0 ? 1 : 0);
+				glUniform4f(glGetUniformLocation(m_ModelShader, color.c_str()),
+					m_pModelLights[i]->color.x, m_pModelLights[i]->color.y, m_pModelLights[i]->color.z, m_pModelLights[i]->radius);
+				glUniform4f(glGetUniformLocation(m_ModelShader, forward.c_str()),
+					flForward[0], flForward[1], flForward[2], cos((m_pModelLights[i]->spotcos * 2) * 0.3 * (M_PI * 2 / 360)));
 			}
 			else
 			{
@@ -4005,7 +2394,7 @@ void CStudioModelRenderer::StudioSetupRenderer( int rendermode )
 	if(m_pCvarModelsLightDebug->value > 0)
 	{
 		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_FRAGMENT_PROGRAM_ARB);
+		//glUseProgram(0);
 	}
 }
 
@@ -4035,8 +2424,7 @@ void CStudioModelRenderer::StudioRestoreRenderer()
 	{
 		if(gBSPRenderer.m_bShaderSupport && m_pCvarModelShaders->value > 0)
 		{
-			glDisable(GL_FRAGMENT_PROGRAM_ARB);
-			glDisable(GL_VERTEX_PROGRAM_ARB);
+			glUseProgram(0);
 		}
 		else
 		{
@@ -4775,7 +3163,7 @@ void CStudioModelRenderer::StudioDrawMesh ( mstudiomesh_t *pmesh, mstudiotexture
 {
 	if(gBSPRenderer.m_bShaderSupport && m_pCvarModelShaders->value > 0 && !(ptex->flags & STUDIO_NF_FULLBRIGHT) && !m_bChromeShell)
 	{
-		gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 11, 1.0/(float)ptex->width, 1.0/(float)ptex->height, 0, 0);
+		glUniform2f(m_uiUniformLoc_texturescale, (float)ptex->width, (float)ptex->height);
 	}
 	else
 	{
@@ -4789,8 +3177,7 @@ void CStudioModelRenderer::StudioDrawMesh ( mstudiomesh_t *pmesh, mstudiotexture
 
 		if(m_pCvarModelShaders->value && gBSPRenderer.m_bShaderSupport)
 		{
-			glDisable(GL_VERTEX_PROGRAM_ARB);
-			glDisable(GL_VERTEX_PROGRAM_ARB);
+			glUseProgram(0);
 		}
 		else
 		{
@@ -4871,8 +3258,7 @@ void CStudioModelRenderer::StudioDrawMesh ( mstudiomesh_t *pmesh, mstudiotexture
 
 		if(m_pCvarModelShaders->value && gBSPRenderer.m_bShaderSupport)
 		{
-			glEnable(GL_VERTEX_PROGRAM_ARB);
-			glEnable(GL_VERTEX_PROGRAM_ARB);
+			glUseProgram(m_ModelShader);
 		}
 		else
 		{
@@ -5549,7 +3935,7 @@ void CStudioModelRenderer::StudioDrawMeshEXT( mstudiotexture_t *ptex, vbomesh_t 
 {
 	if(gBSPRenderer.m_bShaderSupport && m_pCvarModelShaders->value > 0 && !(ptex->flags & STUDIO_NF_FULLBRIGHT))
 	{
-		gBSPRenderer.glProgramLocalParameter4fARB(GL_VERTEX_PROGRAM_ARB, 11, 1.0/(float)ptex->width, 1.0/(float)ptex->height, 0, 0);
+		glUniform2f(m_uiUniformLoc_texturescale, (float)ptex->width, (float)ptex->height);
 	}
 	else
 	{
@@ -5563,8 +3949,7 @@ void CStudioModelRenderer::StudioDrawMeshEXT( mstudiotexture_t *ptex, vbomesh_t 
 
 		if(m_pCvarModelShaders->value && gBSPRenderer.m_bShaderSupport)
 		{
-			glDisable(GL_VERTEX_PROGRAM_ARB);
-			glDisable(GL_VERTEX_PROGRAM_ARB);
+			glUseProgram(0);
 		}
 		else
 		{
@@ -5594,8 +3979,7 @@ void CStudioModelRenderer::StudioDrawMeshEXT( mstudiotexture_t *ptex, vbomesh_t 
 
 		if(m_pCvarModelShaders->value && gBSPRenderer.m_bShaderSupport)
 		{
-			glEnable(GL_VERTEX_PROGRAM_ARB);
-			glEnable(GL_VERTEX_PROGRAM_ARB);
+			glUseProgram(m_ModelShader);
 		}
 		else
 		{

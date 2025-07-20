@@ -21,7 +21,7 @@
 #include "player.h"
 #include "weapons/CGrapple.h"
 #include "weapons/CEagle.h"
-#include "weapons/CPipewrench.h"
+#include "weapons/fists.h"
 #include "weapons/CM249.h"
 #include "weapons/CDisplacer.h"
 #include "weapons/CShockRifle.h"

@@ -64,7 +64,7 @@ int giR, giG, giB;
 
 extern int giOldWeapons;
 
-float weaponstarttime = 0.f;
+float weaponstarttime = 0.f; //goldsrc uses gEngfuncs.GetClientTime() to determine weaponstarttime, so lets just use our own weaponstarttime
 
 int g_iUseEnt;
 std::string g_szUseEntClassname;

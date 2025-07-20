@@ -37,9 +37,6 @@
     <Filter Include="Source Files\dlls\rope">
       <UniqueIdentifier>{8916e080-91ab-48f7-8f59-6cc9497efef1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\dlls\weapons">
-      <UniqueIdentifier>{77768f37-3938-4e92-afeb-8f4fabab6919}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\dlls\rope">
       <UniqueIdentifier>{25bcec5f-fe9f-443f-b81c-ed38b2b511a1}</UniqueIdentifier>
     </Filter>
@@ -60,6 +57,9 @@
     </Filter>
     <Filter Include="Source Files\dlls\TLG_monsters">
       <UniqueIdentifier>{6f3a5e46-6677-44de-adfb-c27a3bf6f1b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\dlls\weapons">
+      <UniqueIdentifier>{04439f09-2256-447b-9e08-2e6c3b96f179}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -369,15 +369,6 @@
     <ClCompile Include="..\..\dlls\rope\CRopeSegment.cpp">
       <Filter>Source Files\dlls\rope</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CEagle.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CEagleLaser.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CSniperRifle.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\dlls\hgrunt_torch.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
@@ -390,38 +381,17 @@
     <ClCompile Include="..\..\dlls\otis.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CKnife.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\dlls\loader.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
     <ClCompile Include="..\..\dlls\zombie_barney.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CShockRifle.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CShockBeam.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CSpore.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CSporeLauncher.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\dlls\shockroach.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
     <ClCompile Include="..\..\dlls\shocktrooper.cpp">
       <Filter>Source Files\dlls</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CDisplacerBall.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CDisplacer.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
     </ClCompile>
     <ClCompile Include="..\..\dlls\blowercannon.cpp">
       <Filter>Source Files\dlls</Filter>
@@ -432,9 +402,6 @@
     <ClCompile Include="..\..\dlls\male_assassin.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CM249.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\dlls\cleansuit_scientist.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
@@ -443,12 +410,6 @@
     </ClCompile>
     <ClCompile Include="..\..\dlls\baby_voltigore.cpp">
       <Filter>Source Files\dlls</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CGrappleTip.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CGrapple.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
     </ClCompile>
     <ClCompile Include="..\..\dlls\ehandle.cpp">
       <Filter>Source Files\dlls</Filter>
@@ -525,9 +486,6 @@
     <ClCompile Include="..\..\dlls\ctf\CHUDIconTrigger.cpp">
       <Filter>Source Files\dlls\ctf</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\dlls\weapons\CPenguin.cpp">
-      <Filter>Source Files\dlls\weapons</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\dlls\penguin_grenade.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
@@ -602,6 +560,48 @@
     </ClCompile>
     <ClCompile Include="pointmessage.cpp">
       <Filter>Source Files\dlls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CSniperRifle.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CSpore.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CSporeLauncher.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CDisplacer.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CDisplacerBall.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CEagle.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CEagleLaser.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CGrapple.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CGrappleTip.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CKnife.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CM249.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CPenguin.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CShockBeam.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\weapons\CShockRifle.cpp">
+      <Filter>Source Files\dlls\weapons</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -764,46 +764,7 @@
     <ClInclude Include="..\..\dlls\rope\CRopeSegment.h">
       <Filter>Header Files\dlls\rope</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CEagle.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CEagleLaser.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CSniperRifle.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CPipewrench.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CKnife.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CShockBeam.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CShockRifle.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CSpore.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CSporeLauncher.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CDisplacerBall.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CDisplacer.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CM249.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CGrapple.h">
-      <Filter>Header Files\dlls\weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CGrappleTip.h">
+    <ClInclude Include="..\..\dlls\weapons\fists.h">
       <Filter>Header Files\dlls\weapons</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dlls\ctf\CItemAcceleratorCTF.h">
@@ -853,9 +814,6 @@
     </ClInclude>
     <ClInclude Include="..\..\dlls\game.h">
       <Filter>Header Files\dlls</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\weapons\CPenguin.h">
-      <Filter>Header Files\dlls\weapons</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dlls\coopplay_gamerules.h">
       <Filter>Header Files\dlls</Filter>
@@ -991,6 +949,48 @@
     </ClInclude>
     <ClInclude Include="..\..\..\the_last_goodbye_fixing\pm_shared\pm_structs.h">
       <Filter>Header Files\pm_shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CDisplacer.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CDisplacerBall.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CEagle.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CEagleLaser.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CGrapple.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CGrappleTip.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CKnife.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CM249.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CPenguin.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CShockBeam.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CShockRifle.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CSniperRifle.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CSpore.h">
+      <Filter>Header Files\dlls\weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\weapons\CSporeLauncher.h">
+      <Filter>Header Files\dlls\weapons</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
