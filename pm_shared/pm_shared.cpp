@@ -1671,19 +1671,19 @@ void PM_Friction ()
 // apply ground friction
 	if (pmove->onground != -1)  // On an entity that is the ground
 	{
-		Vector start, stop;
-		pmtrace_t trace;
-
-		start[0] = stop[0] = pmove->origin[0] + vel[0]/speed*16;
-		start[1] = stop[1] = pmove->origin[1] + vel[1]/speed*16;
-		start[2] = pmove->origin[2] + pmove->player_mins[pmove->usehull][2];
-		stop[2] = start[2] - 34;
-
-		trace = pmove->PM_PlayerTrace (start, stop, PM_NORMAL, -1 );
-
-		if (trace.fraction == 1.0)
-			friction = pmove->movevars->friction*pmove->movevars->edgefriction;
-		else
+		//Vector start, stop;
+		//pmtrace_t trace;
+		//
+		//start[0] = stop[0] = pmove->origin[0] + vel[0]/speed*16;
+		//start[1] = stop[1] = pmove->origin[1] + vel[1]/speed*16;
+		//start[2] = pmove->origin[2] + pmove->player_mins[pmove->usehull][2];
+		//stop[2] = start[2] - 34;
+		//
+		//trace = pmove->PM_PlayerTrace (start, stop, PM_NORMAL, -1 );
+		//
+		//if (trace.fraction == 1.0)
+		//	friction = pmove->movevars->friction*pmove->movevars->edgefriction;
+		//else
 			friction = pmove->movevars->friction;
 		
 		// Grab friction value.

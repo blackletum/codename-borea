@@ -107,7 +107,6 @@ char glsl_model_lighting[] = R"(
 		float diffusefactor = dot(gl_Normal, lightdir);
 		vec3 lighting = ambientlight + (diffuselight * max(-diffusefactor, 0.0));
 
-		//Light 1
 
 		for (int i = 0; i < MAX_LIGHTS; ++i) 
 		{
@@ -119,11 +118,15 @@ char glsl_model_lighting[] = R"(
 			float lightdist = sqrt(lightdistsquared);
 			vec3 lightnormal = lightvector / lightdist;
 			
-			float cosangle = dot(lightnormal, modellight_forward[i].xyz);
-			float spotcosedge = modellight_forward[i].w;
-			float spotcosdiff = max(cosangle - spotcosedge, 0.0);
-			float spotcosrange = 1.0 - spotcosedge;
-			float spotattenuation = clamp(spotcosdiff / spotcosrange, 0.0, 1.0);
+			float spotattenuation = 1.0;
+			if (modellight_forward[i].w < 1.0) //spotlight
+			{
+			    float cosangle = dot(lightnormal, modellight_forward[i].xyz);
+			    float spotcosedge = modellight_forward[i].w;
+			    float spotcosdiff = max(cosangle - spotcosedge, 0.0);
+			    float spotcosrange = 1.0 - spotcosedge;
+			    spotattenuation = clamp(spotcosdiff / spotcosrange, 0.0, 1.0);
+			}
 		
 			float radiussquared = modellight_color[i].w * modellight_color[i].w;
 			float distattenuation = max(1.0 - (lightdistsquared / radiussquared), 0.0);
