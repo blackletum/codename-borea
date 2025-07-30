@@ -29,6 +29,7 @@
 #include <ctype.h>
 #endif
 
+#include "UserMessages.h"
 
 static char *memfgets( byte *pMemFile, int fileSize, int &filePos, char *pBuffer, int bufferSize );
 
@@ -1402,6 +1403,8 @@ int SENTENCEG_PlayRndI(edict_t *entity, int isentenceg,
 
 // same as above, but takes sentence group name instead of index
 
+extern std::vector<subtitlelist_t> subtitles_vector;
+
 int SENTENCEG_PlayRndSz(edict_t *entity, const char *szgroupname, 
 					  float volume, float attenuation, int flags, int pitch)
 {
@@ -1631,7 +1634,20 @@ void EMIT_SOUND_DYN(edict_t *entity, int channel, const char *sample, float volu
 	{
 		char name[32];
 		if (SENTENCEG_Lookup(sample, name) >= 0)
-				EMIT_SOUND_DYN2(entity, channel, name, volume, attenuation, flags, pitch);
+		{
+			EMIT_SOUND_DYN2(entity, channel, name, volume, attenuation, flags, pitch);
+
+			for (auto subtitles : subtitles_vector)
+			{
+				if (!strstr(sample, subtitles.sentence))
+					continue;
+				MESSAGE_BEGIN(MSG_PVS, gmsgSubtitleAdd, entity->v.origin);
+				WRITE_STRING(sample);
+				WRITE_FLOAT(subtitles.staytime);
+				MESSAGE_END();
+			}
+
+		}
 		else
 			ALERT( at_aiconsole, "Unable to find %s in sentences.txt\n", sample );
 	}

@@ -108,4 +108,6 @@ extern int gmsgMessage;
 // Aynekko
 extern int gmsgKickPunch;
 
+extern int gmsgSubtitleAdd;
+
 void LinkUserMessages();

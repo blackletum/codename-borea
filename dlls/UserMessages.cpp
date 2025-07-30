@@ -111,6 +111,8 @@ int gmsgMessage = 0;
 // Aynekko
 int gmsgKickPunch = 0;
 
+int gmsgSubtitleAdd = 0;
+
 void LinkUserMessages()
 {
 	// Already taken care of?
@@ -213,4 +215,6 @@ void LinkUserMessages()
 
 	// Aynekko
 	gmsgKickPunch = REG_USER_MSG( "KickPunch", -1 );
+
+	gmsgSubtitleAdd = REG_USER_MSG("AddSubtitle", -1);
 }

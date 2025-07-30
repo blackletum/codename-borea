@@ -668,6 +668,8 @@ public:
 	void DrawAll(const Vector &org);
 };
 
+#define MAX_SUBTITLES_AT_ONCE 6
+
 class CImguiManager
 {
 public:
@@ -676,11 +678,28 @@ public:
 	void Draw();
 	void DrawChapter();
 	void DrawSpeeds();
+	void DrawSubtitles();
+
+	void SubtitleLifeLogic();
+
+	void AddSubtitle(const char subtitle[512], float staytime);
+
+	struct subtitles_t
+	{
+		char text[512];
+		float fade;
+		float time_to_die;
+		bool fadeout;
+	};
 
 	// chapter selection variables
 	bool isMenuOpen = false;
 	int page;
 	bool skillMode[4];
+
+	int m_iNumTexts;
+	cvar_t* r_subtitles;
+	subtitles_t m_sTexts[MAX_SUBTITLES_AT_ONCE];
 };
 
 class CDiscordRPCManager

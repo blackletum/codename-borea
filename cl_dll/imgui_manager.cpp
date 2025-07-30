@@ -243,15 +243,167 @@ GLuint thumbnail6 = 0;
 GLuint noise1 = 0;
 GLuint noise2 = 0;
 
+std::vector<subtitlelist_t> subtitles_vector_client;
+
+void LoadSubtitles()
+{
+	int iFlags = 0;
+	char szFlag[32];
+	char szSentence[32];
+	char szText[512];
+	char szTime[32];
+
+	int iSize = NULL;
+	char* pFile = (char*)gEngfuncs.COM_LoadFile("sound/subtitles.txt", 5, &iSize);
+
+	if (!pFile)
+	{
+		gEngfuncs.Con_Printf("Could not load sound/subtitles.txt!\n");
+		gEngfuncs.COM_FreeFile(pFile);
+		return;
+	}
+
+	int i = NULL;
+
+	auto ReadToken = [&](char* dest, int maxlen) -> bool
+		{
+			int j = 0;
+
+			if (i >= iSize || pFile[i] == '\n' || pFile[i] == '\r')
+				return false;
+
+			if (pFile[i] == '/' && pFile[i + 1] == '/')
+			{
+				if (i == 0)
+					return false;
+				else if (pFile[i - 1] == '\n')
+					return false;
+			}
+
+			// Skip whitespace — but stop at newlines
+			while (i < iSize && (pFile[i] == ' ' || pFile[i] == '\t'))
+				i++;
+
+			if (i >= iSize || pFile[i] == '\n' || pFile[i] == '\r')
+				return false;
+
+			bool quoted = false;
+
+			if (pFile[i] == '"')
+			{
+				quoted = true;
+				i++;
+			}
+
+			while (i < iSize)
+			{
+				if (quoted)
+				{
+					if (pFile[i] == '"')
+					{
+						i++;
+						break;
+					}
+				}
+				else
+				{
+					if (pFile[i] == ' ' || pFile[i] == '\n' || pFile[i] == '\r')
+						break;
+				}
+
+				if (j < maxlen - 1)
+					dest[j++] = pFile[i];
+				i++;
+			}
+
+			dest[j] = 0;
+
+			//while (i < iSize && (pFile[i] == ' ' || pFile[i] == '\n' || pFile[i] == '\r'))
+			//	i++;
+
+			return true;
+		};
+
+	while (1)
+	{
+		// Reset
+		iFlags = 0;
+
+		if (i >= iSize)
+			break;
+
+		if (!ReadToken(szSentence, sizeof(szSentence)))
+		{
+			if (pFile[i] == '/')
+			{
+				while (i < iSize)
+				{
+					if (pFile[i] != '\n' && pFile[i] != '\r')
+						i++;
+					else
+						break;
+				}
+				continue;
+			}
+
+			while (i < iSize && (pFile[i] == '\n' || pFile[i] == '\r'))
+				i++;
+			continue;
+		}
+
+		if (!ReadToken(szText, sizeof(szText)))
+			break;
+
+		if (!ReadToken(szTime, sizeof(szTime)))
+			break;
+
+		subtitlelist_t newsubtitle{};
+		strcpy_s(newsubtitle.sentence, szSentence);
+		strcpy_s(newsubtitle.text, szText);
+		newsubtitle.staytime = atof(szTime);
+		subtitles_vector_client.push_back(newsubtitle);
+
+	}
+
+	gEngfuncs.COM_FreeFile(pFile);
+
+}
+
 void __CmdFunc_OpenChapter()
 {
 	EngineClientCmd("disconnect");
 	g_ImGUIManager.isMenuOpen = !g_ImGUIManager.isMenuOpen;
 }
 
+int __MsgFunc_AddSubtitle(const char* pszName, int iSize, void* pbuf)
+{
+	char subtitles[512];
+
+	BEGIN_READ(pbuf, iSize);
+
+	const char* text = READ_STRING();
+	float staytime = READ_FLOAT();
+
+	if (!text)
+		return 1;
+
+	for (auto subtitles_inlist : subtitles_vector_client)
+	{
+		if (!strstr(text, subtitles_inlist.sentence))
+			continue;
+
+		strcpy(subtitles, subtitles_inlist.text);
+	}
+
+	g_ImGUIManager.AddSubtitle(subtitles, staytime);
+
+	return 1;
+}
+
 bool CImguiManager::Init()
 {
 	HOOK_COMMAND("imgui_chapter", OpenChapter);
+	HOOK_MESSAGE(AddSubtitle);
 	mainWindow = SDL_GetWindowFromID(1);
 	// mainContext = SDL_GL_CreateContext(mainWindow);
 
@@ -271,6 +423,8 @@ bool CImguiManager::Init()
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
 
+	r_subtitles = CVAR_CREATE("r_subtitles", "1", FCVAR_ARCHIVE);
+
 	// load some textures
 	PRECACHE_IMAGE(LoadChapterConfig("logo"), &newgame, &NewGameSizeX, &NewGameSizeY);
 	PRECACHE_IMAGE(LoadChapterConfig("exitbtn"), &exitbtn, &ExitSizeX, &ExitSizeY);
@@ -288,11 +442,15 @@ bool CImguiManager::Init()
 	PRECACHE_IMAGE("noise1.png", &noise1, &binX, &binY, GL_LINEAR_MIPMAP_LINEAR, GL_MIRRORED_REPEAT);
 	PRECACHE_IMAGE("noise2.png", &noise2, &binX, &binY, GL_NEAREST, GL_MIRRORED_REPEAT);
 
+	LoadSubtitles();
+
 	return true;
 }
 
 bool CImguiManager::VidInit()
 {
+	m_iNumTexts = 0;
+	memset(m_sTexts, 0, sizeof(m_sTexts));
 	return true;
 }
 
@@ -315,6 +473,8 @@ void CImguiManager::Draw()
 	ImGui::NewFrame();
 
 	DrawSpeeds();
+
+	DrawSubtitles();
 
 	if (strlen(gEngfuncs.pfnGetLevelName()) < 4)
 	{
@@ -806,4 +966,119 @@ void CImguiManager::DrawSpeeds()
 	}
 
 	ImGui::End();
+}
+
+void CImguiManager::SubtitleLifeLogic()
+{
+	float curtime = gEngfuncs.GetClientTime();
+	float lasttime = gEngfuncs.hudGetClientOldTime();
+	float deltatime = curtime - lasttime;
+	for (int i = 0; i < m_iNumTexts;)
+	{
+		if (m_sTexts[i].time_to_die > curtime)
+		{
+			if (m_sTexts[i].fadeout)
+			{
+				m_sTexts[i].fade -= deltatime;
+			}
+			else if (m_sTexts[i].fade < 1.0)
+			{
+				m_sTexts[i].fade += deltatime;
+				if (m_sTexts[i].fade > 1.0)
+					m_sTexts[i].fade = 1.0;
+			}
+			i++;
+			continue;
+		}
+
+		if(!m_sTexts[i].fadeout)
+		{
+			m_sTexts[i].time_to_die = curtime + 0.5;
+			m_sTexts[i].fadeout = true;
+			i++;
+			continue;
+		}
+
+		for (int j = i + 1; j < m_iNumTexts; j++)
+		{
+			m_sTexts[j - 1] = m_sTexts[j];
+		}
+
+		m_sTexts[m_iNumTexts - 1] = subtitles_t{};
+		m_iNumTexts--;
+	}
+}
+
+void CImguiManager::DrawSubtitles()
+{
+	SubtitleLifeLogic();
+	if (m_iNumTexts == 0 || !r_subtitles->value)
+		return;
+
+	// setup
+	bool is_open;
+	ImGuiWindowFlags window_flags = 0;
+	window_flags |= ImGuiWindowFlags_NoResize;
+	window_flags |= ImGuiWindowFlags_NoTitleBar;
+	window_flags |= ImGuiWindowFlags_NoCollapse;
+	window_flags |= ImGuiWindowFlags_NoMove;
+	window_flags |= ImGuiWindowFlags_NoScrollbar;
+	window_flags |= ImGuiWindowFlags_NoScrollWithMouse;
+
+	// get resolution
+	ImGuiIO& io = ImGui::GetIO();
+
+	//int boxexpand = m_iNumTexts - 1;
+	//
+	//for (int i = 0; i < m_iNumTexts; i++)
+	//{
+	//	//text wraps around at 58 characters
+	//	float wraps = strlen(m_sTexts[i].text) / 58;
+	//	if (wraps > 0.999)
+	//	{
+	//		boxexpand += wraps;
+	//	}
+	//}
+
+	int height = io.DisplaySize.y * ( 0.1 + (m_iNumTexts - 1) * 0.05);
+	int width = io.DisplaySize.x * 0.5;
+
+	int xpos = io.DisplaySize.x / 2 - (width / 2);
+	int ypos = io.DisplaySize.y - (height) - 10;
+
+	ImGui::SetNextWindowPos(ImVec2(xpos, ypos));
+	ImGui::SetNextWindowSize(ImVec2(width, height));
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+
+	// override imgui styles
+	ImVec4* colours = ImGui::GetStyle().Colors;
+	colours[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.1f, 0.4f);
+
+	ImGui::Begin("Subtitles", &is_open, window_flags);
+	ImGui::SetWindowFontScale(1.2f);
+
+	ImGui::PushTextWrapPos(width);
+
+	for(int i = 0; i < m_iNumTexts; i++)
+	{
+		float fade = m_sTexts[i].fade;
+		ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.4f, 1 * fade), m_sTexts[i].text);
+	}
+
+	ImGui::PopTextWrapPos();
+
+	ImGui::End();
+}
+
+void CImguiManager::AddSubtitle(const char subtitle[256], float staytime)
+{
+	if (m_iNumTexts >= MAX_SUBTITLES_AT_ONCE)
+		return;
+
+	strcpy(m_sTexts[m_iNumTexts].text, subtitle);
+	m_sTexts[m_iNumTexts].time_to_die = gEngfuncs.GetClientTime() + staytime;
+	m_sTexts[m_iNumTexts].fade = 0;
+	m_iNumTexts++;
 }

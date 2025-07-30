@@ -208,4 +208,11 @@ inline void UnpackRGB(int& r, int& g, int& b, unsigned long ulRGB)
 	b = 43;
 }
 
+struct subtitlelist_t
+{
+	char sentence[256];
+	char text[512];
+	float staytime;
+};
+
 #endif
