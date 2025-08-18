@@ -3,7 +3,10 @@
 #include "stdlib.h"
 #include <string>
 #include <vector>
-#include <string.h>
+
+#include <codecvt>
+#include <locale>
+#include <string>
 
 #include "hud.h"
 #include "cl_util.h"
@@ -28,6 +31,9 @@
 
 SDL_Window* mainWindow;
 SDL_GLContext mainContext;
+
+
+ImFont* customfont;
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -250,7 +256,7 @@ void LoadSubtitles()
 	int iFlags = 0;
 	char szFlag[32];
 	char szSentence[32];
-	char szText[512];
+	char szText[1024];
 	char szTime[32];
 
 	int iSize = NULL;
@@ -312,7 +318,47 @@ void LoadSubtitles()
 				}
 
 				if (j < maxlen - 1)
-					dest[j++] = pFile[i];
+				{
+					char test = pFile[i];
+
+					//shitty and hacky utf-8 conversion
+					if ((byte)pFile[i] == 0xe2)
+					{
+						if ((byte)pFile[i + 1] == 0x80)
+						{
+							if ((byte)pFile[i + 2] == 0x99)
+							{
+								test = '\'';
+								i += 2;
+							}
+							else if ((byte)pFile[i + 2] == 0x9c)
+							{
+								test = '\"';
+								i += 2;
+							}
+							else if ((byte)pFile[i + 2] == 0x9d)
+							{
+								test = '\"';
+								i += 2;
+							}
+							else if ((byte)pFile[i + 2] == 0xa6)
+							{
+								dest[j++] = '.';
+								dest[j++] = '.';
+								dest[j++] = '.';
+								i += 2;
+								i++;
+							}
+							else if ((byte)pFile[i + 2] == 0x93)
+							{
+								test = '-';
+								i += 2;
+							}
+						}
+					}
+
+					dest[j++] = test;
+				}
 				i++;
 			}
 
@@ -377,7 +423,7 @@ void __CmdFunc_OpenChapter()
 
 int __MsgFunc_AddSubtitle(const char* pszName, int iSize, void* pbuf)
 {
-	char subtitles[512];
+	char subtitles[1024];
 
 	BEGIN_READ(pbuf, iSize);
 
@@ -416,6 +462,22 @@ bool CImguiManager::Init()
 	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 	std::string path = gEngfuncs.pfnGetGameDirectory() + std::string("/resource/fonts/") + LoadChapterConfig("fontname");
 	io.Fonts->AddFontFromFileTTF(path.c_str(), atof(LoadChapterConfig("fontsize").c_str()));
+
+	path = gEngfuncs.pfnGetGameDirectory() + std::string("/resource/CustomFontFiles/Liberation Serif.ttf");
+
+
+	ImFontConfig config;
+	config.OversampleH = 2; // Horizontal oversampling
+	config.OversampleV = 1; // Vertical oversampling
+	config.GlyphExtraSpacing.x = 1.0f; // Extra spacing between glyphs
+
+	static const ImWchar full_glyph_range[] = {
+		0x0020, 0xFFFF,
+		0,
+	};
+
+	customfont = io.Fonts->AddFontFromFileTTF(path.c_str(), 20.0f, &config, full_glyph_range);
+
 
 	// For Overdraw
 	ClientImGui_HWHook();
@@ -1012,6 +1074,11 @@ void CImguiManager::SubtitleLifeLogic()
 void CImguiManager::DrawSubtitles()
 {
 	SubtitleLifeLogic();
+
+
+	bool hasGlyph = customfont->FindGlyphNoFallback(0x2019);
+
+
 	if (m_iNumTexts == 0 || !r_subtitles->value)
 		return;
 
@@ -1040,13 +1107,33 @@ void CImguiManager::DrawSubtitles()
 	//	}
 	//}
 
-	int height = io.DisplaySize.y * ( 0.1 + (m_iNumTexts - 1) * 0.05);
+	int height = io.DisplaySize.y * (0.1);
+	int totalheight = 0;
 	int width = io.DisplaySize.x * 0.5;
 
+	for (int i = 0; i < m_iNumTexts; i++)
+	{
+		// Measure the size of the text with wrapping
+		ImVec2 textSize = ImGui::CalcTextSize(
+			m_sTexts[i].text.c_str(),
+			nullptr,
+			false,
+			width
+		);
+	
+		totalheight += textSize.y;
+	}
+	
+	if (height < totalheight * 2)
+	{
+		height += (totalheight * 2 - height);
+	}
+
 	int xpos = io.DisplaySize.x / 2 - (width / 2);
-	int ypos = io.DisplaySize.y - (height) - 10;
+	int ypos = io.DisplaySize.y - (height)-10;
 
 	ImGui::SetNextWindowPos(ImVec2(xpos, ypos));
+
 	ImGui::SetNextWindowSize(ImVec2(width, height));
 
 	// Setup Dear ImGui style
@@ -1061,12 +1148,15 @@ void CImguiManager::DrawSubtitles()
 
 	ImGui::PushTextWrapPos(width);
 
+	ImGui::PushFont(customfont);
+
 	for(int i = 0; i < m_iNumTexts; i++)
 	{
 		float fade = m_sTexts[i].fade;
-		ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.4f, 1 * fade), m_sTexts[i].text);
+		ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.4f, 1 * fade), m_sTexts[i].text.c_str());
 	}
 
+	ImGui::PopFont();
 	ImGui::PopTextWrapPos();
 
 	ImGui::End();
@@ -1077,7 +1167,7 @@ void CImguiManager::AddSubtitle(const char subtitle[256], float staytime)
 	if (m_iNumTexts >= MAX_SUBTITLES_AT_ONCE)
 		return;
 
-	strcpy(m_sTexts[m_iNumTexts].text, subtitle);
+	m_sTexts[m_iNumTexts].text = subtitle;
 	m_sTexts[m_iNumTexts].time_to_die = gEngfuncs.GetClientTime() + staytime;
 	m_sTexts[m_iNumTexts].fade = 0;
 	m_iNumTexts++;

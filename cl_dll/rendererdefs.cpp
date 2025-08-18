@@ -34,6 +34,8 @@ Written by Andrew Lucas, Richard Rohac, BUzer, Laurie, Botman and Id Software
 #include "watershader.h"
 #include "mirrormanager.h"
 
+#include "Exports.h"
+
 #include "StudioModelRenderer.h"
 #include "GameStudioModelRenderer.h"
 extern CGameStudioModelRenderer g_StudioRenderer;
@@ -63,6 +65,10 @@ Vector g_vecFull(1.0f, 1.0f, 1.0f); // color of 3d attenuation texture
 //Vector g_vecZero(0.0f, 0.0f, 0.0f); // color of 3d attenuation texture
 
 glstate_t g_savedGLState;
+
+int r_visframecount;
+mleaf_t* r_oldviewleaf;
+
 
 double sqrt(double x);
 
@@ -711,22 +717,50 @@ R_MarkLeaves
 */
 void R_MarkLeaves ( mleaf_t *pLeaf )
 {
-	model_t *pWorld = IEngineStudio.GetModelByIndex(1);
-	byte *vis = Mod_LeafPVS (pLeaf, pWorld);
-		
-	for(int i = 0; i < pWorld->numleafs; i++)
+	model_t* pWorld = engine_cl->worldmodel;
+	cl_entity_t* worldent = gEngfuncs.GetEntityByIndex(1);
+	byte* vis;
+	byte solid[4096];
+	if (r_oldviewleaf == pLeaf)
 	{
-		if (vis[i >> 3] & (1 << (i & 7)))
-		{
-			mnode_t *node = (mnode_t *)&pWorld->leafs[i+1];
-			do
-			{
-				if (node->visframe == gBSPRenderer.m_pViewLeaf->visframe)
-					break;
+		if (gEngfuncs.pfnGetCvarFloat("r_novis") == 0)
+			return;
 
-				node->visframe = gBSPRenderer.m_pViewLeaf->visframe;
-				node = node->parent;
-			} while (node);
+		r_visframecount++;
+		goto label;
+	}
+	else
+	{
+		r_visframecount++;
+		r_oldviewleaf = pLeaf;
+		if (gEngfuncs.pfnGetCvarFloat("r_novis") == 0)
+		{
+			vis = Mod_LeafPVS(pLeaf, pWorld);
+		}
+		else
+		{
+		label:
+			memset(solid, 255, (pWorld->numleafs + 7) >> 3);
+			vis = solid;
+		}
+	}
+
+	if (pWorld->numleafs > 0)
+	{
+		for (int i = 0; i < pWorld->numleafs; i++)
+		{
+			if (vis[i >> 3] & (1 << (i & 7)))
+			{
+				mnode_t* node = (mnode_t*)&pWorld->leafs[i + 1];
+				do
+				{
+					if (node->visframe == r_visframecount)
+						break;
+
+					node->visframe = r_visframecount;
+					node = node->parent;
+				} while (node);
+			}
 		}
 	}
 }
@@ -776,6 +810,10 @@ void HUD_PrintSpeeds ( )
 		gParticleEngine.m_iNumParticles, iFPS);
 }
 
+ref_params_t* r_refdef;
+
+int restore_numleafs = 0;
+
 /*
 =================
 R_CalcRefDef
@@ -784,6 +822,12 @@ R_CalcRefDef
 */
 void R_CalcRefDef( ref_params_t *pparams )
 {
+	r_refdef = pparams;
+	pparams->onlyClientDraw = 1;
+
+	if (!engine_cl->worldmodel->numleafs)
+		engine_cl->worldmodel->numleafs = restore_numleafs;
+
 	// Set this at start
 	RenderFog();
 
@@ -801,7 +845,13 @@ void R_CalcRefDef( ref_params_t *pparams )
 
 	// Set up basic rendering
 	gBSPRenderer.RendererRefDef(pparams);
+
+	if (!restore_numleafs)
+		restore_numleafs = gBSPRenderer.m_pWorld->numleafs;
+	gBSPRenderer.m_pWorld->numleafs = 0;
 }
+
+extern void R_DrawSpriteModel(cl_entity_t* e);
 
 /*
 =================
@@ -843,6 +893,65 @@ void R_DrawNormalTriangles( )
 
 	//Restore
 	R_RestoreGLStates();
+
+	//draw studio models and whatnot
+
+	if (g_StudioRenderer.m_pCvarDrawEntities->value)
+	{
+		for (int i = 0; i < gBSPRenderer.m_iNumRenderEntities; i++)
+		{
+			auto ent = gBSPRenderer.m_pRenderEntities[i];
+			if (!ent->model)
+				continue;
+			if (ent->model->type == mod_studio)
+			{
+				g_StudioRenderer.m_pCurrentEntity = ent;
+				if (ent->player)
+				{
+					entity_state_t* pPlayer = IEngineStudio.GetPlayerState((ent->index - 1));
+
+					if (CL_IsThirdPerson())
+						g_StudioRenderer.StudioDrawPlayer(STUDIO_RENDER, pPlayer);
+				}
+				else
+					g_StudioRenderer.StudioDrawModel(STUDIO_RENDER);
+			}
+			else if (ent->model->type == mod_sprite)
+			{
+				extern Vector r_entorigin;
+				r_entorigin = ent->origin;
+				R_DrawSpriteModel(ent);
+			}
+		}
+	}
+
+	//temporary entities (bullet cases, sparks, etc..)
+	extern void R_DrawTempEntities(bool bBrushes);
+	R_DrawTempEntities(false);
+
+	//VIEMWODEL SHOULD BE RENDERED LAST
+	if (engine_cl->viewent.model)
+	{
+		glClear(GL_DEPTH_BUFFER_BIT);
+		if (!engine_cl->weaponstarttime)
+			engine_cl->weaponstarttime = engine_cl->time;
+
+		engine_cl->viewent.curstate.framerate = 1.0f;
+		engine_cl->viewent.curstate.sequence = engine_cl->weaponsequence;
+		engine_cl->viewent.curstate.animtime = engine_cl->weaponstarttime;
+
+		auto ent = gEngfuncs.GetEntityByIndex(engine_cl->viewent.index);
+
+		for (int i = 0; i < 4; i++)
+		{
+			VectorCopy(ent->origin, engine_cl->viewent.attachment[i]);
+		}
+
+		g_StudioRenderer.m_pCurrentEntity = &engine_cl->viewent;
+		g_StudioRenderer.StudioDrawModel(STUDIO_EVENTS);
+		g_StudioRenderer.m_pCurrentEntity = &engine_cl->viewent;
+		g_StudioRenderer.StudioDrawModel(STUDIO_RENDER);
+	}
 }
 
 /*

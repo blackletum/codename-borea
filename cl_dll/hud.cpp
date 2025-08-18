@@ -541,6 +541,9 @@ int __MsgFunc_StatsPlayer(const char* pszName, int iSize, void* pbuf)
 }
 
 cvar_t* gl_shadows_opacity;
+
+extern std::vector<TEMPENTITY*> gpTempEnts;
+
 // This is called every time the DLL is loaded
 void CHud :: Init()
 {
@@ -640,6 +643,12 @@ void CHud :: Init()
 	HOOK_MESSAGE(UseEnt);
 	HOOK_MESSAGE(SendAnim);
 	HOOK_MESSAGE(PlayVideo);
+
+	for (int i = 0; i < gpTempEnts.size(); i++)
+	{
+		delete gpTempEnts.at(i);
+	}
+	gpTempEnts.clear();
 
 	gPropManager.Init();
 	gTextureLoader.Init();
@@ -966,6 +975,13 @@ void CHud :: VidInit()
 	m_FlagIcons.VidInit();
 	m_PlayerBrowse.VidInit();
 	GetClientVoiceMgr()->VidInit();
+
+	for (int i = 0; i < gpTempEnts.size(); i++)
+	{
+		delete gpTempEnts.at(i);
+	}
+	gpTempEnts.clear();
+
 	//RENDERERS START
 	gTextureLoader.VidInit();
 	gWaterShader.VidInit();

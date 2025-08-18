@@ -1645,6 +1645,7 @@ void EMIT_SOUND_DYN(edict_t *entity, int channel, const char *sample, float volu
 				WRITE_STRING(sample);
 				WRITE_FLOAT(subtitles.staytime);
 				MESSAGE_END();
+				break;
 			}
 
 		}

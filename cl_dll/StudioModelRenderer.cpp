@@ -69,6 +69,9 @@ struct cl_stored_light
 
 std::vector<cl_stored_light>StoredLightBuffer;
 
+model_t* cl_sprite_muzzleflash[3];
+model_t* cl_sprite_ricochet;
+
 extern float weaponstarttime;
 
 //===========================================
@@ -222,6 +225,12 @@ void CStudioModelRenderer::Init()
 	
 	m_pCvarModelsBBoxDebug			= gEngfuncs.pfnRegisterVariable( "te_models_debug_bbox", "0", 0 );
 	m_pCvarModelsLightDebug			= gEngfuncs.pfnRegisterVariable( "te_models_debug_light", "0", 0 );
+
+	cl_sprite_muzzleflash[0] = IEngineStudio.Mod_ForName("sprites/muzzleflash1.spr", false);
+	cl_sprite_muzzleflash[1] = IEngineStudio.Mod_ForName("sprites/muzzleflash2.spr", false);
+	cl_sprite_muzzleflash[2] = IEngineStudio.Mod_ForName("sprites/muzzleflash3.spr", false);
+
+	cl_sprite_ricochet = IEngineStudio.Mod_ForName("sprites/richo1.spr", false);
 
 	IEngineStudio.GetModelCounters( &m_pStudioModelCount, &m_pModelsDrawn );
 
@@ -1448,7 +1457,7 @@ int CStudioModelRenderer::StudioDrawModel( int flags )
 		temp.curstate.frame = 0;
 		temp.curstate.animtime = 0;
 		temp.latched.prevframe = 0;
-		m_pCurrentEntity = &temp;
+		*m_pCurrentEntity = temp;
 
 		StudioSetUpTransform(false);
 		StudioSetupBones();

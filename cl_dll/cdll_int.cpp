@@ -89,9 +89,29 @@ CPropManager gPropManager;
 CMirrorManager gMirrorManager;
 //RENDERERS END
 
+modfuncs_t* g_pModFuncs;
+
+extern int cl_numvisedicts;
+extern cl_entity_s* cl_visedicts[512];
+
 void InitInput ();
 void EV_HookEvents( );
 void IN_Commands( );
+
+extern int restore_numleafs;
+
+void pfnFrameRender1(void) //(called in SCR_UpdateScreen before everything)
+{
+	//gEngfuncs.Con_Printf("%s", __func__);
+}
+void pfnFrameRender2(void) //(called in SCR_UpdateScreen in the end before GL_EndRendering)
+{
+	//gEngfuncs.Con_Printf("%s", __func__);
+
+	if (restore_numleafs && engine_cl->worldmodel)
+		engine_cl->worldmodel->numleafs = restore_numleafs;
+
+}
 
 /*
 ================================
@@ -197,9 +217,19 @@ static bool CL_InitClient()
 	return true;
 }
 
+void InitModFuncs()
+{
+	// Functions called every frame
+	g_pModFuncs->m_pfnFrameRender1 = pfnFrameRender1; // Called at the beginning of the render loop //(is called)
+	g_pModFuncs->m_pfnFrameRender2 = pfnFrameRender2; // Called at the end of the render loop //(is called)
+}
+
 int DLLEXPORT Initialize( cl_enginefunc_t *pEnginefuncs, int iVersion )
 {
 	gEngfuncs = *pEnginefuncs;
+
+	extern void Hook_gEngfuncs_Functions();
+	Hook_gEngfuncs_Functions();
 
 //	RecClInitialize(pEnginefuncs, iVersion);
 
@@ -356,6 +386,9 @@ void DLLEXPORT HUD_Frame( double time )
 
 	gSoundSystem.Update();
 
+	memset(cl_visedicts, 0, sizeof(cl_visedicts));
+	cl_numvisedicts = 0;
+
 	// salsa - doing this so the window wont get stuck on top and i can actually alt + tab to debug
 	SDL_Window* window = nullptr;
 	for (Uint32 id = 0; id < 4096; ++id)
@@ -438,9 +471,12 @@ cldll_func_dst_t *g_pcldstAddrs;
 extern "C" void DLLEXPORT F(void *pv)
 {
 	cldll_func_t *pcldll_func = (cldll_func_t *)pv;
+	g_pModFuncs = reinterpret_cast<modfuncs_s*>(pcldll_func->pInitFunc);
 
 	// Hack!
 	g_pcldstAddrs = ((cldll_func_dst_t *)pcldll_func->pHudVidInitFunc);
+
+	InitModFuncs();
 
 	cldll_func_t cldll_func = 
 	{

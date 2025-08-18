@@ -2945,16 +2945,16 @@ void CBasePlayer::SetSuitUpdate(const char *name, int fgroup, int iNoRepeatTime)
 
 			if (m_rgflSuitNoRepeatTime[i] < gpGlobals->time)
 				{
-				// norepeat time has expired, clear it out
-				m_rgiSuitNoRepeat[i] = 0;
-				m_rgflSuitNoRepeatTime[i] = 0.0;
-				iempty = i;
-				break;
+					// norepeat time has expired, clear it out
+					m_rgiSuitNoRepeat[i] = 0;
+					m_rgflSuitNoRepeatTime[i] = 0.0;
+					iempty = i;
+					break;
 				}
 			else
 				{
 				// don't play, still marked as norepeat
-				return;
+					return;
 				}
 			}
 		// keep track of empty slot
@@ -5476,64 +5476,43 @@ void CBasePlayer :: UpdateClientData()
 			pObject = NULL;
 	}
 
-	if (!pObject)
+
+	if (!pObject) //LRC- couldn't find a direct solid object to use, try the normal method
 	{
-		while ((pObject = UTIL_FindEntityInSphere(pObject, pev->origin, PLAYER_SEARCH_RADIUS)) != NULL)
+		while ((pObject = UTIL_FindEntityInSphere(pObject, pev->origin, PLAYER_SEARCH_RADIUS)) != nullptr)
 		{
-			if (pObject->ObjectCaps() & (FCAP_IMPULSE_USE | FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE))
+			//Special behavior for ropes: check if the player is close enough to the rope segment origin
+			if (FClassnameIs(pObject->pev, "rope_segment"))
 			{
-
-				CBaseMonster* pMonster = pObject->MyMonsterPointer();
-				if (pMonster)
+				if ((pev->origin - pObject->pev->origin).Length() > PLAYER_SEARCH_RADIUS)
 				{
-					Vector mins, maxs;
-
-					pMonster->ExtractBbox(pMonster->pev->sequence, mins, maxs);
-					vecLOS = (((mins + maxs) * 0.5) + pMonster->pev->origin - (pev->origin + pev->view_ofs));
-					vecLOS = UTIL_ClampVectorToBox(vecLOS, ((mins + maxs) * 0.5));
-
+					continue;
 				}
+			}
+			int caps = pObject->ObjectCaps();
+			if (caps & (FCAP_IMPULSE_USE | FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE) && !(caps & FCAP_ONLYDIRECT_USE)) //LRC - we can't see 'direct use' entities in this section
+			{
+				// !!!PERFORMANCE- should this check be done on a per case basis AFTER we've determined that
+				// this object is actually usable? This dot is being done for every object within PLAYER_SEARCH_RADIUS
+				// when player hits the use key. How many objects can be in that area, anyway? (sjb)
+				vecLOS = (VecBModelOrigin(pObject->pev) - (pev->origin + pev->view_ofs));
 
-				else
-
-				{
-
-					vecLOS = (VecBModelOrigin(pObject->pev) - (pev->origin + pev->view_ofs));
-
-					vecLOS = UTIL_ClampVectorToBox(vecLOS, pObject->pev->size * 0.5);
-
-				}
-
-
+				//				ALERT(at_console, "absmin %f %f %f, absmax %f %f %f, mins %f %f %f, maxs %f %f %f, size %f %f %f\n", pObject->pev->absmin.x, pObject->pev->absmin.y, pObject->pev->absmin.z, pObject->pev->absmax.x, pObject->pev->absmax.y, pObject->pev->absmax.z, pObject->pev->mins.x, pObject->pev->mins.y, pObject->pev->mins.z, pObject->pev->maxs.x, pObject->pev->maxs.y, pObject->pev->maxs.z, pObject->pev->size.x, pObject->pev->size.y, pObject->pev->size.z);//LRCTEMP
+								// This essentially moves the origin of the target to the corner nearest the player to test to see 
+								// if it's "hull" is in the view cone
+				vecLOS = UTIL_ClampVectorToBox(vecLOS, pObject->pev->size * 0.5);
 
 				flDot = DotProduct(vecLOS, gpGlobals->v_forward);
-
-
-
-				if (flDot > flMaxDot || vecLOS == g_vecZero)
-
-				{
-
+				if (flDot > flMaxDot || vecLOS == g_vecZero) // LRC - if the player is standing inside this entity, it's also ok to use it.
+				{// only if the item is in front of the user
 					pClosest = pObject;
-
 					flMaxDot = flDot;
-
+					//				ALERT( at_console, "%s : %f\n", STRING( pObject->pev->classname ), flDot );
 				}
-
+				//			ALERT( at_console, "%s : %f\n", STRING( pObject->pev->classname ), flDot );
 			}
-
 		}
-
 		pObject = pClosest;
-
-
-
-		if (pObject)	// don't go through walls
-		{
-			UTIL_TraceLine(pObject->Center(), pev->origin + pev->view_ofs, dont_ignore_monsters, ENT(pev), &tr);
-			if (tr.flFraction < 1.0)
-				pObject = NULL;
-		}
 	}
 
 

@@ -925,6 +925,7 @@ void UTIL_MakeInvVectors( const Vector &vec, globalvars_t *pgv )
 	SWAP(pgv->v_right.z, pgv->v_up.y, tmp);
 }
 
+extern std::vector<subtitlelist_t> subtitles_vector;
 
 void UTIL_EmitAmbientSound( edict_t *entity, const Vector &vecOrigin, const char *samp, float vol, float attenuation, int fFlags, int pitch )
 {
@@ -935,7 +936,23 @@ void UTIL_EmitAmbientSound( edict_t *entity, const Vector &vecOrigin, const char
 	{
 		char name[32];
 		if (SENTENCEG_Lookup(samp, name) >= 0)
+		{
 			EMIT_AMBIENT_SOUND(entity, rgfl, name, vol, attenuation, fFlags, pitch);
+
+			if (FBitSet(fFlags, SND_STOP))
+				return;
+			for (auto subtitles : subtitles_vector)
+			{
+				if (!strstr(samp, subtitles.sentence))
+					continue;
+				MESSAGE_BEGIN(MSG_PVS, gmsgSubtitleAdd, entity->v.origin);
+				WRITE_STRING(samp);
+				WRITE_FLOAT(subtitles.staytime);
+				MESSAGE_END();
+				break;
+			}
+
+		}
 	}
 	else
 		EMIT_AMBIENT_SOUND(entity, rgfl, samp, vol, attenuation, fFlags, pitch);

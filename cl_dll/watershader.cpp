@@ -246,6 +246,9 @@ void CWaterShader::Init(void)
 	m_pCvarWaterDebug = gEngfuncs.pfnRegisterVariable("te_water_debug", "0", 0);
 	m_pCvarWaterResolution = gEngfuncs.pfnRegisterVariable("te_water_resolution", "512", FCVAR_ARCHIVE); //MAX:1024
 
+	m_pCvarReflectWorld = gEngfuncs.pfnRegisterVariable("r_waterforceexpensive", "1", FCVAR_ARCHIVE);
+	m_pCvarReflectEntities = gEngfuncs.pfnRegisterVariable("r_waterforcereflectentities", "1", FCVAR_ARCHIVE);
+
 	if (!gBSPRenderer.m_bShaderSupport)
 		return;
 
@@ -813,9 +816,12 @@ void CWaterShader::DrawScene(ref_params_t* pparams, bool isrefracting)
 	gBSPRenderer.RendererRefDef(pparams);
 
 	// Draw world
-	gBSPRenderer.DrawNormalTriangles();
+	if (m_pCvarReflectWorld->value)
+		gBSPRenderer.DrawNormalTriangles();
+	else
+		gBSPRenderer.DrawNormalTriangles(true); //only draw sky
 
-	if ((m_pCvarWaterShader->value > 1) || isrefracting)
+	if ( ((m_pCvarWaterShader->value > 1) || isrefracting) && m_pCvarReflectEntities->value)
 	{
 		for (int i = 0; i < gBSPRenderer.m_iNumRenderEntities; i++)
 		{
@@ -836,7 +842,7 @@ void CWaterShader::DrawScene(ref_params_t* pparams, bool isrefracting)
 		}
 	}
 
-	if ((m_pCvarWaterShader->value > 1) || isrefracting)
+	if ( ((m_pCvarWaterShader->value > 1) || isrefracting ) && m_pCvarReflectEntities->value)
 	{
 		for (int i = 0; i < gBSPRenderer.m_iNumRenderEntities; i++)
 		{
@@ -851,12 +857,14 @@ void CWaterShader::DrawScene(ref_params_t* pparams, bool isrefracting)
 	R_SaveGLStates();
 
 	// Render any props
-	gPropManager.RenderProps();
+	if (m_pCvarReflectEntities->value)
+		gPropManager.RenderProps();
 
 	// Render any transparent triangles
-	gBSPRenderer.DrawTransparentTriangles();
+	if (m_pCvarReflectWorld->value)
+		gBSPRenderer.DrawTransparentTriangles();
 
-	if ((m_pCvarWaterShader->value > 1) || isrefracting)
+	if ( ((m_pCvarWaterShader->value > 1) || isrefracting) && m_pCvarReflectEntities->value)
 		gParticleEngine.DrawParticles();
 
 	if (m_pCvarWaterDebug->value)

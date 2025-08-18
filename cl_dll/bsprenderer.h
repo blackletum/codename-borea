@@ -60,7 +60,7 @@ public:
 	void DrawDetails( );
 
 	void RendererRefDef ( ref_params_t *pparams );
-	void DrawNormalTriangles( );
+	void DrawNormalTriangles( bool onlysky = false );
 	void DrawTransparentTriangles( );
 	void RenderFirstPass( bool bSecond = false );
 	void RenderFinalPasses( );
@@ -88,9 +88,6 @@ public:
 	void MarkLights( cl_dlight_t *pLight, int iBit, mnode_t *node);
 	void MarkBrushFaces( Vector mins, Vector maxs );
 	void AddDynamicLights( msurface_t *surf );
-
-	void DisableWorldDrawing( ref_params_t *pparam );
-	void RestoreWorldDrawing( );
 
 	void CreateTextures( );
 

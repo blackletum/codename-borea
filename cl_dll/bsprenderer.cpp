@@ -825,6 +825,9 @@ void CBSPRenderer::VidInit( )
 	if(!m_bDontPromptParanoia)
 		gEngfuncs.Con_Printf("Paranoia's opengl32.dll was detected! This conflicts with shadow mapping! Remove this dll in order to have shadow maps.\n");
 
+	extern int restore_numleafs;
+	restore_numleafs = 0;
+
 	// Clear this
 	VectorClear(m_vSkyOrigin);
 	VectorClear(m_vSkyWorldOrigin);
@@ -1077,7 +1080,7 @@ void CBSPRenderer::GetRenderEnts( )
 			continue;
 		}
 
-		if (pEntity->model->type == mod_brush || pEntity->model->type == mod_studio)
+		if (pEntity->model->type == mod_brush || pEntity->model->type == mod_studio || pEntity->model->type == mod_sprite)
 		{
 			m_pRenderEntities[m_iNumRenderEntities] = pEntity;
 			m_iNumRenderEntities++;
@@ -1251,6 +1254,10 @@ void CBSPRenderer::SetupPreFrame ( ref_params_t *pparams )
 {
 	// Get the leaf we're on
 	m_pWorld	= IEngineStudio.GetModelByIndex(1);
+
+	// Mark all leaves with current visframe
+	R_MarkLeaves(m_pViewLeaf);
+
 	m_pViewLeaf	= Mod_PointInLeaf( pparams->vieworg, m_pWorld );
 
 	//Ensure proper shadow maps
@@ -1424,38 +1431,8 @@ void CBSPRenderer::RendererRefDef ( ref_params_t *pparams )
 
 	PushDynLights();
 	ClearToFogColor();
-	DisableWorldDrawing(pparams);
 
-	if(!pparams->onlyClientDraw)
 		m_bCanDraw = true;
-};
-
-/*
-====================
-DisableWorldDrawing
-
-====================
-*/
-void CBSPRenderer::DisableWorldDrawing( ref_params_t *pparams )
-{
-	Vector wcoord;
-	AngleVectors ( pparams->viewangles, pparams->forward, pparams->right, pparams->up );
-	VectorMASSE(pparams->vieworg, -100, pparams->forward, wcoord);
-	memcpy(m_fSavedMinsMaxs, m_pWorld->nodes[0].minmaxs, 6*sizeof(float));
-
-	VectorCopy(wcoord, m_pWorld->nodes[0].minmaxs);
-	VectorCopy(wcoord, m_pWorld->nodes[0].minmaxs + 3);
-};
-
-/*
-====================
-RestoreWorldDrawing
-
-====================
-*/
-void CBSPRenderer::RestoreWorldDrawing( )
-{
-	memcpy(m_pWorld->nodes[0].minmaxs, m_fSavedMinsMaxs, 6 * sizeof(float));
 };
 
 /*
@@ -2447,7 +2424,7 @@ DrawNormalTriangles
 
 ====================
 */
-void CBSPRenderer::DrawNormalTriangles( )
+void CBSPRenderer::DrawNormalTriangles( bool onlysky )
 {
 	if (!m_bCanDraw)
 		return;
@@ -2466,7 +2443,10 @@ void CBSPRenderer::DrawNormalTriangles( )
 	RenderFog();
 
 	DrawSky();
-	DrawWorld();
+
+	if(!onlysky)
+		DrawWorld();
+
 	R_RestoreGLStates();
 
 	// So it's called only once
@@ -2514,8 +2494,6 @@ DrawWorld
 */
 void CBSPRenderer::DrawWorld( )
 {
-	// Restore mins/maxs
-	RestoreWorldDrawing();
 
 	if(!m_pCvarDrawWorld->value)
 		return;

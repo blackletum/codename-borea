@@ -63,9 +63,10 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>..\..\dlls;..\..\include;..\..\cl_dll;..\..\public;..\..\common;..\..\pm_shared;..\..\engine;..\..\utils\vgui\include;..\..\game_shared;..\..\external;..\..\external\imgui;..\..\external\discord_sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalOptions>/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zc:threadSafeInit- /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>4828</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -131,6 +132,7 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\cl_dll\death.cpp" />
     <ClCompile Include="..\..\cl_dll\demo.cpp" />
     <ClCompile Include="..\..\cl_dll\discord_manager.cpp" />
+    <ClCompile Include="..\..\cl_dll\engine_hookfuncs.cpp" />
     <ClCompile Include="..\..\cl_dll\entity.cpp" />
     <ClCompile Include="..\..\cl_dll\events.cpp" />
     <ClCompile Include="..\..\cl_dll\ev_common.cpp" />

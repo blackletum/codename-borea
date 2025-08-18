@@ -79,6 +79,9 @@ public:
 	cvar_t* m_pCvarWaterDebug;
 	cvar_t* m_pCvarWaterResolution;
 
+	cvar_t* m_pCvarReflectWorld;
+	cvar_t*	m_pCvarReflectEntities;
+
 	cl_texture_t* m_pNormalTexture;
 	cl_water_t* m_pCurWater;
 

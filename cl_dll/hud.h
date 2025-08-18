@@ -686,7 +686,7 @@ public:
 
 	struct subtitles_t
 	{
-		char text[512];
+		std::string text;
 		float fade;
 		float time_to_die;
 		bool fadeout;
@@ -1120,3 +1120,7 @@ extern FogSettings g_fogPreFade;
 extern FogSettings g_fogPostFade;
 extern float g_fFogFadeDuration;
 extern float g_fFogFadeFraction;
+
+#include "client_state.h"
+
+extern client_state_s* engine_cl;

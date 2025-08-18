@@ -913,6 +913,8 @@ typedef struct modfuncs_s
 	int m_nVoid9;
 } modfuncs_t;
 
+extern modfuncs_t* g_pModFuncs;
+
 
 #define k_nEngineVersion15Base		0
 #define k_nEngineVersion15Patch		1
