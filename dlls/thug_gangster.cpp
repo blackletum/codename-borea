@@ -3353,7 +3353,7 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 		{
 			PlaySentence( "THU_IDLE", 3, VOL_NORM, ATTN_NORM );
 			JustSpoke();
-			next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 4.0, 8.0 );
+			next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 8.0, 14.0 );
 		}
 		break;
 	}
@@ -4157,7 +4157,7 @@ Schedule_t *CMonsterGangster::GetSchedule()
 		{
 			PlaySentence( "GANG_IDLE", 3, VOL_NORM, ATTN_NORM );
 			JustSpoke();
-			next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 4.0, 8.0 );
+			next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 8.0, 14.0 );
 		}
 		break;
 	}
