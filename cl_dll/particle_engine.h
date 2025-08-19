@@ -29,6 +29,39 @@ Written by Andrew Lucas
 #include "textureloader.h"
 #include "rendererdefs.h"
 
+#include <unordered_map>
+
+
+struct ParticlePairHash
+{
+	template <class T1, class T2>
+	std::size_t operator()(const std::pair<T1, T2>& p) const
+	{
+		auto h1 = std::hash<T1>{}(p.first);
+		auto h2 = std::hash<T2>{}(p.second);
+		return h1 ^ (h2 << 1);
+	}
+};
+
+
+struct ParticleVertex
+{
+	Vector pos;
+	float uv[2];
+	Vector color;
+	float alpha;
+};
+
+struct ParticleBlendMode
+{
+	GLuint first, second;
+};
+
+struct ParticleQuad
+{
+	ParticleVertex vert[4];
+};
+
 /*
 ====================
 CParticleEngine
@@ -61,12 +94,16 @@ public:
 
 	void CreateParticle( particle_system_t *pSystem, float *flOrigin = nullptr, float *flNormal = nullptr );
 	bool UpdateParticle( cl_particle_t *pParticle );
-	void RenderParticle( cl_particle_t *pParticle, float flUp, float flRight );
+	void GetParticleQuad(cl_particle_t* pParticle, float flUp, float flRight, std::vector<ParticleQuad>& quadlist);
+
+	void DrawQuadList(std::unordered_map<std::pair<GLuint, int>, std::vector<ParticleQuad>, ParticlePairHash>& particlebatch, particle_system_t* psystem);
 
 	int MsgCreateSystem( const char *pszName, int iSize, void *pbuf );
 
 public:
 	particle_system_t	*m_pSystemHeader;
+
+	GLuint m_uiquadbufferindex;
 
 	cvar_t *m_pCvarDrawParticles;
 	cvar_t *m_pCvarParticleDebug;

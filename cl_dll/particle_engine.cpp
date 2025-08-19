@@ -16,6 +16,9 @@ Written by Andrew Lucas
 #include <cmath>
 
 #include "windows.h"
+
+#include "gl/glew.h"
+
 #include "hud.h"
 #include "cl_util.h"
 #include <gl/glu.h>
@@ -42,6 +45,9 @@ Written by Andrew Lucas
 
 #include "StudioModelRenderer.h"
 #include "GameStudioModelRenderer.h"
+
+
+
 extern CGameStudioModelRenderer g_StudioRenderer;
 
 enum ParticleQuality
@@ -109,6 +115,13 @@ void CParticleEngine::VidInit( )
 
 		m_pSystemHeader = nullptr;
 	}
+
+	if (m_uiquadbufferindex)
+	{
+		glDeleteBuffers(1, &m_uiquadbufferindex);
+		m_uiquadbufferindex = 0;
+	}
+	glGenBuffers(1, &m_uiquadbufferindex);
 };
 
 /*
@@ -1423,7 +1436,7 @@ RenderParticle
 
 ====================
 */
-void CParticleEngine::RenderParticle( cl_particle_t *pParticle, float flUp, float flRight ) 
+void CParticleEngine::GetParticleQuad(cl_particle_t* pParticle, float flUp, float flRight, std::vector<ParticleQuad>& quadlist)
 {
 	float flDot;
 	Vector vTemp;
@@ -1431,7 +1444,7 @@ void CParticleEngine::RenderParticle( cl_particle_t *pParticle, float flUp, floa
 	Vector vDir;
 	Vector vAngles;
 
-	if(pParticle->alpha == 0)
+	if (pParticle->alpha == 0)
 		return;
 
 	/*
@@ -1443,9 +1456,9 @@ void CParticleEngine::RenderParticle( cl_particle_t *pParticle, float flUp, floa
 	*/
 
 	VectorSubtract(pParticle->origin, gBSPRenderer.m_vRenderOrigin, vDir);
-	if(gHUD.m_pFogSettings.active)
+	if (gHUD.m_pFogSettings.active)
 	{
-		if(vDir.Length() > gHUD.m_pFogSettings.end)
+		if (vDir.Length() > gHUD.m_pFogSettings.end)
 			return;
 	}
 
@@ -1453,150 +1466,90 @@ void CParticleEngine::RenderParticle( cl_particle_t *pParticle, float flUp, floa
 	DotProductSSE(&flDot, vDir, m_vForward);
 
 	// z clipped
-	if(flDot < 0)
+	if (flDot < 0)
 		return;
 
-	cl_texture_t *pTexture = pParticle->pSystem->texture;
-	if(pParticle->pSystem->rendermode == SYSTEM_RENDERMODE_ADDITIVE)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		glColor4f(pParticle->color[0], pParticle->color[1], pParticle->color[2], pParticle->alpha*pParticle->pSystem->mainalpha);
-		glFogfv(GL_FOG_COLOR, g_vecZero);
-	}
-	else if(pParticle->pSystem->rendermode == SYSTEM_RENDERMODE_ALPHABLEND)
-	{
-		glBlendFunc(GL_ONE, GL_ONE);
-		glColor3f(pParticle->alpha*pParticle->pSystem->mainalpha, pParticle->alpha*pParticle->pSystem->mainalpha, pParticle->alpha*pParticle->pSystem->mainalpha);
-		glFogfv(GL_FOG_COLOR, g_vecZero);
-	}
-	else
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glColor4f(pParticle->color[0], pParticle->color[1], pParticle->color[2], pParticle->alpha*pParticle->pSystem->mainalpha);
-		glFogfv(GL_FOG_COLOR, gHUD.m_pFogSettings.color);
-	}
+	cl_texture_t* pTexture = pParticle->pSystem->texture;
 
-	if(pParticle->pSystem->displaytype == SYSTEM_DISPLAY_PLANAR)
+	if (pParticle->pSystem->displaytype == SYSTEM_DISPLAY_PLANAR)
 	{
 		gBSPRenderer.GetUpRight(pParticle->normal, m_vRUp, m_vRRight);
 	}
-	else if(pParticle->rotation || pParticle->rotx || pParticle->roty)
+	else if (pParticle->rotation || pParticle->rotx || pParticle->roty)
 	{
 		VectorCopy(gBSPRenderer.m_vViewAngles, vAngles);
 
-		if(pParticle->rotx) vAngles[0] = pParticle->rotx;
-		if(pParticle->roty) vAngles[1] = pParticle->roty;
-		if(pParticle->rotation) vAngles[2] = pParticle->rotation;
+		if (pParticle->rotx)
+			vAngles[0] = pParticle->rotx;
+		if (pParticle->roty)
+			vAngles[1] = pParticle->roty;
+		if (pParticle->rotation)
+			vAngles[2] = pParticle->rotation;
 
 		AngleVectors(vAngles, nullptr, m_vRRight, m_vRUp);
 	}
 
-	if(pParticle->pSystem->displaytype == SYSTEM_DISPLAY_PARALELL)
+	ParticleQuad quad;
+
+	if (pParticle->pSystem->displaytype == SYSTEM_DISPLAY_PARALELL)
 	{
-		glBegin(GL_TRIANGLE_FAN);
+
 		vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale * 2;
 		vPoint = vPoint + m_vRRight * flRight * (-pParticle->scale);
-		glTexCoord2f(pParticle->texcoords[0][0], pParticle->texcoords[0][1]);
-		glVertex3fv(vPoint);
+		quad.vert[0].pos = vPoint;
 
 		vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale * 2;
 		vPoint = vPoint + m_vRRight * flRight * pParticle->scale;
-		glTexCoord2f(pParticle->texcoords[1][0], pParticle->texcoords[1][1]);
-		glVertex3fv (vPoint);
+		quad.vert[1].pos = vPoint;
 
 		vPoint = pParticle->origin + m_vRRight * flRight * pParticle->scale;
-		glTexCoord2f(pParticle->texcoords[2][0], pParticle->texcoords[2][1]);
-		glVertex3fv(vPoint);
+		quad.vert[2].pos = vPoint;
 
 		vPoint = pParticle->origin + m_vRRight * flRight * (-pParticle->scale);
-		glTexCoord2f(pParticle->texcoords[3][0], pParticle->texcoords[3][1]);
-		glVertex3fv (vPoint);
-		glEnd();
+		quad.vert[3].pos = vPoint;
 	}
 	else
 	{
-		glBegin(GL_TRIANGLE_FAN);
 		vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale;
 		vPoint = vPoint + m_vRRight * flRight * (-pParticle->scale);
-		glTexCoord2f(pParticle->texcoords[0][0], pParticle->texcoords[0][1]);
-		glVertex3fv(vPoint);
+		quad.vert[0].pos = vPoint;
 
 		vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale;
 		vPoint = vPoint + m_vRRight * flRight * pParticle->scale;
-		glTexCoord2f(pParticle->texcoords[1][0], pParticle->texcoords[1][1]);
-		glVertex3fv (vPoint);
+		quad.vert[1].pos = vPoint;
 
 		vPoint = pParticle->origin + m_vRUp * flUp * (-pParticle->scale);
 		vPoint = vPoint + m_vRRight * flRight * pParticle->scale;
-		glTexCoord2f(pParticle->texcoords[2][0], pParticle->texcoords[2][1]);
-		glVertex3fv(vPoint);
+		quad.vert[2].pos = vPoint;
 
 		vPoint = pParticle->origin + m_vRUp * flUp * (-pParticle->scale);
 		vPoint = vPoint + m_vRRight * flRight * (-pParticle->scale);
-		glTexCoord2f(pParticle->texcoords[3][0], pParticle->texcoords[3][1]);
-		glVertex3fv (vPoint);
-		glEnd();
+		quad.vert[3].pos = vPoint;
 	}
 
-	if(gBSPRenderer.m_pCvarWireFrame->value > 0)
+	memcpy(quad.vert[0].uv, pParticle->texcoords[0], sizeof(float) * 2);
+	memcpy(quad.vert[1].uv, pParticle->texcoords[1], sizeof(float) * 2);
+	memcpy(quad.vert[2].uv, pParticle->texcoords[2], sizeof(float) * 2);
+	memcpy(quad.vert[3].uv, pParticle->texcoords[3], sizeof(float) * 2);
+
+	if (pParticle->pSystem->rendermode == SYSTEM_RENDERMODE_ADDITIVE)
 	{
-		glDisable(GL_BLEND);
-		glDepthMask(GL_TRUE);
-		glDisable(GL_TEXTURE_2D);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glColor3f(1.0, 0.0, 0.0);
-		glLineWidth(1);
-
-		if(gBSPRenderer.m_pCvarWireFrame->value > 1)
-			glDisable(GL_DEPTH_TEST);
-
-		if(pParticle->pSystem->displaytype == SYSTEM_DISPLAY_PARALELL)
-		{
-			glBegin(GL_TRIANGLE_FAN);
-			vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale * 2;
-			vPoint = vPoint + m_vRRight * flRight * (-pParticle->scale);
-			glVertex3fv(vPoint);
-
-			vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale * 2;
-			vPoint = vPoint + m_vRRight * flRight * pParticle->scale;
-			glVertex3fv (vPoint);
-
-			vPoint = pParticle->origin + m_vRRight * flRight * pParticle->scale;
-			glVertex3fv(vPoint);
-
-			vPoint = pParticle->origin + m_vRRight * flRight * (-pParticle->scale);
-			glVertex3fv (vPoint);
-			glEnd();
-		}
-		else
-		{
-			glBegin(GL_TRIANGLE_FAN);
-			vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale;
-			vPoint = vPoint + m_vRRight * flRight * (-pParticle->scale);
-			glVertex3fv(vPoint);
-
-			vPoint = pParticle->origin + m_vRUp * flUp * pParticle->scale;
-			vPoint = vPoint + m_vRRight * flRight * pParticle->scale;
-			glVertex3fv (vPoint);
-
-			vPoint = pParticle->origin + m_vRUp * flUp * (-pParticle->scale);
-			vPoint = vPoint + m_vRRight * flRight * pParticle->scale;
-			glVertex3fv(vPoint);
-
-			vPoint = pParticle->origin + m_vRUp * flUp * (-pParticle->scale);
-			vPoint = vPoint + m_vRRight * flRight * (-pParticle->scale);
-			glVertex3fv (vPoint);
-			glEnd();
-		}
-
-		if(gBSPRenderer.m_pCvarWireFrame->value > 1)
-			glEnable(GL_DEPTH_TEST);
-
-		glEnable(GL_BLEND);
-		glDepthMask(GL_FALSE);
-		glEnable(GL_TEXTURE_2D);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		quad.vert[3].color = quad.vert[2].color = quad.vert[1].color = quad.vert[0].color = pParticle->color;
+		quad.vert[3].alpha = quad.vert[2].alpha = quad.vert[1].alpha = quad.vert[0].alpha = pParticle->alpha * pParticle->pSystem->mainalpha;
 	}
+	else if (pParticle->pSystem->rendermode == SYSTEM_RENDERMODE_ALPHABLEND)
+	{
+		quad.vert[3].color = quad.vert[2].color = quad.vert[1].color = quad.vert[0].color = Vector(pParticle->alpha * pParticle->pSystem->mainalpha, pParticle->alpha * pParticle->pSystem->mainalpha, pParticle->alpha * pParticle->pSystem->mainalpha);
+		quad.vert[3].alpha = quad.vert[2].alpha = quad.vert[1].alpha = quad.vert[0].alpha = 1;
+	}
+	else
+	{
+		quad.vert[3].color = quad.vert[2].color = quad.vert[1].color = quad.vert[0].color = pParticle->color;
+		quad.vert[3].alpha = quad.vert[2].alpha = quad.vert[1].alpha = quad.vert[0].alpha = pParticle->alpha * pParticle->pSystem->mainalpha;
+	}
+
+
+	quadlist.push_back(quad);
 
 	m_iNumParticles++;
 }
@@ -1607,17 +1560,16 @@ DrawParticles
 
 ====================
 */
-void CParticleEngine::DrawParticles( ) 
+void CParticleEngine::DrawParticles()
 {
-	if(m_pCvarDrawParticles->value <= 0)
+	if (!m_pCvarDrawParticles->value)
 		return;
 
 	AngleVectors(gBSPRenderer.m_vViewAngles, m_vForward, m_vRight, m_vUp);
 
-	RenderFog();
 	gBSPRenderer.SetTexEnvs(ENVSTATE_REPLACE, ENVSTATE_OFF, ENVSTATE_OFF, ENVSTATE_OFF);
 
-	gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
+	glActiveTexture(GL_TEXTURE0);
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
 	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);
 	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
@@ -1630,95 +1582,188 @@ void CParticleEngine::DrawParticles( )
 	float flUp;
 	float flRight;
 
-	particle_system_t *psystem = m_pSystemHeader;
-	while(psystem)
+	std::unordered_map<std::pair<GLuint, int>, std::vector<ParticleQuad>, ParticlePairHash> particlebatch;
+
+	particle_system_t* psystem = m_pSystemHeader;
+	while (psystem)
 	{
 		// Check if there's any particles at all
-		if(!psystem->particleheader)
+		if (!psystem->particleheader)
 		{
-			particle_system_t *pnext = psystem->next;
+			particle_system_t* pnext = psystem->next;
 			psystem = pnext;
 			continue;
 		}
 
 		// Check if it's in VIS
-		if(psystem->leaf)
+		if (psystem->leaf)
 		{
-			if(psystem->leaf->visframe != gBSPRenderer.m_iVisFrame)
+			if (psystem->leaf->visframe != gBSPRenderer.m_pViewLeaf->visframe)
 			{
-				particle_system_t *pnext = psystem->next;
+				particle_system_t* pnext = psystem->next;
 				psystem = pnext;
 				continue;
 			}
 		}
 
 		// Calculate up and right scalers
-		if(psystem->numframes)
+		if (psystem->numframes)
 		{
-			if(psystem->framesizex > psystem->framesizey)
+			if (psystem->framesizex > psystem->framesizey)
 			{
-				flUp = (float)psystem->framesizey/(float)psystem->framesizex;
+				flUp = (float)psystem->framesizey / (float)psystem->framesizex;
 				flRight = 1.0;
 			}
 			else
 			{
-				flRight = (float)psystem->framesizex/(float)psystem->framesizey;
+				flRight = (float)psystem->framesizex / (float)psystem->framesizey;
 				flUp = 1.0;
 			}
 		}
 		else
 		{
-			if(psystem->texture->iWidth > psystem->texture->iHeight)
+			if (psystem->texture->iWidth > psystem->texture->iHeight)
 			{
-				flUp = (float)psystem->texture->iHeight/(float)psystem->texture->iWidth;
+				flUp = (float)psystem->texture->iHeight / (float)psystem->texture->iWidth;
 				flRight = 1.0;
 			}
 			else
 			{
-				flRight = (float)psystem->texture->iWidth/(float)psystem->texture->iHeight;
+				flRight = (float)psystem->texture->iWidth / (float)psystem->texture->iHeight;
 				flUp = 1.0;
 			}
 		}
 
-		if(psystem->displaytype == SYSTEM_DISPLAY_PARALELL)
+		if (psystem->displaytype == SYSTEM_DISPLAY_PARALELL)
 		{
 			VectorCopy(m_vRight, m_vRRight);
-			VectorClear(m_vRUp); m_vRUp[2] = 1;
+			VectorClear(m_vRUp);
+			m_vRUp[2] = 1;
 		}
-		else if(!psystem->rotationvel && !psystem->rotxvel && !psystem->rotyvel)
+		else if (!psystem->rotationvel && !psystem->rotxvel && !psystem->rotyvel)
 		{
 			VectorCopy(m_vRight, m_vRRight);
 			VectorCopy(m_vUp, m_vRUp);
 		}
 
-		if(psystem->overbright)
-			glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 2);
-
 		// Bind texture
-		gBSPRenderer.Bind2DTexture(GL_TEXTURE0_ARB, psystem->texture->iIndex);
+		gBSPRenderer.Bind2DTexture(GL_TEXTURE0, psystem->texture->iIndex);
+
+		std::vector<ParticleQuad> quadlist;
 
 		// Render all particles tied to this system
-		cl_particle_t *pparticle = psystem->particleheader;
-		while(pparticle)
+		cl_particle_t* pparticle = psystem->particleheader;
+		while (pparticle)
 		{
-			RenderParticle(pparticle, flUp, flRight);
-			cl_particle_t *pnext = pparticle->next;
+
+			GetParticleQuad(pparticle, flUp, flRight, quadlist);
+			cl_particle_t* pnext = pparticle->next;
 			pparticle = pnext;
 		}
 
-		// Reset
-		if(psystem->overbright)
-			glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);
+		// append them to the correct batch
+		std::pair<GLuint, int> particlepair = std::pair<GLuint, int>(psystem->texture->iIndex, psystem->rendermode);
+		auto& batch = particlebatch[particlepair];
+		batch.insert(batch.end(), std::begin(quadlist), std::end(quadlist));
 
-		particle_system_t *pnext = psystem->next;
+
+		particle_system_t* pnext = psystem->next;
 		psystem = pnext;
 	}
+
+	DrawQuadList(particlebatch, psystem);
 
 	glFogfv(GL_FOG_COLOR, gHUD.m_pFogSettings.color);
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
 	glColor4f(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+}
+
+void CParticleEngine::DrawQuadList(std::unordered_map<std::pair<GLuint, int>, std::vector<ParticleQuad>, ParticlePairHash>& particlebatch, particle_system_t* psystem)
+{
+	if (particlebatch.empty())
+		return;
+
+	glEnable(GL_TEXTURE_2D);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_uiquadbufferindex);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(ParticleVertex), (void*)offsetof(ParticleVertex, pos));
+	glTexCoordPointer(2, GL_FLOAT, sizeof(ParticleVertex), (void*)offsetof(ParticleVertex, uv));
+	glColorPointer(4, GL_FLOAT, sizeof(ParticleVertex), (void*)offsetof(ParticleVertex, color));
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+	int currendermode = 999;
+	GLuint curtexture;
+
+	for (auto batch : particlebatch)
+	{
+		if (batch.second.empty())
+			continue;
+
+		switch (batch.first.second)
+		{
+		case SYSTEM_RENDERMODE_ADDITIVE:
+		{
+			if (currendermode != SYSTEM_RENDERMODE_ADDITIVE)
+			{
+				currendermode = SYSTEM_RENDERMODE_ADDITIVE;
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				glFogfv(GL_FOG_COLOR, vec3_origin);
+			}
+			break;
+		}
+		case SYSTEM_RENDERMODE_ALPHABLEND:
+		{
+			if (currendermode != SYSTEM_RENDERMODE_ALPHABLEND)
+			{
+				currendermode = SYSTEM_RENDERMODE_ALPHABLEND;
+				glBlendFunc(GL_ONE, GL_ONE);
+				glFogfv(GL_FOG_COLOR, vec3_origin);
+			}
+			break;
+		}
+		default:
+		{
+			if(currendermode != -1)
+			{
+				currendermode = -1;
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				glFogfv(GL_FOG_COLOR, gHUD.m_pFogSettings.color);
+			}
+			break;
+		}
+
+		}
+
+		std::vector<ParticleVertex> verts;
+		for (auto quad : batch.second)
+		{
+			verts.push_back(quad.vert[0]);
+			verts.push_back(quad.vert[1]);
+			verts.push_back(quad.vert[2]);
+			verts.push_back(quad.vert[3]);
+		}
+
+		if(curtexture != batch.first.first)
+		{
+			curtexture = batch.first.first;
+			glBindTexture(GL_TEXTURE_2D, batch.first.first);
+		}
+		glBufferData(GL_ARRAY_BUFFER, sizeof(ParticleVertex) * verts.size(), verts.data(), GL_DYNAMIC_DRAW);
+
+		glDrawArrays(GL_QUADS, 0, verts.size());
+	}
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 /*
