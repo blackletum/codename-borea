@@ -16,6 +16,8 @@ bool first_init = true;
 
 float scale_X, scale_Y;
 
+cvar_t* ffmpeg_soundvolume = nullptr;
+
 ///////////////
 //ffmpeg start
 ///////////////
@@ -313,7 +315,7 @@ bool video_reader_loadaudio(VideoData* viddata, const char* filepath)
         av_packet_unref_(packet);
     }
 
-    gSoundSystem.StartSound_rawdata(filepath, audio_data.data(), audio_data.size(), audio_codec_ctx->sample_rate);
+    gSoundSystem.StartSound_rawdata(filepath, audio_data.data(), audio_data.size(), audio_codec_ctx->sample_rate, ffmpeg_soundvolume->value);
 
     av_seek_frame_(av_format_ctx, -1, 0, AVSEEK_FLAG_BACKWARD);
 
@@ -487,6 +489,8 @@ void InitFFMPEG()
     swr_convert_ = (swr_convert_func)GetProcAddress(swresample, "swr_convert");
 
     SetDllDirectoryA("");
+
+    ffmpeg_soundvolume = gEngfuncs.pfnRegisterVariable("ffmpeg_soundvolume", "75", FCVAR_ARCHIVE);
 
     first_init = false;
 }

@@ -45,6 +45,7 @@ Studio models are position independent, so the cache manager can move them.
 #define MAXSTUDIOEVENTS		1024
 #define MAXSTUDIOPIVOTS		256
 #define MAXSTUDIOCONTROLLERS 8
+#define MAXSTUDIOATTACHMENTS		64	// max attachments per model
 #define MAXSTUDIOFILESIZE	 32		//FDreamer: Was 16. "X*1024*1024" Bs,
 
 typedef struct 

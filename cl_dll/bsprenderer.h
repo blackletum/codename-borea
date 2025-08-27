@@ -191,6 +191,8 @@ public:
 	dlight_t			*m_pFirstDLight;
 	dlight_t			*m_pFirstELight;
 
+	ref_params_t		m_RefDef;
+
 	int					m_iTotalVertCount;
 	int					m_iTotalFaceCount;
 	int					m_iTotalTriCount;

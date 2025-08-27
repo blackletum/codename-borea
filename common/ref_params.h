@@ -1,9 +1,9 @@
 /***
 *
 *	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -12,64 +12,62 @@
 *   without written permission from Valve LLC.
 *
 ****/
-#if !defined( REF_PARAMSH )
-#define REF_PARAMSH
+
+#pragma once
 
 typedef struct ref_params_s
 {
 	// Output
-	float	vieworg[3];
-	float	viewangles[3];
+	Vector vieworg;
+	Vector viewangles;
 
-	float	forward[3];
-	float	right[3];
-	float   up[3];
+	Vector forward;
+	Vector right;
+	Vector up;
 
 	// Client frametime;
-	float	frametime;
+	float frametime;
 	// Client time
-	float	time;
+	float time;
 
 	// Misc
-	int		intermission;
-	int		paused;
-	int		spectator;
-	int		onground;
-	int		waterlevel;
+	int intermission;
+	int paused;
+	int spectator;
+	int onground;
+	int waterlevel;
 
-	float	simvel[3];
-	float	simorg[3];
+	Vector simvel;
+	Vector simorg;
 
-	float	viewheight[3];
-	float	idealpitch;
+	Vector viewheight;
+	float idealpitch;
 
-	float	cl_viewangles[3];
+	Vector cl_viewangles;
 
-	int		health;
-	float	crosshairangle[3];
-	float	viewsize;
+	int health;
+	Vector crosshairangle;
+	float viewsize;
 
-	float	punchangle[3];
-	int		maxclients;
-	int		viewentity;
-	int		playernum;
-	int		max_entities;
-	int		demoplayback;
-	int		hardware;
+	Vector punchangle;
+	int maxclients;
+	int viewentity;
+	int playernum;
+	int max_entities;
+	int demoplayback;
+	int hardware;
 
-	int		smoothing;
+	int smoothing;
 
 	// Last issued usercmd
-	struct usercmd_s *cmd;
+	struct usercmd_s* cmd;
 
 	// Movevars
-	struct movevars_s *movevars;
+	struct movevars_s* movevars;
 
-	int		viewport[4];		// the viewport coordinates x ,y , width, height
+	int viewport[4]; // the viewport coordinates x ,y , width, height
 
-	int		nextView;			// the renderer calls ClientDLL_CalcRefdef() and Renderview
-								// so long in cycles until this value is 0 (multiple views)
-	int		onlyClientDraw;		// if !=0 nothing is drawn by the engine except clientDraw functions
+	int nextView;		// the renderer calls ClientDLL_CalcRefdef() and Renderview
+	// so long in cycles until this value is 0 (multiple views)
+	int onlyClientDraw; // if !=0 nothing is drawn by the engine except clientDraw functions
 } ref_params_t;
-
-#endif // !REF_PARAMSH

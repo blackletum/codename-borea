@@ -825,6 +825,8 @@ void R_CalcRefDef( ref_params_t *pparams )
 	r_refdef = pparams;
 	pparams->onlyClientDraw = 1;
 
+	gBSPRenderer.m_RefDef = *pparams;
+
 	if (!engine_cl->worldmodel->numleafs)
 		engine_cl->worldmodel->numleafs = restore_numleafs;
 
@@ -918,8 +920,6 @@ void R_DrawNormalTriangles( )
 			}
 			else if (ent->model->type == mod_sprite)
 			{
-				extern Vector r_entorigin;
-				r_entorigin = ent->origin;
 				R_DrawSpriteModel(ent);
 			}
 		}
@@ -930,7 +930,7 @@ void R_DrawNormalTriangles( )
 	R_DrawTempEntities(false);
 
 	//VIEMWODEL SHOULD BE RENDERED LAST
-	if (engine_cl->viewent.model)
+	if (engine_cl->viewent.model && gEngfuncs.pfnGetCvarFloat("r_drawviewmodel") > 0)
 	{
 		glClear(GL_DEPTH_BUFFER_BIT);
 		if (!engine_cl->weaponstarttime)

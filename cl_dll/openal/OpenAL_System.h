@@ -41,7 +41,7 @@ public:
 	bool Init();
 	void VidInit();
 	void StartSound(const char* filepath);
-	void StartSound_rawdata(const char* filepath, uint8_t* audiobuffer, int buffersize, int samplerate);
+	void StartSound_rawdata(const char* filepath, uint8_t* audiobuffer, int buffersize, int samplerate, float volume); //volume = 0 - 100
 	bool MakeCurrent();
 	void Pause();
 	void Resume();

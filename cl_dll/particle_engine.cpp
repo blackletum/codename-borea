@@ -1322,24 +1322,25 @@ bool CParticleEngine::UpdateParticle( cl_particle_t *pParticle )
 	//
 	// Check if lighting is required
 	//
-	if(pSystem->lightcheck != PARTICLE_LIGHTCHECK_NONE)
-	{
-		if(pSystem->lightcheck == PARTICLE_LIGHTCHECK_NORMAL)
-		{
-			pParticle->color = LightForParticle(pParticle);
-		}
-		else if(pSystem->lightcheck == PARTICLE_LIGHTCHECK_SCOLOR)
-		{
-			pParticle->scolor = LightForParticle(pParticle);
-		}
-		else if(pSystem->lightcheck == PARTICLE_LIGHTCHECK_MIXP)
-		{
-			pParticle->color = LightForParticle(pParticle);
-			pParticle->color.x = pParticle->color.x*pSystem->primarycolor.x;
-			pParticle->color.y = pParticle->color.y*pSystem->primarycolor.y;
-			pParticle->color.z = pParticle->color.z*pSystem->primarycolor.z;
-		}
-	}
+	// salsa: jesus no, just check it once
+	//if(pSystem->lightcheck != PARTICLE_LIGHTCHECK_NONE)
+	//{
+	//	if(pSystem->lightcheck == PARTICLE_LIGHTCHECK_NORMAL)
+	//	{
+	//		pParticle->color = LightForParticle(pParticle);
+	//	}
+	//	else if(pSystem->lightcheck == PARTICLE_LIGHTCHECK_SCOLOR)
+	//	{
+	//		pParticle->scolor = LightForParticle(pParticle);
+	//	}
+	//	else if(pSystem->lightcheck == PARTICLE_LIGHTCHECK_MIXP)
+	//	{
+	//		pParticle->color = LightForParticle(pParticle);
+	//		pParticle->color.x = pParticle->color.x*pSystem->primarycolor.x;
+	//		pParticle->color.y = pParticle->color.y*pSystem->primarycolor.y;
+	//		pParticle->color.z = pParticle->color.z*pSystem->primarycolor.z;
+	//	}
+	//}
 
 	//
 	// See if we need to blend colors
@@ -1646,9 +1647,6 @@ void CParticleEngine::DrawParticles()
 			VectorCopy(m_vUp, m_vRUp);
 		}
 
-		// Bind texture
-		gBSPRenderer.Bind2DTexture(GL_TEXTURE0, psystem->texture->iIndex);
-
 		std::vector<ParticleQuad> quadlist;
 
 		// Render all particles tied to this system
@@ -1698,7 +1696,7 @@ void CParticleEngine::DrawQuadList(std::unordered_map<std::pair<GLuint, int>, st
 	glEnableClientState(GL_COLOR_ARRAY);
 
 	int currendermode = 999;
-	GLuint curtexture;
+	GLuint curtexture = 0;
 
 	for (auto batch : particlebatch)
 	{

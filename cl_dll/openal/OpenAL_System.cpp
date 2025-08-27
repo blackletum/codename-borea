@@ -151,7 +151,7 @@ void CSoundSystem::PrecacheSound(const char* filepath)
 	}
 }
 
-void CSoundSystem::StartSound_rawdata(const char* filepath /*mp4 file path*/, uint8_t* audiobuffer, int buffersize, int samplerate)
+void CSoundSystem::StartSound_rawdata(const char* filepath /*mp4 file path*/, uint8_t* audiobuffer, int buffersize, int samplerate, float volume)
 {
 	ALuint source;
 	AudioSource audiosource;
@@ -164,11 +164,12 @@ void CSoundSystem::StartSound_rawdata(const char* filepath /*mp4 file path*/, ui
 
 	alSourcei(source, AL_BUFFER, buffer);
 
-	alSourcef(source, AL_GAIN, 100);
+	alSourcef(source, AL_GAIN, volume / 100);
 	alSourcef(source, AL_PITCH, 1);
-	alSourcef(source, AL_REFERENCE_DISTANCE, 0);
+	alSourcef(source, AL_REFERENCE_DISTANCE, 1);
 	alSourcei(source, AL_SOURCE_RELATIVE, AL_FALSE);
 	alSourcei(source, AL_LOOPING, AL_FALSE);
+	alSourcef(source, AL_ROLLOFF_FACTOR, 0.0f);
 	alSourcePlay(source);
 	audiosource.sourceID = source;
 	audiosource.bufferID = audioBuffers[filepath];
@@ -206,9 +207,10 @@ void CSoundSystem::StartSound(const char* filepath)
 	alSourcei(source, AL_BUFFER, audioBuffers[fullpath]);
 	alSourcef(source, AL_GAIN, 1);
 	alSourcef(source, AL_PITCH, 1);
-	alSourcef(source, AL_REFERENCE_DISTANCE, 0);
+	alSourcef(source, AL_REFERENCE_DISTANCE, 1);
 	alSourcei(source, AL_SOURCE_RELATIVE, AL_FALSE);
 	alSourcei(source, AL_LOOPING, AL_FALSE);
+	alSourcef(source, AL_ROLLOFF_FACTOR, 0.0f);
 	alSourcePlay(source);
 	audiosource.sourceID = source;
 	audiosource.bufferID = audioBuffers[fullpath];
@@ -268,12 +270,24 @@ void CSoundSystem::Resume()
 	}
 }
 
+extern cvar_t* ffmpeg_soundvolume;
+
 void CSoundSystem::Update()
 {
+	bool volume_changed;
+	static float volume = 0;
+
+	ffmpeg_soundvolume->value = clamp(ffmpeg_soundvolume->value, 0, 100);
+
+	volume_changed = volume != ffmpeg_soundvolume->value;
+	volume = ffmpeg_soundvolume ? ffmpeg_soundvolume->value : 0;
 	for (auto it = audiosources.begin(); it != audiosources.end();)
 	{
 		ALint state;
 		alGetSourcei(it->sourceID, AL_SOURCE_STATE, &state);
+
+		if (volume_changed);
+			alSourcef(it->sourceID, AL_GAIN, volume / 100);
 
 		if (state == AL_STOPPED)
 		{
