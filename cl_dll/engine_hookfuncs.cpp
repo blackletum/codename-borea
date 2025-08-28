@@ -1432,6 +1432,9 @@ void Hook_TriApi()
 
 void Hook_gEngfuncs_Functions()
 {
+	//
+	//credits to meetem for this cl hooking code
+	//
 	size_t address = (size_t)gEngfuncs.GetViewModel();
 	size_t viewent_offset = offsetof(client_state_s, viewent);
 	client_state_s* clientState = (client_state_s*)(address - viewent_offset);

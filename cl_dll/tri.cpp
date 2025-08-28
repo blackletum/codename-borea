@@ -26,6 +26,8 @@
 #include "StudioModelRenderer.h"
 #include "GameStudioModelRenderer.h"
 
+#include "shake.h"
+
 #include "event_api.h"
 
 extern CGameStudioModelRenderer g_StudioRenderer;
@@ -536,6 +538,107 @@ void R_DrawTempEntities(bool bBrushes)
 
 extern ref_params_t* r_refdef;
 
+int V_FadeAlpha()
+{
+	bool fade_in = (engine_cl->sf.fadeFlags & FFADE_IN);
+	bool fade_out = (engine_cl->sf.fadeFlags & FFADE_OUT);
+	bool fade_modulate = (engine_cl->sf.fadeFlags & FFADE_MODULATE);
+	bool fade_stayout = (engine_cl->sf.fadeFlags & FFADE_STAYOUT);
+	bool fade_longfade = (engine_cl->sf.fadeFlags & FFADE_LONGFADE);
+
+	float time = engine_cl->time;
+
+	int result = 0;
+	float fadetime = 0;
+	int fadealpha = 0;
+
+	int alpha;
+
+	if (time > engine_cl->sf.fadeReset && time > engine_cl->sf.fadeEnd)
+	{
+		if (!engine_cl->sf.fadeFlags & FFADE_STAYOUT)
+			return 0;
+	}
+
+	if (engine_cl->sf.fadeFlags & FFADE_STAYOUT)
+	{
+		alpha = engine_cl->sf.fadealpha;
+		if ((engine_cl->sf.fadeFlags & FFADE_OUT) && engine_cl->sf.fadeTotalEnd > time)
+		{
+			alpha += engine_cl->sf.fadeSpeed * (engine_cl->sf.fadeTotalEnd - time);
+		}
+		else
+		{
+			engine_cl->sf.fadeEnd = time + 0.1;
+		}
+	}
+	else
+	{
+		alpha = engine_cl->sf.fadeSpeed * (engine_cl->sf.fadeEnd - time);
+		if (engine_cl->sf.fadeFlags & FFADE_OUT)
+		{
+			alpha += engine_cl->sf.fadealpha;
+		}
+	}
+	alpha = bound(0, alpha, engine_cl->sf.fadealpha);
+
+	return alpha;
+}
+
+void R_PolyBlend()
+{
+	int alpha = V_FadeAlpha();
+	if (!alpha)
+		return;
+
+	byte color[4];
+	int glx = r_refdef->viewport[0];
+	int gly = r_refdef->viewport[1];
+	int glwidth = r_refdef->viewport[2];
+	int glheight = r_refdef->viewport[3];
+
+	//GL_DisableMultitexture();
+	glDisable(GL_ALPHA_TEST);
+	glEnable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_TEXTURE_2D);
+	if ((engine_cl->sf.fadeFlags & FFADE_MODULATE) != 0)
+	{
+		glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+		color[3] = -1;
+		color[0] = color[1] = color[2] = (alpha * (engine_cl->sf.fader - 255) - 511) >> 8;
+	}
+	else
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		color[3] = alpha;
+		color[0] = color[1] = color[2] = engine_cl->sf.fadeb;
+	}
+
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0, glwidth, glheight, 0, -99999.0, 99999.0);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glDisable(GL_CULL_FACE);
+	glColor4ubv(color);
+	glBegin(GL_QUADS);
+	glVertex2f(0, 0);
+	glVertex2f(0, glheight);
+	glVertex2f(glwidth, glheight);
+	glVertex2f(glwidth, 0);
+	glEnd();
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_ALPHA_TEST);
+}
+
 /*
 =================
 HUD_DrawNormalTriangles
@@ -559,6 +662,8 @@ void DLLEXPORT HUD_DrawNormalTriangles()
     R_DrawTransparentTriangles();
 
     gHUD.m_Spectator.DrawOverview();
+
+	R_PolyBlend();
 
 #ifdef JPH_DEBUG_RENDERER
     //PhysDebug_Draw();
