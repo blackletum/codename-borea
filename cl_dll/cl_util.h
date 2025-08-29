@@ -39,24 +39,29 @@ inline float CVAR_GET_FLOAT( const char *x ) {	return gEngfuncs.pfnGetCvarFloat(
 inline const char* CVAR_GET_STRING( const char *x ) {	return gEngfuncs.pfnGetCvarString( (char*)x ); }
 inline struct cvar_s *CVAR_CREATE( const char *cv, const char *val, const int flags ) {	return gEngfuncs.pfnRegisterVariable( (char*)cv, (char*)val, flags ); }
 
-#define SPR_Load (*gEngfuncs.pfnSPR_Load)
-#define SPR_Set (*gEngfuncs.pfnSPR_Set)
-#define SPR_Frames (*gEngfuncs.pfnSPR_Frames)
-#define SPR_GetList (*gEngfuncs.pfnSPR_GetList)
 
-// SPR_Draw  draws a the current sprite as solid
-#define SPR_Draw (*gEngfuncs.pfnSPR_Draw)
-// SPR_DrawHoles  draws the current sprites,  with color index255 not drawn (transparent)
-#define SPR_DrawHoles (*gEngfuncs.pfnSPR_DrawHoles)
-// SPR_DrawAdditive  adds the sprites RGB values to the background  (additive transulency)
-#define SPR_DrawAdditive (*gEngfuncs.pfnSPR_DrawAdditive)
+extern void SPR_Init();
 
-// SPR_EnableScissor  sets a clipping rect for HUD sprites.  (0,0) is the top-left hand corner of the screen.
-#define SPR_EnableScissor (*gEngfuncs.pfnSPR_EnableScissor)
-// SPR_DisableScissor  disables the clipping rect
-#define SPR_DisableScissor (*gEngfuncs.pfnSPR_DisableScissor)
-//
+extern HL_HSPRITE SPR_Load(const char* szPicName);
+extern int SPR_Frames(HL_HSPRITE hPic);
+extern int SPR_Height(HL_HSPRITE hPic, int frame);
+extern int SPR_Width(HL_HSPRITE hPic, int frame);
+extern void SPR_Set(HL_HSPRITE hPic, int r, int g, int b);
+extern void SPR_Draw(int frame, int x, int y, const Rect* prc);
+extern void SPR_DrawHoles(int frame, int x, int y, const Rect* prc);
+extern void SPR_DrawAdditive(int frame, int x, int y, const Rect* prc);
+extern void SPR_EnableScissor(int x, int y, int width, int height);
+extern void SPR_DisableScissor(void);
+
+extern model_t* GetSpritePointer(HL_HSPRITE hSprite);
+
+extern void SetCrosshair(HL_HSPRITE hspr, Rect rc, int r, int g, int b);
+extern void DrawCrosshair();
+
+
 #define FillRGBA (*gEngfuncs.pfnFillRGBA)
+
+#define SPR_GetList (*gEngfuncs.pfnSPR_GetList)
 
 
 // ScreenHeight returns the height of the screen, in pixels
@@ -76,13 +81,8 @@ inline struct cvar_s *CVAR_CREATE( const char *cv, const char *val, const int fl
 #define GetScreenInfo (*gEngfuncs.pfnGetScreenInfo)
 #define ServerCmd (*gEngfuncs.pfnServerCmd)
 #define EngineClientCmd (*gEngfuncs.pfnClientCmd)
-#define SetCrosshair (*gEngfuncs.pfnSetCrosshair)
 #define AngleVectors (*gEngfuncs.pfnAngleVectors)
 
-
-// Gets the height & width of a sprite,  at the specified frame
-inline int SPR_Height( HL_HSPRITE x, int f )	{ return gEngfuncs.pfnSPR_Height(x, f); }
-inline int SPR_Width( HL_HSPRITE x, int f )	{ return gEngfuncs.pfnSPR_Width(x, f); }
 
 inline 	client_textmessage_t	*TextMessageGet( const char *pName ) { return gEngfuncs.pfnTextMessageGet( pName ); }
 inline 	int						TextMessageDrawChar( int x, int y, int number, int r, int g, int b ) 

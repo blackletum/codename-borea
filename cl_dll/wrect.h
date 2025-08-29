@@ -13,4 +13,6 @@ typedef struct rect_s
 	int				left, right, top, bottom;
 } wrect_t;
 
+typedef rect_s Rect;
+
 #endif

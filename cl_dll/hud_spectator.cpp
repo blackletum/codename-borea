@@ -1423,7 +1423,7 @@ void CHudSpectator::DrawOverviewLayer()
 	int ix,iy,i,xTiles,yTiles,frame;
 
 	qboolean	hasMapImage = m_MapSprite?TRUE:FALSE;
-	model_t *   dummySprite = (struct model_s *)gEngfuncs.GetSpritePointer( m_hsprUnkownMap);
+	model_t *   dummySprite = (struct model_s *)GetSpritePointer( m_hsprUnkownMap);
 
 	if ( hasMapImage)
 	{
@@ -1573,7 +1573,7 @@ void CHudSpectator::DrawOverviewEntities()
 		if ( !m_OverviewEntities[i].HL_HSPRITE )
 			continue;
 
-		hSpriteModel = (struct model_s *)gEngfuncs.GetSpritePointer( m_OverviewEntities[i].HL_HSPRITE );
+		hSpriteModel = (struct model_s *)GetSpritePointer( m_OverviewEntities[i].HL_HSPRITE );
 		ent = m_OverviewEntities[i].entity;
 		
 		gEngfuncs.pTriAPI->SpriteTexture( hSpriteModel, 0 );
@@ -1625,7 +1625,7 @@ void CHudSpectator::DrawOverviewEntities()
 
 		gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
 		
-		hSpriteModel = (struct model_s *)gEngfuncs.GetSpritePointer( m_hsprBeam );
+		hSpriteModel = (struct model_s *)GetSpritePointer( m_hsprBeam );
 		gEngfuncs.pTriAPI->SpriteTexture( hSpriteModel, 0 );
 		
 		gEngfuncs.pTriAPI->Color4f(r, g, b, 0.3);
@@ -1709,7 +1709,7 @@ void CHudSpectator::DrawOverviewEntities()
 
 	angles[0] = 0; // always show horizontal camera sprite
 
-	hSpriteModel = (struct model_s *)gEngfuncs.GetSpritePointer( m_hsprCamera );
+	hSpriteModel = (struct model_s *)GetSpritePointer( m_hsprCamera );
 	gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
 	gEngfuncs.pTriAPI->SpriteTexture( hSpriteModel, 0 );
 	

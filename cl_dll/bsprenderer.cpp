@@ -2635,6 +2635,98 @@ void CBSPRenderer::DrawDetails( )
 
 /*
 ====================
+V_CalcFov
+====================
+*/
+static float V_CalcFov(float* fov_x, float width, float height)
+{
+	float x, half_fov_y;
+
+	if (*fov_x < 1.0f || *fov_x > 179.0f)
+		*fov_x = 90.0f; // default value
+
+	x = width / tan(DEG2RAD(*fov_x) * 0.5f);
+	half_fov_y = atan(height / x);
+
+	return RAD2DEG(half_fov_y) * 2;
+}
+
+
+void AdjustFOV(float* fov_x, float* fov_y, float width, float height, qboolean lock_x)
+{
+	if (!gEngfuncs.pfnGetCvarFloat("gl_widescreen_yfov") || width * 3 == 4 * height || width * 4 == height * 5)
+	{
+		*fov_x = 2.0f * atan(tan(glm::radians(*fov_x) / 2.0f) / (width / height));
+		return;
+	}
+
+	float x, y;
+
+	if (lock_x)
+	{
+		*fov_y = 2 * atan((width * 3) / (height * 4) * tan(*fov_y * M_PI / 360.0f * 0.5f)) * 360 / M_PI;
+		return;
+	}
+
+	y = V_CalcFov(fov_x, 640, 480);
+	x = *fov_x;
+
+	*fov_x = V_CalcFov(&y, height, width);
+	if (*fov_x < x)
+		*fov_x = x;
+	else
+		*fov_y = y;
+
+
+	*fov_x = 2.0f * atan(tan(glm::radians(*fov_x) / 2.0f) / (width / height));
+}
+
+Vector CBSPRenderer::TriWorldToScreen(Vector point)
+{
+	Vector screen(0, 0, 0);
+
+	//generate matrixes
+	float fov = gHUD.m_iFOV;
+	if (!fov)
+		return screen;
+	float fovy = fov;
+
+	AdjustFOV(&fov, &fovy, ScreenWidth, ScreenHeight, 0);
+
+	float aspect = (float)ScreenWidth / (float)ScreenHeight;
+
+	glm::mat4 m_ProjectionMatrix = glm::perspective(fov, aspect, 1.f, 16384.f);
+
+	glm::vec3 viewangles = glm::vec3(m_RefDef.viewangles.x + m_RefDef.punchangle.x, m_RefDef.viewangles.y + m_RefDef.punchangle.y, m_RefDef.viewangles.z + m_RefDef.punchangle.z);
+	Vector forward_;
+	AngleVectors(Vector(viewangles.x, viewangles.y, viewangles.z), forward_, nullptr, nullptr);
+
+	glm::vec3 forward = glm::vec3(forward_.x, forward_.y, forward_.z);
+
+	glm::vec3 cameraPos = glm::vec3(m_vRenderOrigin.x, m_vRenderOrigin.y, m_vRenderOrigin.z);
+	glm::vec3 cameraTarget = cameraPos + forward;
+	glm::vec3 cameraUp = glm::vec3(m_RefDef.up.x, m_RefDef.up.y, m_RefDef.up.z);
+
+	glm::mat4 m_ViewMatrix = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+
+
+	glm::vec4 worldPos = glm::vec4(point.x, point.y, point.z, 1.0);
+
+	// clip space
+	glm::vec4 clip = m_ProjectionMatrix * m_ViewMatrix * worldPos;
+
+	// perspective divide -> NDC (-1..1)
+	glm::vec3 ndc = glm::vec3(clip) / clip.w;
+
+	// to screen coords (pixels)
+	float screenX = (ndc.x * 0.5f + 0.5f) * ScreenWidth;
+	float screenY = (ndc.y * 0.5f + 0.5f) * ScreenHeight;
+
+	return Vector(screenX / ScreenWidth, screenY / ScreenHeight, 0);
+}
+
+/*
+====================
 RenderFirstPass
 
 ====================

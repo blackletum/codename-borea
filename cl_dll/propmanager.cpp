@@ -824,8 +824,8 @@ void CPropManager::RenderProps( bool isWater )
 			if (dist.Length2D() < GRASS_RADIUS)
 			{
 				// clamps
-				float distX = clamp(dist.x, -GRASS_RADIUS, GRASS_RADIUS);
-				float distY = clamp(dist.y, -GRASS_RADIUS, GRASS_RADIUS);
+				float distX = std::clamp(dist.x, -GRASS_RADIUS, GRASS_RADIUS);
+				float distY = std::clamp(dist.y, -GRASS_RADIUS, GRASS_RADIUS);
 
 				if (distX > 0)
 				{

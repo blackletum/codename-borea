@@ -30,6 +30,15 @@ Extended and/or recoded by Andrew Lucas
 #include "textureloader.h"
 #include "rendererdefs.h"
 
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#undef clamp
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <algorithm>
+
 /*
 ====================
 CBSPRenderer
@@ -58,6 +67,8 @@ public:
 	void ClearDetailObjects( );
 	void LoadDetailFile( );
 	void DrawDetails( );
+
+	Vector TriWorldToScreen(Vector point);
 
 	void RendererRefDef ( ref_params_t *pparams );
 	void DrawNormalTriangles( bool onlysky = false );

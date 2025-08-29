@@ -1205,7 +1205,7 @@ void CHud::DrawBackground(float xmin, float ymin, float xmax, float ymax, char* 
 	gEngfuncs.pTriAPI->Brightness(1.0f);
 	gEngfuncs.pTriAPI->Color4ub(color.x, color.y, color.z, 255);
 	gEngfuncs.pTriAPI->CullFace(TRI_NONE);
-	gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(SPR_Load(sprite)), 0);
+	gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(SPR_Load(sprite)), 0);
 
 	//start drawing
 	gEngfuncs.pTriAPI->Begin(TRI_QUADS);

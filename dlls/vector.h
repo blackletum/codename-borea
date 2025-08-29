@@ -108,6 +108,7 @@ public:
 	inline Vector operator+(const Vector& v) const	{ return Vector(x+v.x, y+v.y, z+v.z);	}
 	inline Vector operator-(const Vector& v) const	{ return Vector(x-v.x, y-v.y, z-v.z);	}
 	inline Vector operator*(float fl) const			{ return Vector(x*fl, y*fl, z*fl);		}
+	inline Vector operator*(Vector v) const { return Vector(x * v.x, y * v.y, z * v.z); }
 	inline Vector operator/(float fl) const			{ return Vector(x/fl, y/fl, z/fl);		}
 	#ifdef _STRING_
 	inline operator std::string() const				{ return ("X: " + std::to_string(x) + ", Y: " + std::to_string(y) + ", Z: " + std::to_string(z)); }

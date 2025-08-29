@@ -1262,9 +1262,20 @@ FuncHook(CullFace, void, TRICULLSTYLE style)
 		glCullFace(GL_FRONT);
 	}
 }
+extern mspriteframe_t* R_GetSpriteFrame(const model_t* pModel, int frame, float yaw);
+
 FuncHook(SpriteTexture, int, struct model_s* pSpriteModel, int frame)
 {
-	return OrigSpriteTexture(pSpriteModel, frame);
+	OrigBegin(0);
+	OrigEnd();
+
+	mspriteframe_t* sprite = R_GetSpriteFrame(pSpriteModel, frame, 0);
+	if (!sprite)
+		return 0;
+
+	glBindTexture(GL_TEXTURE_2D, sprite->gl_texturenum);
+
+	return 1;
 }
 FuncHook(WorldToScreen, int, float* world, float* screen) // Returns 1 if it's z clipped
 {

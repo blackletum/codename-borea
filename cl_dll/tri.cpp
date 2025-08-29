@@ -94,7 +94,7 @@ void R_SpriteColor(colorVec* pColor, cl_entity_t* pEntity, int alpha)
 	int a;
 
 	if (pEntity->curstate.rendermode == kRenderGlow || pEntity->curstate.rendermode == kRenderTransAdd)
-		a = clamp(alpha, 0, 255); // some entities > 255 wtf?
+		a = std::clamp(alpha, 0, 255); // some entities > 255 wtf?
 	else
 		a = 256;
 
@@ -167,6 +167,27 @@ mspriteframe_t* R_GetSpriteFrame(const model_t* pModel, int frame, float yaw)
 	//}
 
 	return pspriteframe;
+}
+
+void R_GetSpriteFrames(const model_t* pModel, int &framecount)
+{
+	msprite_t* psprite;
+	mspritegroup_t* pspritegroup;
+	mspriteframe_t* pspriteframe = NULL;
+	float* pintervals, fullinterval;
+	int i, numframes;
+	float          targettime;
+
+	assert(pModel != NULL);
+	psprite = (msprite_t*)pModel->cache.data;
+
+	if (!psprite)
+	{
+		framecount = 0;
+		return;
+	}
+
+	framecount = psprite->numframes;
 }
 
 /*
@@ -709,7 +730,7 @@ void DrawBloodOverlay()
         //gEngfuncs.Con_Printf("scale :  %f health : %i", scale, gHUD.m_Health.m_iHealth);
 
         gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)
-            gEngfuncs.GetSpritePointer(SPR_Load("sprites/damagehud.spr")), 4);
+           GetSpritePointer(SPR_Load("sprites/damagehud.spr")), 4);
         gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
         gEngfuncs.pTriAPI->Begin(TRI_QUADS); //start our quad
 
@@ -744,7 +765,7 @@ void DrawBloodOverlay()
         //gEngfuncs.Con_Printf("scale :  %f health : %i", scale, gHUD.m_Health.m_iHealth);
 
         gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)
-            gEngfuncs.GetSpritePointer(SPR_Load("sprites/slowmo.spr")), 4);
+           GetSpritePointer(SPR_Load("sprites/slowmo.spr")), 4);
         gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
         gEngfuncs.pTriAPI->Begin(TRI_QUADS); //start our quad
 

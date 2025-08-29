@@ -209,7 +209,7 @@ void DrawFrame(float xmin, float ymin, float xmax, float ymax, char* sprite, Vec
 	gEngfuncs.pTriAPI->Brightness(1.0f);
 	gEngfuncs.pTriAPI->Color4ub(color.x, color.y, color.z, 255);
 	gEngfuncs.pTriAPI->CullFace(TRI_NONE);
-	gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(SPR_Load(sprite)), frame);
+	gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(SPR_Load(sprite)), frame);
 
 	//start drawing
 	gEngfuncs.pTriAPI->Begin(TRI_QUADS);

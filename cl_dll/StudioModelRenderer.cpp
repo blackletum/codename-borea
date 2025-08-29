@@ -1846,7 +1846,7 @@ void CStudioModelRenderer::StudioClientEvents()
 		el->radius = 24;
 	}
 
-	sequence = clamp(e->curstate.sequence, 0, m_pStudioHeader->numseq - 1);
+	sequence = std::clamp(e->curstate.sequence, 0, m_pStudioHeader->numseq - 1);
 	pseqdesc = (mstudioseqdesc_t*)((byte*)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
 
 	// no events for this animation

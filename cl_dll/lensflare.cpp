@@ -215,7 +215,7 @@ int CHudLensflare::Draw(float flTime)
 			Sundisty = Screenmy - Suncoordy;
 
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(SPR_Load("sprites/sunflare04.spr")), 0);//use hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(SPR_Load("sprites/sunflare04.spr")), 0);//use hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(1.0, 1.0, 155 / 255.0, flPlayerBlend2 / 355.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 355.0);
@@ -229,7 +229,7 @@ int CHudLensflare::Draw(float flTime)
 
 
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(SPR_Load("sprites/sunflare05.spr")), 0);//use hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(SPR_Load("sprites/sunflare05.spr")), 0);//use hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(1.0, 1.0, 1.0, flPlayerBlend3 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend3 / 255.0);
@@ -243,7 +243,7 @@ int CHudLensflare::Draw(float flTime)
 
 
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(SPR_Load("sprites/sunflare04.spr")), 0);//use hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(SPR_Load("sprites/sunflare04.spr")), 0);//use hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(1.0, 1.0, 1.0, flPlayerBlend5 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend5 / 255.0);
@@ -259,7 +259,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx[i] = (Suncoordx + (Sundistx * multi[i]));
 			Lensy[i] = (Suncoordy + (Sundisty * multi[i]));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(red[i], green[i], green[i], flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -275,7 +275,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx[i] = (Suncoordx + (Sundistx * multi[i]));
 			Lensy[i] = (Suncoordy + (Sundisty * multi[i]));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(red[i], green[i], green[i], flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -291,7 +291,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx[i] = (Suncoordx + (Sundistx * multi[i]));
 			Lensy[i] = (Suncoordy + (Sundisty * multi[i]));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(red[i], green[i], green[i], flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -307,7 +307,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx[i] = (Suncoordx + (Sundistx * multi[i]));
 			Lensy[i] = (Suncoordy + (Sundisty * multi[i]));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(red[i], green[i], green[i], flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -323,7 +323,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx[i] = (Suncoordx + (Sundistx * multi[i]));
 			Lensy[i] = (Suncoordy + (Sundisty * multi[i]));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(red[i], green[i], green[i], flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -339,7 +339,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx[i] = (Suncoordx + (Sundistx * multi[i]));
 			Lensy[i] = (Suncoordy + (Sundisty * multi[i]));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(red[i], green[i], green[i], flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -355,7 +355,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx[i] = (Suncoordx + (Sundistx * multi[i]));
 			Lensy[i] = (Suncoordy + (Sundisty * multi[i]));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(red[i], green[i], green[i], flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -373,7 +373,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx1 = (Suncoordx + (Sundistx * 0.88));
 			Lensy1 = (Suncoordy + (Sundisty * 0.88));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(0.9, 0.9, 0.9, flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);
@@ -390,7 +390,7 @@ int CHudLensflare::Draw(float flTime)
 			Lensx1 = (Suncoordx + (Sundistx * 1.1));
 			Lensy1 = (Suncoordy + (Sundisty * 1.1));
 			gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd); //additive
-			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)gEngfuncs.GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
+			gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(text[i]), 0); //hotglow, or any other sprite for the texture
 			gEngfuncs.pTriAPI->CullFace(TRI_NONE); //no culling
 			gEngfuncs.pTriAPI->Color4f(0.9, 0.9, 0.9, flPlayerBlend2 / 255.0);
 			gEngfuncs.pTriAPI->Brightness(flPlayerBlend2 / 255.0);

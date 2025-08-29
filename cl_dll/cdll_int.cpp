@@ -272,6 +272,8 @@ int DLLEXPORT HUD_VidInit()
 	//Reset to default on new map load
 	UnpackRGB(giR, giG, giB, RGB_HUD_COLOR);
 
+	SPR_Init();
+
 	gHUD.VidInit();
 
 	VGui_Startup();
@@ -320,6 +322,9 @@ int DLLEXPORT HUD_Redraw( float time, int intermission )
 //	RecClHudRedraw(time, intermission);
 
 	gHUD.Redraw( time, intermission );
+
+	if (gEngfuncs.pfnGetCvarFloat("crosshair"))
+		DrawCrosshair();
 
 //RENDERERS START
 	HUD_PrintSpeeds();
