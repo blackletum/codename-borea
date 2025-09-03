@@ -38,18 +38,7 @@
 
 float UTIL_WeaponTimeBase()
 {
-#if defined( CLIENT_WEAPONS )
-	if (oldweapons.value == 1)
-	{
-		return gpGlobals->time;
-	}
-	else
-	{
-		return 0.0;
-	}
-#else
 	return gpGlobals->time;
-#endif
 }
 
 CBaseEntity* UTIL_FindEntityForward(CBaseEntity* pMe)

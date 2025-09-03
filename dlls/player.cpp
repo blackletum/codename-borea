@@ -4745,14 +4745,7 @@ void CBasePlayer::ItemPostFrame()
 	if ( m_pTank != nullptr )
 		return;
 
-	//if (!oldweapons.value)
-	//{
-	//	if (m_flNextAttack > 0)
-	//	{
-	//		return;
-	//	}
-	//}
-	/*else*/ if (gpGlobals->time < m_flNextAttack)
+	if (gpGlobals->time < m_flNextAttack)
 	{
 		if (!m_pActiveItem)
 			return;

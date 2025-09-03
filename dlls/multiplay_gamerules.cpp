@@ -737,7 +737,7 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 	}
 
 	g_engfuncs.pfnMessageBegin(MSG_ONE, gmsgOldWeapon, nullptr, pPlayer->edict());
-	g_engfuncs.pfnWriteByte(1 == oldweapons.value);
+	g_engfuncs.pfnWriteByte(false);
 	g_engfuncs.pfnMessageEnd();
 
 	if ( addDefault )

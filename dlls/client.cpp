@@ -2396,8 +2396,5 @@ AllowLagCompensation
 */
 int AllowLagCompensation()
 {
-	if (1 == oldweapons.value)
-		return 0;
-
 	return 1;
 }

@@ -58,22 +58,17 @@ MULTIDAMAGE gMultiDamage;
 
 int UTIL_DefaultPlaybackFlags()
 {
-	if (oldweapons.value == 1)
-	{
-		return 0;
-	}
-
-	return FEV_NOTHOST;
+	return 0;
 }
 
 bool UTIL_DefaultUseDecrement()
 {
-	return !oldweapons.value;
+	return false;
 }
 
 bool UTIL_UseOldWeapons()
 {
-	return !!oldweapons.value;
+	return true;
 }
 
 //=========================================================

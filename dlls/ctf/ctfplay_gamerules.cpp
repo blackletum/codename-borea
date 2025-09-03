@@ -798,7 +798,7 @@ void CHalfLifeCTFplay::PlayerSpawn( CBasePlayer* pPlayer )
 
 			MESSAGE_BEGIN( MSG_ONE, gmsgOldWeapon, nullptr, pPlayer->edict() );
 
-			g_engfuncs.pfnWriteByte( 1.0 == oldweapons.value );
+			g_engfuncs.pfnWriteByte( false );
 			g_engfuncs.pfnMessageEnd();
 
 			if( useDefault )
