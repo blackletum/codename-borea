@@ -559,11 +559,11 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		flDamage = flNew;
 	}
 
-	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
-	// as an int (zero) and think the player is dead! (this will incite a clientside screentilt, etc)
-	if( pev->health <= 5 )
-		flDamage = (int)flDamage;
 	fTookDamage = CBaseMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+
+	//salsa: this should probably fix fake player death? im not sure
+	if (pev->health < 1.0 && pev->health > 0.0)
+		pev->health = 0;
 
 	// reset damage time countdown for each type of time based damage player just sustained
 
