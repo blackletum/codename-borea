@@ -454,6 +454,9 @@ public:
 	
 	void drawNightVision();
 
+	//battery is public just for health.cpp
+	float m_flBat;
+
 private:
 	HL_HSPRITE m_hSprite1;
 	HL_HSPRITE m_hSprite2;
@@ -462,7 +465,6 @@ private:
 	wrect_t *m_prc1;
 	wrect_t *m_prc2;
 	wrect_t *m_prcBeam;
-	float m_flBat;	
 	int	  m_iBat;	
 	int	  m_fOn;
 	float m_fFade;

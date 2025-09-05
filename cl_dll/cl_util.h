@@ -59,7 +59,7 @@ extern void SetCrosshair(HL_HSPRITE hspr, Rect rc, int r, int g, int b);
 extern void DrawCrosshair();
 
 
-#define FillRGBA (*gEngfuncs.pfnFillRGBA)
+extern void FillRGBA(float x, float y, float w, float h, int r, int g, int b, int a);
 
 #define SPR_GetList (*gEngfuncs.pfnSPR_GetList)
 

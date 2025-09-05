@@ -426,3 +426,25 @@ void DrawCrosshair()
 	else
 		gEngfuncs.Con_DPrintf("Client.dll SPR_DrawHoles error:  invalid frame\n");
 }
+
+void FillRGBA(float x, float y, float w, float h, int r, int g, int b, int a)
+{
+	glDisable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	glColor4f(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
+
+		glBegin(GL_QUADS);
+		glVertex2f(x, y);
+		glVertex2f(x + w, y);
+		glVertex2f(x + w, y + h);
+		glVertex2f(x, y + h);
+		glEnd();
+
+	glColor3f(1.0, 1.0, 1.0);
+
+	glEnable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
+}

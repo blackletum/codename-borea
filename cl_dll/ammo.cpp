@@ -874,7 +874,8 @@ void CHudAmmo::UserCmd_PrevWeapon()
 
 int CHudAmmo::Draw(float flTime)
 {
-	int a, x, y, r, g, b;
+	int a, r, g, b;
+	float x, y;
 	int AmmoWidth;
 
 	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
@@ -923,13 +924,13 @@ int CHudAmmo::Draw(float flTime)
 
 	ScaleColors(r, g, b, a );
 
-	// Does this weapon have a clip?
-	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight/2;
+	float spritewidth = SPR_Width(SPR_Load(BACKGROUND_SPRITE), 0) * 0.4;
+	float spriteheight = SPR_Height(SPR_Load(BACKGROUND_SPRITE), 0) * 0.3;
 
 	// draw background
 	x = ScreenWidth - 50;
-	y = ScreenHeight - 90 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
-	gHUD.DrawBackground(x, y, x - 350, y + 100, BACKGROUND_SPRITE, BACKGROUND_COLOR, kRenderTransTexture);
+	y = ScreenHeight - spriteheight - 10;
+	gHUD.DrawBackground(x, y, x - spritewidth, y + spriteheight, BACKGROUND_SPRITE, BACKGROUND_COLOR, kRenderTransTexture);
 
 	// Does weapon have any ammo at all?
 	if (m_pWeapon->iAmmoType > 0)
@@ -941,7 +942,7 @@ int CHudAmmo::Draw(float flTime)
 		{
 			// room for the number and the '|' and the current ammo
 			
-			x = ScreenWidth - 350;
+			x = ScreenWidth - spritewidth;
 			y = ScreenHeight - 30 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, pw->iClip, r, g, b);
 
@@ -954,7 +955,7 @@ int CHudAmmo::Draw(float flTime)
 
 			int iBarWidth =  AmmoWidth/10;
 
-			x = ScreenWidth - 280;
+			x = ScreenWidth - spritewidth + 70;
 			y = ScreenHeight - 20 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 			r = giR;
@@ -976,7 +977,7 @@ int CHudAmmo::Draw(float flTime)
 		else
 		{
 			// SPR_Draw a bullets only line
-			x = ScreenWidth - 350;
+			x = ScreenWidth - spritewidth;
 			y = ScreenHeight - 30 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, gWR.CountAmmo(pw->iAmmoType), r, g, b);
 		}

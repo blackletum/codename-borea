@@ -41,7 +41,7 @@ const char *CBreakable::pSpawnObjects[] =
 {
 	nullptr,				// 0
 	"weapon_dynamite",		// 1
-	"weapon_fists",	// 2
+	"item_healthkit",	// 2
 	"weapon_molotov",// 3
 	"weapon_psk",		// 4
 	"ammo_psk",		// 5

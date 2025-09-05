@@ -846,6 +846,8 @@ void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib )
 	if (m_fCanBleed)
 		m_pMyBloodPuddle = CBloodPuddle::CreatePuddle(pev->origin/*m_vecLastHitLocation*/, pev->v_angle, this, m_bloodColor, m_fBloodScale)->pev;
 
+	return;
+
 	//pev->enemy = ENT( pevAttacker );//why? (sjb)
 	
 	m_IdealMonsterState = MONSTERSTATE_DEAD;

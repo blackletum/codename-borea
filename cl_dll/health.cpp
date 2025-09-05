@@ -235,7 +235,8 @@ void DrawFrame(float xmin, float ymin, float xmax, float ymax, char* sprite, Vec
 int CHudHealth::Draw(float flTime)
 {
 	int r, g, b;
-	int a = 0, x, y;
+	int a = 0;
+	float x, y;
 	int HealthWidth;
 	int scale;
 
@@ -346,17 +347,25 @@ int CHudHealth::Draw(float flTime)
 		HealthWidth = gHUD.GetSpriteRect(gHUD.m_HUD_number_0).right - gHUD.GetSpriteRect(gHUD.m_HUD_number_0).left;
 		int CrossWidth = gHUD.GetSpriteRect(m_HUD_cross).right - gHUD.GetSpriteRect(m_HUD_cross).left;
 
+
+		float spritewidth = SPR_Width(SPR_Load(BACKGROUND_SPRITE), 0) * 0.55;
+		float spriteheight = SPR_Height(SPR_Load(BACKGROUND_SPRITE), 0) * 0.45;
+
 		// draw background
 		x = 50;
-		y = ScreenHeight - 90 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
+		y = ScreenHeight - spriteheight;
 
-		gHUD.DrawBackground(x, y, x + 350, y + 100, BACKGROUND_SPRITE, BACKGROUND_COLOR, kRenderTransTexture);
+		gHUD.DrawBackground(x, y, x + spritewidth, y + spriteheight, BACKGROUND_SPRITE, BACKGROUND_COLOR, kRenderTransTexture);
 
 		// draw health
 		x = 190;
 		y = ScreenHeight - 70 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 		//gHUD.DrawHudNumber(x, y, DHN_DRAWZERO, m_iHealth, r, g, b);
+
+		Vector color = HEALTH_COLOR;
+		float factor = 1.0 - (m_iHealth / 100.f);
+		color = color * (1.0 - factor) + Vector(255, 0, 0) * factor;
 
 		// draw health
 		x = 200;
@@ -365,47 +374,22 @@ int CHudHealth::Draw(float flTime)
 		static float scaleLerpHealth = 0.0f;
 		scaleLerpHealth = lerp(scaleLerpHealth, scale, gHUD.m_flTimeDelta * 5);
 
-		FillRGBA(x, y, 100 * 1.3f, 15, 144, 144, 144, 100);
-		FillRGBA(x, y, scaleLerpHealth, 15, 251, 125, 43, 255);
+		FillRGBA(x, y, 100 * 1.3f, 15, 100, 100, 100, 100);
+		FillRGBA(x, y, scaleLerpHealth, 15, color.x * 0.5, color.y, color.z, 255);
 
 		y -= 20;
 		x -= 4;
-		gHUD.DrawHudString(x, y, ScreenWidth, "Vitals", 251, 125, 43);
+		gHUD.DrawHudString(x, y, ScreenWidth, "Vitals", color.x, color.y, color.z);
 
 		// draw cardio lines
 		x = 85;
 		y = ScreenHeight - 98 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
-		if (m_iHealth > 80)
-		{
-			DrawFrame(x, y, x + 120, y + 120, "sprites/a.spr", Vector(94, 235, 33), kRenderTransAdd, beatFrame);
-		}
-		else if (m_iHealth > 60)
-		{
-			DrawFrame(x, y, x + 120, y + 120, "sprites/b.spr", Vector(94, 235, 33), kRenderTransAdd, beatFrame);
-		}
-		else if (m_iHealth > 40)
-		{
-			DrawFrame(x, y, x + 120, y + 120, "sprites/c.spr", Vector(94, 235, 33), kRenderTransAdd, beatFrame);
-		}
-		else if (m_iHealth > 20)
-		{
-			DrawFrame(x, y, x + 120, y + 120, "sprites/d.spr", Vector(94, 235, 33), kRenderTransAdd, beatFrame);
-		}
-		else if (m_iHealth > 0)
-		{
-			DrawFrame(x, y, x + 120, y + 120, "sprites/e.spr", Vector(94, 235, 33), kRenderTransAdd, beatFrame);
-		}
-		else
-		{
-			DrawFrame(x, y, x + 120, y + 120, "sprites/f.spr", Vector(94, 235, 33), kRenderTransAdd, beatFrame);
-		}
-
 		// draw health logo
 		x = 100;
 		y = ScreenHeight - 78 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
-		gHUD.DrawBackground(x - heartScaler*2, y - heartScaler*2, x + 80 + heartScaler*2, y + 80 + heartScaler * 2, HEALTH_SPRITE, HEALTH_COLOR, kRenderTransAdd);
+		gHUD.DrawBackground(x - heartScaler*2, y - heartScaler*2, x + 80 + heartScaler*2, y + 80 + heartScaler * 2, HEALTH_SPRITE, color, kRenderTransAdd);
 
 		// draw battery empty bar
 		/*
@@ -418,29 +402,31 @@ int CHudHealth::Draw(float flTime)
 		FillRGBA(x, y, scaleLerpEmpty, 15, 144, 144, 144, 100);
 		*/
 
-		// draw battery
-		x = 210;
-		y = ScreenHeight - 70;
-		scale = gHUD.m_Battery.m_iBat * 1.3f;
-		static float scaleLerp = 0.0f;
-		scaleLerp = lerp(scaleLerp, scale, gHUD.m_flTimeDelta * 5);
-
-		FillRGBA(x, y, 100 * 1.3f, 15, 144, 144, 144, 100);
-		FillRGBA(x, y, scaleLerp, 15, 21, 255, 255, 255);
-
 		// draw stamina empty bar
-		x = 220 + m_iStamina * 0.8f;
-		y = ScreenHeight - 50;
-		int stamina = (gEngfuncs.pfnGetCvarFloat("sv_sprintdur") - m_iStamina) * 0.8f;
+		x = 210 + m_iStamina * 0.8f;
+		y = ScreenHeight - 70;
+		float stamina = (gEngfuncs.pfnGetCvarFloat("sv_sprintdur") - m_iStamina) * 0.8f;
 
-		FillRGBA(x, y, stamina, 5, 144, 144, 144, 100);
+		FillRGBA(x, y, stamina, 15, 144, 144, 144, 100);
 
 		// draw stamina
-		x = 220;
-		y = ScreenHeight - 50;
+		x = 210;
+		y = ScreenHeight - 70;
 		stamina = m_iStamina * 0.8f;
 
-		FillRGBA(x, y, stamina, 5, 249, 111, 45, 255);
+		FillRGBA(x, y, stamina, 15, 249, 111, 45, 255);
+
+		// draw flashlight bar
+		x = 220;
+		y = ScreenHeight - 50;
+		float flashlight_dur = 100 * gHUD.m_Flash.m_flBat;
+
+		extern int g_iFlashLight;
+
+		if(g_iFlashLight)
+			FillRGBA(x, y, flashlight_dur, 5, 224, 224, 224, 140);
+		else
+			FillRGBA(x, y, flashlight_dur, 5, 144, 144, 144, 100);
 
 		// draw slowmo bar
 		x = (ScreenWidth - gHUD.slowmoBar * 1.3f) / 2;

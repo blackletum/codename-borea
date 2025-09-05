@@ -101,7 +101,7 @@ void CBloodPuddle::Spawn()
 
 	if (pOwner != nullptr)
 	{
-		m_fStartTime = gpGlobals->time += pOwner->m_fBleedTime;
+		m_fStartTime = gpGlobals->time + pOwner->m_fBleedTime;
 	}
 	else
 	{

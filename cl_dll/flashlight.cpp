@@ -137,6 +137,8 @@ int CHudFlashlight::Draw(float flTime)
 		}
 	}
 
+	return 1; //TLG: flashlight is now a bar in bottom left
+
 	ScaleColors(r, g, b, a);
 
 	y = (m_prc1->bottom - m_prc2->top)/2;
