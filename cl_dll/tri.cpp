@@ -332,6 +332,10 @@ void R_DrawSpriteModel(cl_entity_t* e)
 
 	r_blend = 1.0f;
 
+	model_t* beamsprite = IEngineStudio.GetModelByIndex(e->curstate.movetype);
+	if (beamsprite)
+		return; //hacky way to not draw beams
+
 	// do movewith
 	if (e->curstate.aiment > 0 && e->curstate.movetype == MOVETYPE_FOLLOW)
 	{
