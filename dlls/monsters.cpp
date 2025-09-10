@@ -3454,7 +3454,7 @@ BOOL CBaseMonster :: GetEnemy ()
 	{
 		pNewEnemy = BestVisibleEnemy();
 
-		if ( pNewEnemy != m_hEnemy && pNewEnemy != nullptr)
+		if ( ( pNewEnemy != m_hEnemy && pNewEnemy != nullptr) && !FBitSet(pNewEnemy->pev->flags, FL_NOTARGET) )
 		{
 			// DO NOT mess with the monster's m_hEnemy pointer unless the schedule the monster is currently running will be interrupted
 			// by COND_NEW_ENEMY. This will eliminate the problem of monsters getting a new enemy while they are in a schedule that doesn't care,

@@ -636,6 +636,14 @@ void CHGrunt :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecD
 		// it's head shot anyways
 		ptr->iHitgroup = HITGROUP_HEAD;
 	}
+
+	if ( (ptr->iHitgroup == HITGROUP_HEAD || FBitSet(bitsDamageType, DMG_CLUB)) )
+	{
+		if (!pev->enemy && !m_hEnemy)
+		{
+			flDamage = pev->health; //if monster seems calm and gets headshotted or melee'd, they must die
+		}
+	}
 	CSquadMonster::TraceAttack( pevAttacker, flDamage, vecDir, ptr, bitsDamageType );
 }
 
