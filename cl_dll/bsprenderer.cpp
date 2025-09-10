@@ -787,6 +787,11 @@ void CBSPRenderer::Init( )
 		m_bShaderSupport = false;
 		m_bDontPromptShadersError = false;
 	}
+	GLuint shadowfbo;
+	glGenFramebuffersEXT(1, &shadowfbo);
+	m_uiShadowFBO = shadowfbo;
+
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_uiMainGLFBO);
 };
 
 /*
@@ -1337,9 +1342,6 @@ void CBSPRenderer::CheckTextures ( )
 				continue;
 			}
 		}
-
-		// salsa: i use these 2 lines to fix text and texture corruption on my own mod thats using trinity on 25th anniverary half-life,
-		// it could fix some of the texture issues we're having like the green skybox texture on the health sprite, but i am not sure
 		
 		pWorld->textures[i]->gl_texturenum = current_ext_texture_id;
 
@@ -6780,6 +6782,9 @@ void CBSPRenderer::CreateShadowMap( bool isPointLight )
 	float flProj[16];
 	float flModel[16];
 
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_uiShadowFBO);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, m_pCurrentDynLight->depth, 0);
+
 	// Doing this otherwise fucks shit up
 	glGetFloatv(GL_PROJECTION_MATRIX, flProj);
 	glGetFloatv(GL_MODELVIEW_MATRIX, flModel);
@@ -6881,7 +6886,7 @@ void CBSPRenderer::CreateShadowMap( bool isPointLight )
 
 	// Save Depth Buffer
 	glBindTexture(GL_TEXTURE_2D, m_pCurrentDynLight->depth);
-	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, 0, 0, DEPTHMAP_RESOLUTION, DEPTHMAP_RESOLUTION, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_uiMainGLFBO);
 
 	glViewport(GL_ZERO, GL_ZERO, ScreenWidth, ScreenHeight);
 	glColorMask(GL_ONE, GL_ONE, GL_ONE, GL_ONE);

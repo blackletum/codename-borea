@@ -56,6 +56,8 @@ extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player in
 #include "StudioModelRenderer.h"
 #include "GameStudioModelRenderer.h"
 
+#include "filesystem_utils.h"
+
 extern CGameStudioModelRenderer g_StudioRenderer;
 extern engine_studio_api_t IEngineStudio;
 //RENDERERS END
@@ -68,6 +70,8 @@ float weaponstarttime = 0.f; //goldsrc uses gEngfuncs.GetClientTime() to determi
 
 int g_iUseEnt;
 std::string g_szUseEntClassname;
+
+SDL_Window* m_hGameWindow;
 
 class CHLVoiceStatusHelper : public IVoiceStatusHelper
 {
@@ -544,6 +548,47 @@ cvar_t* gl_shadows_opacity;
 
 extern std::vector<TEMPENTITY*> gpTempEnts;
 
+//taken from GameEngine-reGoldSrc/ repository
+void GetWindowNameFromGameDir(char* output, int outputBufferSize)
+{
+	FileHandle_t hLiblist = g_pFileSystem->Open("liblist.gam", "rt");
+
+	if (hLiblist)
+	{
+		char line[512];
+
+		while (!g_pFileSystem->EndOfFile(hLiblist))
+		{
+			*line = '\0';
+			g_pFileSystem->ReadLine(line, sizeof(line) - 1, hLiblist);
+
+			if (!strnicmp(line, "game", 4))
+			{
+				auto pszStart = strchr(line, '"');
+
+				if (pszStart)
+				{
+					auto pszEnd = strchr(pszStart + 1, '"');
+
+					if (pszEnd)
+					{
+						const int uiLength = pszEnd - pszStart;
+
+						if ((uiLength - 1) < outputBufferSize)
+						{
+							strncpy(output, pszStart + 1, uiLength - 1);
+							output[uiLength - 1] = '\0';
+						}
+					}
+				}
+				break;
+			}
+		}
+
+		g_pFileSystem->Close(hLiblist);
+	}
+}
+
 // This is called every time the DLL is loaded
 void CHud :: Init()
 {
@@ -679,10 +724,6 @@ void CHud :: Init()
 	CVAR_CREATE("r_glowdark", "2", FCVAR_ARCHIVE );
 	//end glow effect
 
-	//Borderless Things
-	CVAR_CREATE("r_borderless", "1", FCVAR_ARCHIVE);
-	CVAR_CREATE("r_ignoreborderless", "0", FCVAR_ARCHIVE);
-
 	viewEntityIndex = 0; // trigger_viewset stuff
 	viewFlags = 0;
 	m_iLogo = 0;
@@ -743,6 +784,36 @@ void CHud :: Init()
 	m_Menu.Init();
 
 	MsgFunc_ResetHUD(nullptr, 0, nullptr );
+
+	SDL_Window* game_window = nullptr;
+
+	char gameWindowName[512];
+	GetWindowNameFromGameDir(gameWindowName, sizeof(gameWindowName));
+
+	for (Uint32 id = 0; id < UINT32_MAX; ++id)
+	{
+		auto brd_window = SDL_GetWindowFromID(id);
+		if (brd_window)
+		{
+			if(!strcmp(SDL_GetWindowTitle(brd_window), gameWindowName))
+			{
+				m_hGameWindow = brd_window;
+				break;
+			}
+		}
+			
+	}
+
+	// pre-hl25 anniversary goldsrc uses sdl versions < 2.0.0, 
+	// its very limited and buggy, for example, using SDL_SetWindowBordered
+	// changes the window size, and thus switching back and forth
+	// from bordered and not bordered makes window smaller. so
+	// no special sdl code for now
+
+	int mainfbo;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &mainfbo);
+	gBSPRenderer.m_uiMainGLFBO = mainfbo;
+
 }
 
 // CHud destructor
@@ -794,50 +865,6 @@ int CHud :: GetSpriteIndex( const char *SpriteName )
 	return -1; // invalid sprite
 }
 
-void CHud::BRD_SetBorderless(SDL_Window* brd_windowArg)
-{
-	SDL_DisplayMode dm;
-	int weg, heg;
-	if (SDL_GetDesktopDisplayMode(0, &dm) != 0)
-	{
-		gEngfuncs.Con_Printf("\nCould not switch to borderless mode!! Err: %s", SDL_GetError());
-		return;
-	}
-	weg = dm.w;
-	heg = dm.h;
-	//gEngfuncs.pfnClientCmd("r_borderless 1\n");
-	//gEngfuncs.pfnClientCmd("r_ignoreborderless 1\n");
-	SDL_SetWindowFullscreen(brd_windowArg, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	SDL_SetWindowSize(brd_windowArg, weg, heg);
-	SDL_SetWindowBordered(brd_windowArg, SDL_FALSE);
-	SDL_RaiseWindow(brd_windowArg);
-
-	SDL_SysWMinfo wmInfo;
-	SDL_VERSION(&wmInfo.version);
-	if (SDL_GetWindowWMInfo(brd_windowArg, &wmInfo)) {
-		HWND hwnd = wmInfo.info.win.window;
-		SetWindowPos(
-			hwnd,
-			HWND_NOTOPMOST,
-			0, 0, 0, 0,
-			SWP_NOMOVE | SWP_NOSIZE
-		);
-	}
-
-	gEngfuncs.Con_Printf("\nBorderless mode initialised.\n");
-}
-
-SDL_Window* CHud::BRD_GetWindow()
-{
-	for (Uint32 id = 0; id < UINT32_MAX; ++id)
-	{
-			auto brd_window = SDL_GetWindowFromID(id);
-			if (brd_window)
-				return brd_window;
-	}
-	return nullptr;
-}
-
 void CHud :: VidInit()
 {
 #ifdef ENGINE_DEBUG
@@ -861,32 +888,6 @@ void CHud :: VidInit()
 		m_iRes = 320;
 	else
 		m_iRes = 640;
-
-	if (CVAR_GET_FLOAT("r_ignoreborderless") == 0)
-	{
-		auto brd_window = BRD_GetWindow();
-		if (brd_window)
-		{
-			if (SDL_GetWindowFlags(brd_window) & SDL_WINDOW_FULLSCREEN)
-			{
-				gEngfuncs.pfnClientCmd("escape\n");
-				if (MessageBox(nullptr, "Renderer works best at borderless windowed mode.\nIf you want to enable it, go to windowed mode at your native resolution.\n\nYou can disable this message by pressing no or from the advanced tab.", "Warning", MB_YESNO) == IDNO)
-				{
-					gEngfuncs.pfnClientCmd("r_ignoreborderless 1\n");
-				}
-			}
-		}
-	}
-
-	if (CVAR_GET_FLOAT("r_borderless") == 1)
-	{
-		auto brd_window = BRD_GetWindow();
-		if (brd_window)
-		{
-			if (!(SDL_GetWindowFlags(brd_window) & SDL_WINDOW_FULLSCREEN))
-				BRD_SetBorderless(BRD_GetWindow());
-		}		
-	}
 
 	// Only load this once
 	if ( !m_pSpriteList )

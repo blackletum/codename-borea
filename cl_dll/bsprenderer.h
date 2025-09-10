@@ -222,6 +222,9 @@ public:
 
 	int					m_iTexRectangleSize;
 
+	GLuint				m_uiMainGLFBO;
+	GLuint				m_uiShadowFBO;
+
 	bool				m_bCanDraw;
 	bool				m_bDrawSky;
 	bool				m_bSecondPassNeeded;

@@ -254,6 +254,7 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\external\minhook\hook.c" />
     <ClCompile Include="..\..\external\minhook\trampoline.c" />
     <ClCompile Include="..\..\external\sptlib\DetoursUtils.cpp" />
+    <ClCompile Include="..\..\game_shared\filesystem_utils.cpp" />
     <ClCompile Include="..\..\game_shared\vgui_checkbutton2.cpp" />
     <ClCompile Include="..\..\game_shared\vgui_grid.cpp" />
     <ClCompile Include="..\..\game_shared\vgui_helpers.cpp" />
@@ -450,6 +451,7 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\external\sptlib\patterns_macros.hpp" />
     <ClInclude Include="..\..\external\sptlib\sptlib-stdafx.hpp" />
     <ClInclude Include="..\..\external\sptlib\Utils.hpp" />
+    <ClInclude Include="..\..\game_shared\filesystem_utils.h" />
     <ClInclude Include="..\..\game_shared\vgui_scrollbar2.h" />
     <ClInclude Include="..\..\game_shared\vgui_slider2.h" />
     <ClInclude Include="..\..\game_shared\voice_banmgr.h" />

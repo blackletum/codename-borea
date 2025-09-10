@@ -253,6 +253,18 @@ void CWaterShader::Init(void)
 		return;
 
 	m_WaterFragmentShader = gBSPRenderer.createShaderProgram(water_depth_vertex, water_fragment_water_regular);
+
+	glGenFramebuffersEXT(1, &m_uiWaterFBO);
+	glGenFramebuffersEXT(1, &m_uiWaterDepthFBO);
+
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_uiWaterFBO);
+
+	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_uiWaterDepthFBO);
+	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24,
+		m_pCvarWaterResolution->value,
+		m_pCvarWaterResolution->value);
+
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBSPRenderer.m_uiMainGLFBO);
 }
 
 /*
@@ -563,12 +575,14 @@ void CWaterShader::AddEntity(cl_entity_t* entity)
 	pWater->origin[2] = (pWater->mins[2] + pWater->maxs[2]) * 0.5f;
 
 	glBindTexture(GL_TEXTURE_2D, pWater->reflect);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_pCvarWaterResolution->value, m_pCvarWaterResolution->value, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	glBindTexture(GL_TEXTURE_2D, pWater->refract);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_pCvarWaterResolution->value, m_pCvarWaterResolution->value, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -895,6 +909,10 @@ SetupRefract
 */
 void CWaterShader::SetupRefract(void)
 {
+	glBindFramebufferEXT(GL_FRAMEBUFFER, m_uiWaterFBO);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_pCurWater->refract, 0);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_uiWaterDepthFBO);
+
 	glCullFace(GL_FRONT);
 	glColor4f(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 
@@ -907,6 +925,11 @@ void CWaterShader::SetupRefract(void)
 	glRotatef(-m_pViewParams->viewangles[0], 0, 1, 0);
 	glRotatef(-m_pViewParams->viewangles[1], 0, 0, 1);
 	glTranslatef(-m_vViewOrigin[0], -m_vViewOrigin[1], -m_vViewOrigin[2]);
+
+	// Check FBO completeness (do once)
+	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+	if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
+		gEngfuncs.Con_Printf("FBO is incomplete! Error: 0x%x\n", status);
 
 	// bacontsu - custom per mirror resolution
 	if (!m_pCurWater->res)
@@ -947,11 +970,7 @@ void CWaterShader::FinishRefract(void)
 	// Save mirrored image
 	glBindTexture(GL_TEXTURE_2D, m_pCurWater->refract);
 	
-	// bacontsu - custom per water surface res
-	if (!m_pCurWater->res)
-		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, m_pCvarWaterResolution->value, m_pCvarWaterResolution->value, 0);
-	else
-		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, m_pCurWater->res, m_pCurWater->res, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBSPRenderer.m_uiMainGLFBO);
 
 	// Completely clear everything
 	glClearColor(GL_ZERO, GL_ZERO, GL_ZERO, GL_ONE);
@@ -997,6 +1016,10 @@ void CWaterShader::SetupReflect(void)
 	AngleVectors(m_pWaterParams.viewangles, m_pWaterParams.forward, m_pWaterParams.right, m_pWaterParams.up);
 	VectorCopy(m_pWaterParams.viewangles, m_pWaterParams.cl_viewangles);
 
+	glBindFramebufferEXT(GL_FRAMEBUFFER, m_uiWaterFBO);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_pCurWater->reflect, 0);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_uiWaterDepthFBO);
+
 	glCullFace(GL_FRONT);
 	glColor4f(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 
@@ -1037,11 +1060,7 @@ void CWaterShader::FinishReflect(void)
 	// Save mirrored image
 	glBindTexture(GL_TEXTURE_2D, m_pCurWater->reflect);
 
-	// bacontsu - custom per water surface res
-	if (!m_pCurWater->res)
-		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, m_pCvarWaterResolution->value, m_pCvarWaterResolution->value, 0);
-	else
-		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, m_pCurWater->res, m_pCurWater->res, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBSPRenderer.m_uiMainGLFBO);
 
 	// Completely clear everything
 	glClearColor(GL_ZERO, GL_ZERO, GL_ZERO, GL_ONE);

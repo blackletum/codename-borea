@@ -240,6 +240,8 @@ int DLLEXPORT Initialize( cl_enginefunc_t *pEnginefuncs, int iVersion )
 
 	EV_HookEvents();
 
+	CL_InitClient();
+
 	MH_Initialize();
 
 	// make sure we start with FBO / AA disabled
@@ -369,7 +371,6 @@ void DLLEXPORT HUD_Reset()
 
 	gHUD.VidInit();
 }
-
 /*
 ==========================
 HUD_Frame
@@ -393,36 +394,6 @@ void DLLEXPORT HUD_Frame( double time )
 
 	memset(cl_visedicts, 0, sizeof(cl_visedicts));
 	cl_numvisedicts = 0;
-
-	// salsa - doing this so the window wont get stuck on top and i can actually alt + tab to debug
-	SDL_Window* window = nullptr;
-	for (Uint32 id = 0; id < 4096; ++id)
-	{
-		auto brd_window = SDL_GetWindowFromID(id);
-		if (brd_window)
-			window = brd_window;
-	}
-	if (window == nullptr)
-		return;
-
-	int width, height, x, y;
-	SDL_GetWindowSize(window, &width, &height);
-	SDL_GetWindowPosition(window, &x, &y);
-
-	if (width == 0 && height == 0)
-		return;
-
-	SDL_SysWMinfo wmInfo;
-	SDL_VERSION(&wmInfo.version);
-	if (SDL_GetWindowWMInfo(window, &wmInfo)) {
-		HWND hwnd = wmInfo.info.win.window;
-		SetWindowPos(
-			hwnd,
-			HWND_NOTOPMOST,
-			x, y, width, height,
-			SWP_NOMOVE | SWP_NOSIZE
-		);
-	}
 }
 
 

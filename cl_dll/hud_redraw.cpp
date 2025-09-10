@@ -59,12 +59,14 @@ extern int g_iVisibleMouse;
 float HUD_GetFOV();
 
 extern cvar_t *sensitivity;
+extern SDL_Window* m_hGameWindow;
 
 // Think
 void CHud::Think()
 {
 	m_scrinfo.iSize = sizeof(m_scrinfo);
 	GetScreenInfo(&m_scrinfo);
+	SDL_GetWindowSize(m_hGameWindow, &m_scrinfo.iWidth, &m_scrinfo.iHeight);
 
 	int newfov;
 	HUDLIST *pList = m_pHudList;

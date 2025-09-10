@@ -941,12 +941,6 @@ public:
 
 	int m_iHUDColor; //LRC
 
-	//Borderless Things
-	//BOOL brd_isFullscreen;
-	SDL_Window* BRD_GetWindow();
-	void BRD_SetBorderless(SDL_Window* brd_windowArg);
-	//SDL_Window* brd_window;
-
 private:
 	// the memory for these arrays are allocated in the first call to CHud::VidInit(), when the hud.txt and associated sprites are loaded.
 	// freed in ~CHud()

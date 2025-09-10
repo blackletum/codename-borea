@@ -99,6 +99,9 @@ public:
 public:
 	GLuint m_WaterFragmentShader;
 
+	GLuint m_uiWaterFBO;
+	GLuint m_uiWaterDepthFBO;
+
 public:
 	fog_settings_t m_pMainFogSettings;
 	fog_settings_t m_pWaterFogSettings;

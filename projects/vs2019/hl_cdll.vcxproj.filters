@@ -531,6 +531,9 @@
     <ClCompile Include="..\..\cl_dll\HLHudSprites.cpp">
       <Filter>Source Files\cl_dll</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\game_shared\filesystem_utils.cpp">
+      <Filter>Source Files\game_shared</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cl_dll\kbutton.h">
@@ -1111,6 +1114,9 @@
     </ClInclude>
     <ClInclude Include="..\..\cl_dll\openal\OpenAL_System.h">
       <Filter>Header Files\openal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\game_shared\filesystem_utils.h">
+      <Filter>Header Files\game_shared</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
