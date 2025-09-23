@@ -726,7 +726,7 @@ void DrawBloodOverlay()
 
         //calculate opacity
         float scale = (30 - gHUD.m_Health.m_iHealth) / 30.0f;
-        if (gHUD.m_Health.m_iHealth != 0)
+        if (gHUD.m_Health.m_iHealth > 0)
             gEngfuncs.pTriAPI->Brightness(scale);
         else
             gEngfuncs.pTriAPI->Brightness(1);

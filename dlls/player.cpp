@@ -2262,6 +2262,11 @@ void CBasePlayer::PreThink()
 		PlayerDeathThink();
 		return;
 	}
+	else if (pev->health <= 0 && pev->deadflag < DEAD_DYING)
+	{
+		Killed(nullptr, 0);
+		return;
+	}
 
 	// So the correct flags get sent to client asap.
 	//
