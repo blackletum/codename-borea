@@ -54,11 +54,10 @@ extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player in
 
 #include "studio.h"
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
 
 #include "filesystem_utils.h"
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 extern engine_studio_api_t IEngineStudio;
 //RENDERERS END
 

@@ -47,8 +47,8 @@ Extended and/or recoded by Andrew Lucas
 #include "studio_util.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
-extern CGameStudioModelRenderer g_StudioRenderer;
+
+extern CStudioModelRenderer g_StudioRenderer;
 
 cl_texture_t *scopetexture = nullptr;
 

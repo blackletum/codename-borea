@@ -22,9 +22,8 @@
 #include "mirrormanager.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 int g_iFlashLight = 0;
 //RENDERERS END
 

@@ -47,13 +47,8 @@ Written by Andrew Lucas
 #include "event_args.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
-#ifdef GOLDSRC_PHYS
-#include "PhyStudioModelRenderer.h"
-extern PhyStudioModelRenderer g_StudioRenderer;
-#else
-extern CGameStudioModelRenderer g_StudioRenderer;
-#endif
+
+extern CStudioModelRenderer g_StudioRenderer;
 
 extern inline float sgn(float a);
 

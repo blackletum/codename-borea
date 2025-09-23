@@ -46,9 +46,8 @@
 
 #include "studio.h"
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 extern engine_studio_api_t IEngineStudio;
 //RENDERERS END
 
@@ -57,8 +56,6 @@ extern engine_studio_api_t IEngineStudio;
 #include "../public/interface.h"
 
 #include "minhook/MinHook.h"
-
-#include "svdformat.h"
 
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
@@ -280,8 +277,6 @@ int DLLEXPORT HUD_VidInit()
 
 	VGui_Startup();
 
-	SVD_VidInit();
-
 	gHUD.KickStage = 0;
 
 	return 1;
@@ -443,6 +438,48 @@ extern "C" __declspec( dllexport ) void CL_GetModelByIndex(int iIndex, void **pP
 //RENDERERS_END
 
 cldll_func_dst_t *g_pcldstAddrs;
+/*
+====================
+HUD_GetStudioModelInterface
+
+Export this function for the engine to use the studio renderer class to render objects.
+// (23/09/2025) this is used just for getting goldsrc's studio engine interface now,
+// with onlyclientdraws, goldsrc doesnt call studio functions at all
+====================
+*/
+int DLLEXPORT HUD_GetStudioModelInterface(int version, struct r_studio_interface_s** ppinterface, struct engine_studio_api_s* pstudio)
+{
+	//	RecClStudioInterface(version, ppinterface, pstudio);
+
+	if (version != STUDIO_INTERFACE_VERSION)
+	{
+		gEngfuncs.pfnClientCmd("escape\n");
+		MessageBox(NULL, "ERROR: \nClient's studio interface version does not match goldsrc's.\n\nPress OK to quit the game.\n", "ERROR", MB_OK);
+		exit(-1);
+	}
+
+	// Copy in engine helper functions
+	memcpy(&IEngineStudio, pstudio, sizeof(IEngineStudio));
+
+	if (!IEngineStudio.IsHardware())
+	{
+		gEngfuncs.pfnClientCmd("escape\n");
+		MessageBox(NULL, "VIDEO ERROR: This game does not support Software mode!\nInput the -gl parameter in the game's launch options to use OpenGL.\n\nPress OK to quit the game.\n", "ERROR", MB_OK);
+		exit(-1);
+	}
+	if (IEngineStudio.IsHardware() == 2)
+	{
+		gEngfuncs.pfnClientCmd("escape\n");
+		MessageBox(NULL, "VIDEO ERROR: This game does not support DirectX!\nInput the -gl parameter in the game's launch options to use OpenGL.\n\nPress OK to quit the game.\n", "ERROR", MB_OK);
+		exit(-1);
+	}
+
+	// Initialize local variables, etc.
+	g_StudioRenderer.Init();
+
+	// Success
+	return 1;
+}
 
 extern "C" void DLLEXPORT F(void *pv)
 {

@@ -44,8 +44,7 @@ Additional code taken from Id Software
 #include "event_args.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 
 inline float sgn(float a)
 {

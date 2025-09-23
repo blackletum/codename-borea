@@ -44,11 +44,10 @@ Written by Andrew Lucas
 #include "event_args.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
 
 
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 
 enum ParticleQuality
 {

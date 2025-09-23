@@ -37,8 +37,7 @@ Written by Andrew Lucas, Richard Rohac, BUzer, Laurie, Botman and Id Software
 #include "Exports.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 
 #ifndef BOX_ON_PLANE_SIDE
 #define BOX_ON_PLANE_SIDE(emins, emaxs, p)	\

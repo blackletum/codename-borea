@@ -11,14 +11,13 @@
 
 #include "particle_engine.h"
 #include "bsprenderer.h"
-#include "GameStudioModelRenderer.h"
 
 #include "entity_types.h"
 
 // Global engine <-> studio model rendering code interface
 extern engine_studio_api_t IEngineStudio;
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 
 extern int CL_Internal_AddEntity(int type, cl_entity_t* ent);
 

@@ -70,9 +70,8 @@ extern cvar_t *cl_lw;
 
 #include "studio.h"
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 extern engine_studio_api_t IEngineStudio;
 
 //RENDERERS START

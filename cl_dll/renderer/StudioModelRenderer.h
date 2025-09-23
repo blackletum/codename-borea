@@ -26,7 +26,6 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "dlight.h"
 
 #include "rendererdefs.h"
-#include "svdformat.h"
 
 #define MAX_FRAGMENT_SHADERS 2
 
@@ -323,41 +322,8 @@ public:
 	studiodecal_t	m_pStudioDecals[MAX_CUSTOMDECALS];
 	int				m_iNumStudioDecals;
 
-	// Sets up bodypart pointers
-	virtual void StudioSetupModelSVD(int bodypart);
-
-	// Draws shadows for an entity
-	virtual void StudioDrawShadow(void);
-
-	// Draws a shadow volume
-	virtual void StudioDrawShadowVolume(void);
-
-	// Sets the buffer
-	virtual void StudioSetBuffer(void);
-
-	// Clears the buffer
-	virtual void StudioClearBuffer(void);
-
-	// Tells if we should draw a shadow for this ent
-	virtual bool StudioShouldDrawShadow(void);
-
-	Vector verts[MAXSTUDIOVERTS];
-	void StudioGetVerts();
-	void GL_StudioDrawShadow();
-	void StudioSetupModel(int bodypart, void** ppbodypart, void** ppsubmodel);
-	void StudioDrawPointsShadow();
-
-	// Should we draw shadows?
-	cvar_t* m_pCvarDrawShadows;
-
 	// Render distance
 	cvar_t* m_pCvarRenderDistance;
-
-
-	// Array of transformed vertexes
-	Vector			m_vertexTransform[MAXSTUDIOVERTS * 2];
-
-	Vector m_vShadowLightOrigin;
 
 	//glsl start
 
@@ -380,19 +346,10 @@ public:
 
 
 private:
-	// Pointer to the shadow volume data
-	svdheader_t* m_pSVDHeader;
-	// Pointer to shadow volume submodel data
-	svdsubmodel_t* m_pSVDSubModel;
 
-		// Tells if a face is facing the light
-		bool			m_trianglesFacingLight[MAXSTUDIOTRIANGLES];
-		// Index array used for rendering
-		GLushort		m_shadowVolumeIndexes[MAXSTUDIOTRIANGLES * 3];
-
-		cvar_t* m_pSkylightDirX;
-		cvar_t* m_pSkylightDirY;
-		cvar_t* m_pSkylightDirZ;
+	cvar_t* m_pSkylightDirX;
+	cvar_t* m_pSkylightDirY;
+	cvar_t* m_pSkylightDirZ;
 
 
 };

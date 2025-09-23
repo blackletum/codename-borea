@@ -42,8 +42,7 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "particle_engine.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 
 /*
 ====================

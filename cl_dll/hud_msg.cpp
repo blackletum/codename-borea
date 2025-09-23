@@ -30,9 +30,8 @@
 
 #include "studio.h"
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 //RENDERERS END
 
 #include "vgui_TeamFortressViewport.h"

@@ -24,13 +24,11 @@
 #include "mirrormanager.h"
 
 #include "StudioModelRenderer.h"
-#include "GameStudioModelRenderer.h"
-
 #include "shake.h"
 
 #include "event_api.h"
 
-extern CGameStudioModelRenderer g_StudioRenderer;
+extern CStudioModelRenderer g_StudioRenderer;
 //RENDERERS END
 #include "rain.h"
 #include "com_model.h"
@@ -41,8 +39,6 @@ extern CGameStudioModelRenderer g_StudioRenderer;
 
 #include "glInclude.h"
 #include "blur.h"
-
-#include "svd_render.h"
 
 extern int g_iWaterLevel;
 extern Vector v_origin;

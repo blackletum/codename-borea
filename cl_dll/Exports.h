@@ -60,7 +60,7 @@ extern "C"
 	// From view
 	void	DLLEXPORT V_CalcRefdef( struct ref_params_s *pparams );
 
-	// From GameStudioModelRenderer
+	// From cdll_int
 	int DLLEXPORT HUD_GetStudioModelInterface( int version, struct r_studio_interface_s **ppinterface, struct engine_studio_api_s *pstudio );
 }
 
