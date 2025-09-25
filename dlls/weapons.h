@@ -231,7 +231,7 @@ public:
 #define MP5_DEFAULT_GIVE			30 //Full magazine for Op4
 #define MP5_DEFAULT_AMMO			25
 #define MP5_M203_DEFAULT_GIVE		0
-#define SHOTGUN_DEFAULT_GIVE		12
+#define SHOTGUN_DEFAULT_GIVE		6
 #define CROSSBOW_DEFAULT_GIVE		5
 #define RPG_DEFAULT_GIVE			1
 #define GAUSS_DEFAULT_GIVE			20
