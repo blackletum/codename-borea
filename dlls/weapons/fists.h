@@ -34,7 +34,7 @@ enum pipewrench_e
 	PIPEWRENCH_BIG_SWING_IDLE
 };
 
-class CPipewrench : public CBasePlayerWeapon
+class CFists : public CBasePlayerWeapon
 {
 private:
 	enum SwingMode

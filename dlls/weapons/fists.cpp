@@ -34,20 +34,20 @@
 #define ANIM_FISTS_LEFTEND 16
 
 #ifndef CLIENT_DLL
-TYPEDESCRIPTION	CPipewrench::m_SaveData[] =
+TYPEDESCRIPTION	CFists::m_SaveData[] =
 {
-	DEFINE_FIELD( CPipewrench, m_flBigSwingStart, FIELD_TIME ),
-	DEFINE_FIELD( CPipewrench, m_iSwing, FIELD_INTEGER ),
-	DEFINE_FIELD( CPipewrench, m_iSwingMode, FIELD_INTEGER ),
+	DEFINE_FIELD( CFists, m_flBigSwingStart, FIELD_TIME ),
+	DEFINE_FIELD( CFists, m_iSwing, FIELD_INTEGER ),
+	DEFINE_FIELD( CFists, m_iSwingMode, FIELD_INTEGER ),
 };
 
-IMPLEMENT_SAVERESTORE( CPipewrench, CPipewrench::BaseClass );
+IMPLEMENT_SAVERESTORE( CFists, CFists::BaseClass );
 #endif
 
-LINK_ENTITY_TO_CLASS( weapon_pipewrench, CPipewrench );
-LINK_ENTITY_TO_CLASS( weapon_fists, CPipewrench );
+LINK_ENTITY_TO_CLASS( weapon_pipewrench, CFists );
+LINK_ENTITY_TO_CLASS( weapon_fists, CFists );
 
-void CPipewrench::Spawn()
+void CFists::Spawn()
 {
 	pev->classname = MAKE_STRING( "weapon_fists" );
 	Precache();
@@ -59,7 +59,7 @@ void CPipewrench::Spawn()
 	FallInit();// get ready to fall down.
 }
 
-void CPipewrench::Precache()
+void CFists::Precache()
 {
 	PRECACHE_MODEL("models/v_fists.mdl");
 	PRECACHE_MODEL("models/w_fists.mdl");
@@ -90,7 +90,7 @@ void CPipewrench::Precache()
 
 //#define FISTS_DBG_MSG
 
-BOOL CPipewrench::Deploy()
+BOOL CFists::Deploy()
 {
 	m_flNextPrimaryAttack = GetNextAttackDelay( 0.15 );
 	m_flNextSecondaryAttack = GetNextAttackDelay( 0.15 );
@@ -101,13 +101,13 @@ BOOL CPipewrench::Deploy()
 	return DefaultDeploy( "models/v_fists.mdl", "models/p_fists.mdl", PIPEWRENCH_DRAW, "crowbar" );
 }
 
-void CPipewrench::Holster( int skiplocal )
+void CFists::Holster( int skiplocal )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	SendWeaponAnim( PIPEWRENCH_HOLSTER );
 }
 
-void CPipewrench::PrimaryAttack()
+void CFists::PrimaryAttack()
 {
 	attack_state = ATTACK_LMB_SMALL;
 
@@ -129,7 +129,7 @@ void CPipewrench::PrimaryAttack()
 #endif
 }
 
-void CPipewrench::SecondaryAttack()
+void CFists::SecondaryAttack()
 {
 	attack_state = ATTACK_RMB_SMALL;
 
@@ -151,7 +151,7 @@ void CPipewrench::SecondaryAttack()
 #endif
 }
 
-void CPipewrench::WeaponIdle()
+void CFists::WeaponIdle()
 {
 #ifndef CLIENT_DLL
 	if( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
@@ -171,7 +171,7 @@ void CPipewrench::WeaponIdle()
 #endif // !CLIENT_DLL
 }
 
-void CPipewrench::DoAttack()
+void CFists::DoAttack()
 {
 #ifndef CLIENT_DLL
 	if( !attack_state || attack_state == ATTACK_IDLE )
@@ -224,6 +224,8 @@ void CPipewrench::DoAttack()
 			vecEnd = tr.vecEndPos;	// This is the point on the actual surface (the hull could have hit space)
 		}
 	}
+
+	m_pPlayer->m_iWeaponVolume = QUIET_GUN_VOLUME;
 
 	switch( attack_state )
 	{
@@ -372,17 +374,17 @@ void CPipewrench::DoAttack()
 
 
 #if 0
-void CPipewrench::Smack()
+void CFists::Smack()
 {
 	//DecalGunshot( &m_trHit, BULLET_PLAYER_CROWBAR );
 }
 
-void CPipewrench::SwingAgain()
+void CFists::SwingAgain()
 {
 	Swing( false );
 }
 
-bool CPipewrench::Swing( const bool bFirst )
+bool CFists::Swing( const bool bFirst )
 {
 	bool bDidHit = false;
 
@@ -551,7 +553,7 @@ bool CPipewrench::Swing( const bool bFirst )
 
 		m_pPlayer->m_iWeaponVolume = flVol * PIPEWRENCH_WALLHIT_VOLUME;
 
-		SetThink( &CPipewrench::Smack );
+		SetThink( &CFists::Smack );
 		pev->nextthink = gpGlobals->time + 0.2;
 #endif
 		//RENDERERS START
@@ -561,7 +563,7 @@ bool CPipewrench::Swing( const bool bFirst )
 	return bDidHit;
 }
 
-void CPipewrench::BigSwing()
+void CFists::BigSwing()
 {
 	TraceResult tr;
 
@@ -704,7 +706,7 @@ void CPipewrench::BigSwing()
 		// doesn't make a bullet hole decal when making a big
 		// swing. If you want that decal, just uncomment the
 		// 2 lines below.
-		/*SetThink( &CPipewrench::Smack );
+		/*SetThink( &CFists::Smack );
 		SetNextThink( UTIL_WeaponTimeBase() + 0.2 );*/
 #endif
 		m_flNextPrimaryAttack = GetNextAttackDelay(1.0);
@@ -714,26 +716,26 @@ void CPipewrench::BigSwing()
 }
 #endif
 
-void CPipewrench::GetWeaponData( weapon_data_t& data )
+void CFists::GetWeaponData( weapon_data_t& data )
 {
 	BaseClass::GetWeaponData( data );
 
 	data.m_fInSpecialReload = static_cast<int>( m_iSwingMode );
 }
 
-void CPipewrench::SetWeaponData( const weapon_data_t& data )
+void CFists::SetWeaponData( const weapon_data_t& data )
 {
 	BaseClass::SetWeaponData( data );
 
 	m_iSwingMode = data.m_fInSpecialReload;
 }
 
-int CPipewrench::iItemSlot()
+int CFists::iItemSlot()
 {
 	return 1;
 }
 
-int CPipewrench::GetItemInfo( ItemInfo* p )
+int CFists::GetItemInfo( ItemInfo* p )
 {
 	p->pszAmmo1 = nullptr;
 	p->iMaxAmmo1 = WEAPON_NOCLIP;

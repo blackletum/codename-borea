@@ -4778,6 +4778,7 @@ void CBasePlayer::ItemPostFrame()
 		{
 			// do damage
 			DoKickDamage = true;
+			CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 120, 0.1 ); // Aynekko - npc now hears us (regardless if we landed a hit or not)
 
 			TraceResult tr;
 			UTIL_MakeVectors( pev->v_angle );

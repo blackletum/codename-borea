@@ -83,7 +83,7 @@ CTripmine g_Tripmine;
 CSqueak g_Snark;
 CGrapple g_Grapple;
 CEagle g_Eagle;
-CPipewrench g_Pipewrench;
+CFists g_Pipewrench;
 CM249 g_M249;
 CDisplacer g_Displacer;
 CShockRifle g_ShockRifle;
