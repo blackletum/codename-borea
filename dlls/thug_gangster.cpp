@@ -827,7 +827,7 @@ void CHGrunt :: Shoot ()
 
 		// Aynekko: add custom gang stuff right here...less functions
 		if( FClassnameIs(pev, "monster_gangster_smg") )
-			FireBullets( 1, vecShootOrigin, vecShootDir, VECTOR_CONE_10DEGREES, 2048, BULLET_MONSTER_MP5, 3, gSkillData.gangDmgSmg ); // shoot +-5 degrees
+			FireBullets( 1, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_MONSTER_MP5, 3, gSkillData.gangDmgSmg ); // shoot +-5 degrees
 		else
 			FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_10DEGREES, 2048, BULLET_MONSTER_MP5 ); // shoot +-5 degrees
 
@@ -877,7 +877,7 @@ void CHGrunt :: Shotgun ()
 
 	// Aynekko: add custom gang stuff right here...less functions
 	if( FClassnameIs( pev, "monster_gangster_shotgun" ) )
-		FireBullets( gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_7DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, gSkillData.gangDmgShotgun ); // shoot +-7.5 degrees
+		FireBullets( gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, gSkillData.gangDmgShotgun ); // shoot +-7.5 degrees
 	else
 		FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0 ); // shoot +-7.5 degrees
 
