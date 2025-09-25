@@ -162,6 +162,7 @@ struct skilldata_t
 	float trampHealth;
 	float workerHealth;
 	float dogDmg;
+	float dogDmgLunge;
 	float dogHealth;
 	float ratDmg;
 	float ratHealth;

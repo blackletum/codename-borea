@@ -322,6 +322,7 @@ void CGameRules::RefreshSkillData ()
 	gSkillData.workerHealth = GetSkillCvar( "sk_worker_health" );
 	gSkillData.dogHealth = GetSkillCvar( "sk_dog_health" );
 	gSkillData.dogDmg = GetSkillCvar( "sk_dog_dmg" );
+	gSkillData.dogDmgLunge = GetSkillCvar( "sk_dog_dmglunge" );
 	gSkillData.ratHealth = GetSkillCvar( "sk_rat_health" );
 	gSkillData.ratDmg = GetSkillCvar( "sk_rat_dmg" );
 	gSkillData.spiderHealth = GetSkillCvar( "sk_spider_health" );

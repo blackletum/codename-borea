@@ -840,7 +840,7 @@ void EXPORT CHoundeye::LungeTouch(CBaseEntity* pOther)
 	{
 		EMIT_SOUND_DYN(edict(), CHAN_WEAPON, "dog/dog_bite.wav", VOL_NORM, ATTN_IDLE, 0, PITCH_NORM);
 
-		pOther->TakeDamage(pev, pev, 10, DMG_SLASH);
+		pOther->TakeDamage(pev, pev, gSkillData.dogDmgLunge, DMG_SLASH);
 	}
 
 	SetTouch(nullptr);
