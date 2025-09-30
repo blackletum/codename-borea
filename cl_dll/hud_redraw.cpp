@@ -675,21 +675,18 @@ int CHud::DrawHudNumberReverse(int x, int y, int number, int flags, int r, int g
 void HUD_MarkUsableEnt(void)
 {
 	if (g_iUseEnt <= 0)
-
 		return;
 
-
+	if( gHUD.m_pCvarDraw->value <= 0 )
+		return;
 
 	cl_entity_t* ent = gEngfuncs.GetEntityByIndex(g_iUseEnt);
-
-
 
 	if (!ent)
 		return;
 
 	if (!ent->model)
 		return;
-
 
 	// Aynekko
 	Vector CenterOffset = (ent->curstate.mins + ent->curstate.maxs) / 2.f;
@@ -701,7 +698,6 @@ void HUD_MarkUsableEnt(void)
 	int r = 255;
 	int g = 255;
 	int b = 255;
-
 
 	std::string sprite = "sprites/use.spr";
 
