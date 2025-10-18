@@ -1,10 +1,9 @@
 /*
 Trinity Rendering Engine - Copyright Andrew Lucas 2009-2012
-Spirinity Rendering Engine - Copyright FranticDreamer 2020-2021
 
 The Trinity Engine is free software, distributed in the hope th-
-at it will be useful, but WITHOUT ANY WARRANTY; without even the 
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+at it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE. See the GNU Lesser General Public License for more det-
 ails.
 
@@ -12,14 +11,13 @@ Particle Engine
 Written by Andrew Lucas
 */
 
-#if !defined ( PARTICLE_ENGINE_H )
+#if !defined(PARTICLE_ENGINE_H)
 #define PARTICLE_ENGINE_H
-#if defined( _WIN32 )
+#if defined(_WIN32)
 #pragma once
 #endif
 
-#include "windows.h"
-#include "gl/gl.h"
+#include "PlatformHeaders.h"
 #include "pm_defs.h"
 #include "cl_entity.h"
 #include "ref_params.h"
@@ -43,24 +41,21 @@ struct ParticlePairHash
 	}
 };
 
-
 struct ParticleVertex
 {
 	Vector pos;
 	float uv[2];
-	Vector color;
-	float alpha;
-};
-
-struct ParticleBlendMode
-{
-	GLuint first, second;
+	color32 color;
 };
 
 struct ParticleQuad
 {
 	ParticleVertex vert[4];
 };
+
+class GL_BufferHandler;
+class GL_ShaderProgram;
+class GL_VertexArrayObject;
 
 /*
 ====================
@@ -71,55 +66,57 @@ CParticleEngine
 class CParticleEngine
 {
 public:
-	void Init( );
-	void VidInit( );
-	void Shutdown();
+	void Init(void);
+	void VidInit(void);
+	void Shutdown(void);
 
-	void CreateCluster( char *szPath, Vector origin, Vector dir, int iId );
-	particle_system_t *CreateSystem( char *szPath, Vector origin, Vector dir, int iId, particle_system_t *parent = nullptr );
-	void RemoveSystem( int iId );
+	void CreateCluster(const char* szPath, Vector origin, Vector dir, int iId);
+	particle_system_t* CreateSystem(char* szPath, Vector origin, Vector dir, int iId, particle_system_t* parent = NULL);
 
-	particle_system_t *AllocSystem( );
-	cl_particle_t *AllocParticle( particle_system_t *pSystem );
+	void RemoveSystem(int iId);
 
-	void Update( );
-	void DrawParticles( );
-	void CullSystems( );
-	void UpdateSystems( );
+	particle_system_t* AllocSystem(void);
+	cl_particle_t* AllocParticle(particle_system_t* pSystem);
 
-	Vector LightForParticle( cl_particle_t *pParticle );
-	bool CheckLightBBox( cl_particle_t *pParticle, cl_dlight_t *pLight );
+	void Update(void);
+	void DrawParticles(void);
+	void CullSystems(void);
+	void UpdateSystems(void);
 
-	void EnvironmentCreateFirst( particle_system_t *pSystem );
+	Vector LightForParticle(cl_particle_t* pParticle);
+	bool CheckLightBBox(cl_particle_t* pParticle, cl_dlight_t* pLight);
 
-	void CreateParticle( particle_system_t *pSystem, float *flOrigin = nullptr, float *flNormal = nullptr );
-	bool UpdateParticle( cl_particle_t *pParticle );
+	void EnvironmentCreateFirst(particle_system_t* pSystem);
+
+	void CreateParticle(particle_system_t* pSystem, float* flOrigin = NULL, float* flNormal = NULL);
+	bool UpdateParticle(cl_particle_t* pParticle);
 	void GetParticleQuad(cl_particle_t* pParticle, float flUp, float flRight, std::vector<ParticleQuad>& quadlist);
 
 	void DrawQuadList(std::unordered_map<std::pair<GLuint, int>, std::vector<ParticleQuad>, ParticlePairHash>& particlebatch, particle_system_t* psystem);
 
-	int MsgCreateSystem( const char *pszName, int iSize, void *pbuf );
+	int MsgCreateSystem(const char* pszName, int iSize, void* pbuf);
 
 public:
-	particle_system_t	*m_pSystemHeader;
+	GL_BufferHandler* m_pQuadBuffer;
+	GL_ShaderProgram *m_ParticleShader;
+	GL_VertexArrayObject* m_pParticleVAO;
 
-	GLuint m_uiquadbufferindex;
+	particle_system_t* m_pSystemHeader;
 
-	cvar_t *m_pCvarDrawParticles;
-	cvar_t *m_pCvarParticleDebug;
-	cvar_t *m_pCvarParticleMaxPart;
-	cvar_t *m_pCvarGravity;
+	cvar_t* m_pCvarDrawParticles;
+	cvar_t* m_pCvarParticleDebug;
+	cvar_t* m_pCvarGravity;
 
 	float m_flLastDraw;
 	float m_flFrameTime;
 
 	int m_iNumParticles;
 
-	int	m_iNumFreedParticles;
-	int	m_iNumCreatedParticles;
+	int m_iNumFreedParticles;
+	int m_iNumCreatedParticles;
 
 	int m_iNumFreedSystems;
-	int	m_iNumCreatedSystems;
+	int m_iNumCreatedSystems;
 
 	Vector m_vForward;
 	Vector m_vRight;

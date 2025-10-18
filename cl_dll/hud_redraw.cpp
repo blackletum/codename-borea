@@ -125,7 +125,7 @@ int CHud :: Redraw( float flTime, int intermission )
 	if (!gVideoEngine.videoended)
 	{
 		gVideoEngine.DrawVideo(flTime);
-		static wrect_t nullrc;
+		static Rect nullrc;
 		SetCrosshair(0, nullrc, 0, 0, 0); //hide crosshair
 		return true;
 	}
@@ -294,8 +294,8 @@ int CHud :: Redraw( float flTime, int intermission )
 	{
 	
 		int r, g, b, x, y, a;
-		//wrect_t rc;
-		HL_HSPRITE m_hCam1;
+		//Rect rc;
+		HSPRITE_GOLDSRC m_hCam1;
 		int HUD_camera_active;
 		int HUD_camera_rect;
 

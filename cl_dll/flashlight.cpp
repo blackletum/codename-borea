@@ -37,8 +37,6 @@ int CHudFlashlight::Init()
 	m_fFade = 0;
 	m_fOn = 0;
 
-	gHUD.setNightVisionState( false );
-
 	HOOK_MESSAGE(Flashlight);
 	HOOK_MESSAGE(FlashBat);
 
@@ -53,8 +51,6 @@ void CHudFlashlight::Reset()
 {
 	m_fFade = 0;
 	m_fOn = 0;
-
-	gHUD.setNightVisionState( false );
 }
 
 int CHudFlashlight::VidInit()
@@ -94,8 +90,6 @@ int CHudFlashlight:: MsgFunc_Flashlight(const char *pszName,  int iSize, void *p
 	BEGIN_READ( pbuf, iSize );
 	m_fOn = READ_BYTE();
 
-	gHUD.setNightVisionState( m_fOn != 0 );
-
 	int x = READ_BYTE();
 	m_iBat = x;
 	m_flBat = ((float)x)/100.0;
@@ -109,7 +103,7 @@ int CHudFlashlight::Draw(float flTime)
 		return 1;
 
 	int r, g, b, x, y, a;
-	wrect_t rc;
+	Rect rc;
 
 	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
 		return 1;
@@ -125,16 +119,9 @@ int CHudFlashlight::Draw(float flTime)
 	}
 	else
 	{
-		if( gHUD.isNightVisionOn() )
-		{
-			gHUD.getNightVisionHudItemColor( r, g, b );
-		}
-		else
-		{
-			r = giR;
-			g = giG;
-			b = giB;
-		}
+		r = giR;
+		g = giG;
+		b = giB;
 	}
 
 	return 1; //TLG: flashlight is now a bar in bottom left
@@ -172,40 +159,4 @@ int CHudFlashlight::Draw(float flTime)
 
 
 	return 1;
-}
-
-void CHudFlashlight::drawNightVision()
-{
-	static int lastFrame = 0;
-
-	auto frameIndex = rand() % gEngfuncs.pfnSPR_Frames( m_nvSprite );
-
-	if( frameIndex == lastFrame )
-		frameIndex = ( frameIndex + 1 ) % gEngfuncs.pfnSPR_Frames( m_nvSprite );
-
-	lastFrame = frameIndex;
-
-	if( m_nvSprite )
-	{
-		const auto width = gEngfuncs.pfnSPR_Width( m_nvSprite, 0 );
-		const auto height = gEngfuncs.pfnSPR_Height( m_nvSprite, 0 );
-
-		gEngfuncs.pfnSPR_Set( m_nvSprite, 0, 170, 0 );
-
-		wrect_t drawingRect;
-
-		for( auto x = 0; x < gHUD.m_scrinfo.iWidth; x += width )
-		{
-			drawingRect.left = 0;
-			drawingRect.right = x + width >= gHUD.m_scrinfo.iWidth ? gHUD.m_scrinfo.iWidth - x : width;
-
-			for( auto y = 0; y < gHUD.m_scrinfo.iHeight; y += height )
-			{
-				drawingRect.top = 0;
-				drawingRect.bottom = y + height >= gHUD.m_scrinfo.iHeight ? gHUD.m_scrinfo.iHeight - y : height;
-
-				gEngfuncs.pfnSPR_DrawAdditive( frameIndex, x, y, &drawingRect );
-			}
-		}
-	}
 }

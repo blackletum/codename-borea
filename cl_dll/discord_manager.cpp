@@ -17,6 +17,8 @@
 #include "include/discord_rpc.h"
 #include "time.h"
 
+CDiscordRPCManager g_DiscordRPC;
+
 cvar_t* discord_rpc_updaterate = nullptr;
 
 bool CDiscordRPCManager::Init()

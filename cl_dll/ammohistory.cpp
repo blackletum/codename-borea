@@ -39,8 +39,8 @@ int HISTORY_DRAW_TIME = 5;
 struct ITEM_INFO
 {
 	char szName[MAX_ITEM_NAME];
-	HL_HSPRITE spr;
-	wrect_t rect;
+	HSPRITE_GOLDSRC spr;
+	Rect rect;
 };
 
 void HistoryResource :: AddToHistory( int iType, int iId, int iCount )
@@ -120,8 +120,8 @@ int HistoryResource :: DrawAmmoHistory( float flTime )
 			}
 			else if ( rgAmmoHistory[i].type == HISTSLOT_AMMO )
 			{
-				wrect_t rcPic;
-				HL_HSPRITE *spr = gWR.GetAmmoPicFromWeapon( rgAmmoHistory[i].iId, rcPic );
+				Rect rcPic;
+				HSPRITE_GOLDSRC *spr = gWR.GetAmmoPicFromWeapon( rgAmmoHistory[i].iId, rcPic );
 
 				int r, g, b;
 				r = giR;
@@ -174,7 +174,7 @@ int HistoryResource :: DrawAmmoHistory( float flTime )
 				if ( !rgAmmoHistory[i].iId )
 					continue;  // sprite not loaded
 
-				wrect_t rect = gHUD.GetSpriteRect( rgAmmoHistory[i].iId );
+				Rect rect = gHUD.GetSpriteRect( rgAmmoHistory[i].iId );
 
 				r = giR;
 				g = giG;

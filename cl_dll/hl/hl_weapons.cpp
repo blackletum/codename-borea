@@ -117,7 +117,7 @@ void AlertMessage( ALERT_TYPE atype, const char *szFmt, ... )
 //Mostly used by the client side weapons.
 bool bIsMultiplayer ()
 {
-	return gEngfuncs.GetMaxClients() == 1 ? 0 : 1;
+	return engine_cl->maxclients == 1 ? 0 : 1;
 }
 //Just loads a v_ model.
 void LoadVModel ( const char *szViewModel, CBasePlayer *m_pPlayer )
@@ -428,7 +428,7 @@ void UTIL_ParticleBoxes()
 	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
 
 	// Store off the old count
-	gEngfuncs.pEventAPI->EV_PushPMStates();
+	EV_PushPMStates();
 
 	player = gEngfuncs.GetLocalPlayer();
 	// Now add in all of the players.
@@ -436,11 +436,11 @@ void UTIL_ParticleBoxes()
 
 	for ( idx = 1; idx < 100; idx++ )
 	{
-		pe = gEngfuncs.pEventAPI->EV_GetPhysent( idx );
+		pe = EV_GetPhysent( idx );
 		if ( !pe )
 			break;
 
-		if ( pe->info >= 1 && pe->info <= gEngfuncs.GetMaxClients() )
+		if ( pe->info >= 1 && pe->info <= engine_cl->maxclients )
 		{
 			mins = pe->origin + pe->mins;
 			maxs = pe->origin + pe->maxs;
@@ -449,7 +449,7 @@ void UTIL_ParticleBoxes()
 		}
 	}
 
-	gEngfuncs.pEventAPI->EV_PopPMStates();
+	EV_PopPMStates();
 }
 
 /*
@@ -483,7 +483,7 @@ void HUD_InitClientWeapons()
 	gpGlobals = &Globals;
 
 	// Fill in current time ( probably not needed )
-	gpGlobals->time = gEngfuncs.GetClientTime();
+	gpGlobals->time = engine_cl->time;
 
 	// Fake functions
 	g_engfuncs.pfnPrecacheModel		= stub_PrecacheModel;
@@ -978,7 +978,7 @@ void DLLEXPORT HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* 
 	if (g_irunninggausspred == 1)
 	{
 		Vector forward;
-		gEngfuncs.pfnAngleVectors(v_angles, forward, nullptr, nullptr);
+		AngleVectors(v_angles, &forward, nullptr, nullptr);
 		to->client.velocity = to->client.velocity - forward * g_flApplyVel * 5;
 		g_irunninggausspred = false;
 	}
@@ -989,7 +989,7 @@ void DLLEXPORT HUD_PostRunCmd(struct local_state_s* from, struct local_state_s* 
 
 bool UTIL_IsMultiplayer()
 {
-	return gEngfuncs.GetMaxClients() != 1;
+	return engine_cl->maxclients != 1;
 }
 
 bool UTIL_IsCTF()

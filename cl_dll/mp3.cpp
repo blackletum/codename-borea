@@ -4,6 +4,8 @@
 #include "cl_util.h"
 #include "mp3.h"
 
+CMP3 gMP3;
+
 int CMP3::Initialize()
 {
 

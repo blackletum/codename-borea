@@ -1516,29 +1516,10 @@ void UTIL_BloodStream( const Vector &origin, const Vector &direction, int color,
 
 	
 	//RENDERERS START
-	if(CVAR_GET_FLOAT("te_particles") >= 1)
-	{
-		if(color == BLOOD_COLOR_RED)
-			UTIL_Particle("blood_effects_cluster.txt", origin, direction, 1);
-		else
-			UTIL_Particle("blood_effects_cluster_alien.txt", origin, direction, 1);
-	}
+	if(color == BLOOD_COLOR_RED)
+		UTIL_Particle("blood_effects_cluster.txt", origin, direction, 1);
 	else
-	{
-		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, origin );
-			WRITE_BYTE( TE_BLOODSTREAM );
-			WRITE_COORD( origin.x );
-			WRITE_COORD( origin.y );
-			WRITE_COORD( origin.z );
-			WRITE_COORD( direction.x );
-			WRITE_COORD( direction.y );
-			WRITE_COORD( direction.z );
-			WRITE_BYTE( color );
-			//HACKHACK -  WHAT IN THE HOLY FUCK MATE?	
-			WRITE_BYTE((((amount) < (255)) ? (amount) : (255)));
-			//WRITE_BYTE( min( amount, 255 ) );
-		MESSAGE_END();
-	}
+		UTIL_Particle("blood_effects_cluster_alien.txt", origin, direction, 1);
 	//RENDERERS END
 }				
 
@@ -1563,30 +1544,11 @@ void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, 
 		amount = 255;
 
 	//RENDERERS START
-	if(CVAR_GET_FLOAT("te_particles") >= 1)
-	{
-		if(color == BLOOD_COLOR_RED)
-			UTIL_Particle("blood_effects_cluster.txt", origin, direction, 1);
-		else
-			UTIL_Particle("blood_effects_cluster_alien.txt", origin, direction, 1);
-	}
+	if(color == BLOOD_COLOR_RED)
+		UTIL_Particle("blood_effects_cluster.txt", origin, direction, 1);
 	else
-	{
-		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, origin );
-			WRITE_BYTE( TE_BLOODSTREAM );
-			WRITE_COORD( origin.x );
-			WRITE_COORD( origin.y );
-			WRITE_COORD( origin.z );
-			WRITE_COORD( direction.x );
-			WRITE_COORD( direction.y );
-			WRITE_COORD( direction.z );
-			WRITE_BYTE( color );
-			//HACKHACK -  WHAT IN THE HOLY FUCK MATE?	
-			WRITE_BYTE((((amount) < (255)) ? (amount) : (255)));
-			//WRITE_BYTE( min( amount, 255 ) );
-		MESSAGE_END();
-	}
-//RENDERERS END
+		UTIL_Particle("blood_effects_cluster_alien.txt", origin, direction, 1);
+	//RENDERERS END
 }				
 
 Vector UTIL_RandomBloodVector()

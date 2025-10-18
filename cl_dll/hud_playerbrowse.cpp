@@ -100,8 +100,8 @@ int CHudPlayerBrowse::Draw(float flTime)
 				m_flDelayFadeSprite -= 10 * gHUD.m_flTimeDelta;
 			}
 
-			gEngfuncs.pfnSPR_Set(m_PowerupSprite.spr, m_PowerupSprite.r, m_PowerupSprite.g, m_PowerupSprite.b);
-			gEngfuncs.pfnSPR_DrawAdditive(
+			SPR_Set(m_PowerupSprite.spr, m_PowerupSprite.r, m_PowerupSprite.g, m_PowerupSprite.b);
+			SPR_DrawAdditive(
 				0,
 				ScreenWidth / 2 + (m_PowerupSprite.rc.left - m_PowerupSprite.rc.right - 105),
 				ScreenHeight * 0.75,

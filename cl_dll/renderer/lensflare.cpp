@@ -51,7 +51,7 @@ pmtrace_t TraceIgnoreSky(Vector start, Vector end, int ignore = -1)
 	pmtrace_t tr = { 0 };
 
 	tr = *(gEngfuncs.PM_TraceLine(start, end, PM_NORMAL, 2, ignore));
-	pe = gEngfuncs.pEventAPI->EV_GetPhysent(tr.ent);
+	pe = EV_GetPhysent(tr.ent);
 
 	if (!pe)
 		return tr;
@@ -165,9 +165,9 @@ int CHudLensflare::Draw(float flTime)
 		flPlayerBlend = 0.0;
 		flPlayerBlend2 = 0.0;
 
-		AngleVectors(v_angles, forward, null, null);
+		AngleVectors(v_angles, &forward, null, null);
 
-		AngleVectors(sunangles, sundir, null, null);
+		AngleVectors(sunangles, &sundir, null, null);
 
 		suntarget = v_origin + sundir * 16384;
 
@@ -191,10 +191,9 @@ int CHudLensflare::Draw(float flTime)
 			flPlayerBlend3 = flPlayerBlend * 190.0;
 			flPlayerBlend5 = flPlayerBlend4 * 222.0;
 
-			Vector normal, point, origin;
+			Vector point, origin;
 
-			gEngfuncs.GetViewAngles((float*)normal);
-			AngleVectors(normal, forward, right, up);
+			AngleVectors(engine_cl->viewangles, &forward, &right, &up);
 
 			VectorCopy(tr.endpos, origin);
 

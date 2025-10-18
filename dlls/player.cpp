@@ -5125,7 +5125,7 @@ void CBasePlayer :: UpdateClientData()
 
 	if ((int)pev->health != m_iClientHealth)
 	{
-		int iHealth = clamp( pev->health, 0, std::numeric_limits<short>::max() );  // make sure that no negative health values are sent
+		int iHealth = std::clamp( pev->health, 0.0f, (float)std::numeric_limits<short>::max() );  // make sure that no negative health values are sent
 		if ( pev->health > 0.0f && pev->health <= 1.0f )
 			iHealth = 1;
 
@@ -5150,7 +5150,7 @@ void CBasePlayer :: UpdateClientData()
 	}
 
 	float light = (float)Illumination();
-	light = clamp(light, 100, 200);
+	light = std::clamp(light, 100.f, 200.f);
 
 	//stamina
 	MESSAGE_BEGIN(MSG_ONE, gmsgStamina, nullptr, pev);

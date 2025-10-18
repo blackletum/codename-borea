@@ -273,7 +273,7 @@ float V_CalcRoll (Vector angles, Vector velocity, float rollangle, float rollspe
     float   value;
 	Vector  forward, right, up;
     
-	AngleVectors ( angles, forward, right, up );
+	AngleVectors ( angles, &forward, &right, &up );
     
 	side = DotProduct (velocity, right);
     sign = side < 0 ? -1 : 1;
@@ -303,7 +303,7 @@ static pitchdrift_t pd;
 
 void V_StartPitchDrift()
 {
-	if ( pd.laststop == gEngfuncs.GetClientTime() )
+	if ( pd.laststop == engine_cl->time )
 	{
 		return;		// something else is keeping it from drifting
 	}
@@ -318,7 +318,7 @@ void V_StartPitchDrift()
 
 void V_StopPitchDrift ()
 {
-	pd.laststop = gEngfuncs.GetClientTime();
+	pd.laststop = engine_cl->time;
 	pd.nodrift = 1;
 	pd.pitchvel = 0;
 }
@@ -418,7 +418,7 @@ void V_CalcGunAngle ( struct ref_params_s *pparams )
 {	
 	cl_entity_t *viewent;
 	
-	viewent = gEngfuncs.GetViewModel();
+	viewent = &engine_cl->viewent;
 	if ( !viewent )
 		return;
 
@@ -515,26 +515,26 @@ apply anims from viewmodel to camera
 void V_CamAnims(struct ref_params_s* pparams, cl_entity_s* view)
 {
 	float cl_animbone = CVAR_GET_FLOAT("cl_animbone");
-
+	
 	if (view->model == nullptr || view->model->name == nullptr)
 		return;
-
+	
 	if (g_viewinfo.phdr == NULL)
 		return;
-
+	
 	mstudiobone_t* pbone = nullptr;
 	int index = GetAnimBoneFromFile(view->model->name + 7);
-
+	
 	// find special bone names
 	if (index == -1)
 	{
 		for (int i = 0; i < g_viewinfo.phdr->numbones; i++)
 		{
 			pbone = (mstudiobone_t*)((byte*)g_viewinfo.phdr + g_viewinfo.phdr->boneindex);
-
+	
 			if (pbone == nullptr || pbone[i].name == nullptr)
 				break;
-
+	
 			// usual names used in viewmodels
 			if (!strcmp(pbone[i].name, "camera"))
 			{
@@ -549,11 +549,11 @@ void V_CamAnims(struct ref_params_s* pparams, cl_entity_s* view)
 			}
 		}
 	}
-
+	
 	// follow value in cl_animbone
 	if ((int)cl_animbone > 0 && (index) == -1)
 		index = (int)cl_animbone - 1;
-
+	
 	if (index != -1 && index < g_viewinfo.phdr->numbones)
 	{
 		Vector result, result2;
@@ -564,19 +564,19 @@ void V_CamAnims(struct ref_params_s* pparams, cl_entity_s* view)
 			VectorSubtract(g_viewinfo.boneangles[index], g_viewinfo.prevboneangles[index], result);
 		}
 		VectorSubtract(g_viewinfo.bonepos[index], g_viewinfo.prevbonepos[index], result2);
-
+	
 		NormalizeAngles((float*)&result);
 		static Vector l_camangles, l_campos;
-
+	
 		for (int i = 0; i < 3; i++)
 		{
 			l_camangles[i] = lerp(l_camangles[i], result[i] * 1.2, pparams->frametime * 17.0f);
 			l_campos[i] = lerp(l_campos[i], result2[i] * 1.2, pparams->frametime * 17.0f);
-
+	
 			pparams->viewangles[i] += l_camangles[i] / 25;
-
+	
 			//pparams->vieworg[i] += l_campos[i] / 10;
-
+	
 			//gEngfuncs.Con_Printf("x: %f y: %f", l_camangles[0], l_camangles[1]);
 			
 			if (i < 2)
@@ -603,7 +603,7 @@ void V_CalcIntermissionRefdef ( struct ref_params_s *pparams )
 	ent = gEngfuncs.GetLocalPlayer();
 	
 	// view is the weapon model (only visible from inside body )
-	view = gEngfuncs.GetViewModel();
+	view = &engine_cl->viewent;
 
 	VectorCopy ( pparams->simorg, pparams->vieworg );
 	VectorCopy ( pparams->cl_viewangles, pparams->viewangles );
@@ -651,8 +651,6 @@ V_CalcRefdef
 
 ==================
 */
-extern void RenderFog(); //LRC
-extern void ClearToFogColor(); //LRC
 
 void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 {
@@ -680,7 +678,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	if (pparams->nextView == 1)
 	{
 		gHUD.m_iSkyMode = SKY_ON; //This means that an env_sky is in the level but we are drawing the normal view this time. 
-		view = gEngfuncs.GetViewModel();
+		view = &engine_cl->viewent;
 		view->model = savedviewmodel;
 		pparams->viewangles[0] = v_angles.x;
 		pparams->viewangles[1] = v_angles.y;
@@ -742,7 +740,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	}
 	
 	// view is the weapon model (only visible from inside body )
-	view = gEngfuncs.GetViewModel();
+	view = &engine_cl->viewent;
 
 	// trigger_viewset - dont show weapon model when custom view is enabled
 	if (gHUD.viewFlags & 1)
@@ -841,13 +839,13 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	pparams->vieworg[2] += waterOffset;
 	
 	V_CalcViewRoll ( pparams );
-	//V_CamAnims(pparams, view);
+	V_CamAnims(pparams, view);
 	V_AddIdle ( pparams );
 
 	// offsets
 	VectorCopy( pparams->cl_viewangles, angles );
 
-	AngleVectors ( angles, pparams->forward, pparams->right, pparams->up );
+	AngleVectors ( angles, &pparams->forward, &pparams->right, &pparams->up );
 
 	// don't allow cheats in multiplayer
 	if ( pparams->maxclients <= 1 )
@@ -1236,18 +1234,6 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 
 	v_origin = pparams->vieworg;
 
-	//LRC 1.8 - clear to the fog color (if any) on the first pass
-	if ( pparams->nextView == 0 )
-	{
-		ClearToFogColor();
-	}
-
-	//LRC 1.8 - no fog in the env_sky
-	if ( gHUD.m_iSkyMode != SKY_ON_DRAWING )
-	{
-		RenderFog();
-	}
-
 	if (gHUD.viewFlags & 1 && gHUD.m_iSkyMode == SKY_OFF) // custom view active (trigger_viewset) //AJH (added skymode check and copied function to above)
 	{
 		cl_entity_t *viewentity;
@@ -1382,7 +1368,7 @@ void V_GetChaseOrigin( float * angles, float * origin, float distance, float * r
 	cl_entity_t	 *	ent = nullptr;
 	
 	// Trace back from the target using the player's view angles
-	AngleVectors(angles, forward, nullptr, nullptr);
+	AngleVectors(angles, &forward, nullptr, nullptr);
 	
 	VectorScale(forward,-1,forward);
 
@@ -1806,7 +1792,7 @@ void V_GetMapFreePosition( float * cl_angles, float * origin, float * angles )
 	zScaledTarget[2] = gHUD.m_Spectator.m_mapOrigin[2] * (( 90.0f - angles[0] ) / 90.0f );
 	
 
-	AngleVectors(angles, forward, nullptr, nullptr);
+	AngleVectors(angles, &forward, nullptr, nullptr);
 
 	VectorNormalize(forward);
 
@@ -1849,7 +1835,7 @@ void V_GetMapChasePosition(int target, float * cl_angles, float * origin, float 
 	origin[2] *= (( 90.0f - angles[0] ) / 90.0f );
 	angles[2] = 0.0f;	// don't roll angle (if chased player is dead)
 
-	AngleVectors(angles, forward, nullptr, nullptr);
+	AngleVectors(angles, &forward, nullptr, nullptr);
 
 	VectorNormalize(forward);
 
@@ -1908,7 +1894,7 @@ int V_FindViewModelByWeaponModel(int weaponindex)
 		{
 			if ( !strnicmp( weaponModel->name, modelmap[i][0], len ) )
 			{
-				return gEngfuncs.pEventAPI->EV_FindModelIndex( modelmap[i][1] );
+				return EV_FindModelIndex( modelmap[i][1] );
 			}
 			i++;
 		}
@@ -1975,7 +1961,7 @@ void V_CalcSpectatorRefdef ( struct ref_params_s * pparams )
 
 			pparams->health = 1;
 
-			cl_entity_t	 * gunModel = gEngfuncs.GetViewModel();
+			cl_entity_t	 * gunModel = &engine_cl->viewent;
 
 			if ( lastWeaponModelIndex != ent->curstate.weaponmodel )
 			{

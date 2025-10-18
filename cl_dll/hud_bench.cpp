@@ -678,7 +678,7 @@ int HUD_SetupBenchObjects( cl_entity_t *bench, int plindex, Vector origin )
 	//ang[1] = 90.0;
 	
 	// Determine forward vector
-	AngleVectors ( ang, forward, right, up );
+	AngleVectors ( ang, &forward, &right, &up );
 
 	// Try to find the laserdot sprite model and retrieve the modelindex for it
 	mdl = gEngfuncs.CL_LoadModel( "models/spikeball.mdl", &index );
@@ -688,12 +688,12 @@ int HUD_SetupBenchObjects( cl_entity_t *bench, int plindex, Vector origin )
 	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
 
 	// Store off the old count
-	gEngfuncs.pEventAPI->EV_PushPMStates();
+	EV_PushPMStates();
 
 	// Now add in all of the players.
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( plindex );	
 
-	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+	EV_SetTraceHull( 2 );
 
 	centerspot = origin;
 	centerspot[2] -= 512;
@@ -720,7 +720,7 @@ int HUD_SetupBenchObjects( cl_entity_t *bench, int plindex, Vector origin )
 		NormalizeVector( ang );
 
 		// Determine forward vector
-		AngleVectors ( ang, forward, right, up );
+		AngleVectors ( ang, &forward, &right, &up );
 
 		bench[ i ].model = mdl;
 
@@ -765,7 +765,7 @@ int HUD_SetupBenchObjects( cl_entity_t *bench, int plindex, Vector origin )
 		bench[ i ].prevstate		= bench[ i ].curstate;
 	}
 	
-	gEngfuncs.pEventAPI->EV_PopPMStates();
+	EV_PopPMStates();
 
 	return 1;
 }
@@ -821,12 +821,12 @@ void HUD_CreateBenchObjects(Vector origin )
 	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
 
 	// Store off the old count
-	gEngfuncs.pEventAPI->EV_PushPMStates();
+	EV_PushPMStates();
 
 	// Now add in all of the players.
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( player->index - 1 );	
 
-	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+	EV_SetTraceHull( 2 );
 
 	dt = gHUD.m_flTime - g_flStartTime;
 	if ( dt < 0 )
@@ -845,7 +845,7 @@ void HUD_CreateBenchObjects(Vector origin )
 	}
 
 	// Determine forward vector
-	AngleVectors ( vec3_origin, forward, right, up );
+	AngleVectors ( vec3_origin, &forward, &right, &up );
 
 	centerspot = origin;
 	centerspot[2] -= 512;
@@ -876,7 +876,7 @@ void HUD_CreateBenchObjects(Vector origin )
 		NormalizeVector( ang );
 
 		// Determine forward vector
-		AngleVectors ( ang, forward, right, up );
+		AngleVectors ( ang, &forward, &right, &up );
 
 		// Get a far point for ray trace
 		farpoint = centerspot + ( BENCH_RADIUS + ofs_radius * sin( BENCH_SWEEP * offset + frac2 * 2 * M_PI ) ) * forward;
@@ -980,7 +980,7 @@ void HUD_CreateBenchObjects(Vector origin )
 		}
 	}
 
-	gEngfuncs.pEventAPI->EV_PopPMStates();
+	EV_PopPMStates();
 }
 
 void Bench_AddObjects()
@@ -1098,7 +1098,7 @@ void Bench_SetViewOrigin( float *vieworigin, float frametime )
 	
 	ang = vec3_origin;
 
-	AngleVectors( ang, nullptr, right, nullptr );
+	AngleVectors( ang, nullptr, &right, nullptr );
 
 	// offset along right axis
 	move = right * drift;

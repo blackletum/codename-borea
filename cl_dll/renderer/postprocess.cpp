@@ -26,6 +26,8 @@ Special Thanks to Admer456 of TWHL
 #include "postprocess.h"
 #include "FranUtils.hpp"
 
+CPostProcess gPostProcess;
+
 void CPostProcess::CallTemporaryGrayscale(float startpower, float endpower, float gstime, bool stay, bool reset)
 {
 	if (startpower != endpower || gstime > 0)
@@ -33,13 +35,13 @@ void CPostProcess::CallTemporaryGrayscale(float startpower, float endpower, floa
 		m_bTGS_Stay = stay;
 		m_fGrayscalePower = m_fTGS_StartPower = startpower;
 
-		m_fTGS_StartTime = gEngfuncs.GetClientTime();
+		m_fTGS_StartTime = engine_cl->time;
 		m_fTGS_EndPower = endpower;
 	
 		if (stay)
 			m_fTGS_EndTime = 0;
 		else
-			m_fTGS_EndTime = gEngfuncs.GetClientTime() + gstime;
+			m_fTGS_EndTime = engine_cl->time + gstime;
 
 		m_bTGS_FadeOut = m_fTGS_StartPower < m_fTGS_EndPower;
 		m_bIsTemporaryActive = true;
@@ -55,7 +57,7 @@ void CPostProcess::TempGrayscaleThink()
 	{
 		if (m_fGrayscalePower <= m_fTGS_EndPower)
 		{
-			m_fGrayscalePower = FranUtils::Lerp(FranUtils::WhereInBetween(gEngfuncs.GetClientTime(), m_fTGS_StartTime, m_fTGS_EndTime), m_fTGS_EndPower, m_fTGS_StartPower);
+			m_fGrayscalePower = FranUtils::Lerp(FranUtils::WhereInBetween(engine_cl->time, m_fTGS_StartTime, m_fTGS_EndTime), m_fTGS_EndPower, m_fTGS_StartPower);
 			if (m_fGrayscalePower > 1) m_fGrayscalePower = 1;
 			if (m_fGrayscalePower < 0)
 			{
@@ -68,7 +70,7 @@ void CPostProcess::TempGrayscaleThink()
 	{
 		if (m_fGrayscalePower >= m_fTGS_EndPower)
 		{
-			m_fGrayscalePower = FranUtils::Lerp(FranUtils::WhereInBetween(gEngfuncs.GetClientTime(), m_fTGS_StartTime, m_fTGS_EndTime), m_fTGS_EndPower, m_fTGS_StartPower);
+			m_fGrayscalePower = FranUtils::Lerp(FranUtils::WhereInBetween(engine_cl->time, m_fTGS_StartTime, m_fTGS_EndTime), m_fTGS_EndPower, m_fTGS_StartPower);
 			if (m_fGrayscalePower < 0) m_fGrayscalePower = 0;
 			if (m_fGrayscalePower > 1)
 			{
@@ -81,8 +83,8 @@ void CPostProcess::TempGrayscaleThink()
 
 float CPostProcess::GetGrayscalePower()
 {
-	if (!gBSPRenderer.m_pCvarPPGrayscale->value)
-		return 0;
+	//if (!gBSPRenderer.m_pCvarPPGrayscale->value)
+	//	return 0;
 
 	float grayscale = m_fGrayscalePower;
 
@@ -99,10 +101,10 @@ float CPostProcess::GetGrayscalePower()
 
 int CPostProcess::UseRectangleTextures()
 {
-	if (gBSPRenderer.m_bTexRectangeSupport &&
-		gBSPRenderer.m_iTexRectangleSize >= ScreenWidth &&
-		gBSPRenderer.m_iTexRectangleSize >= ScreenHeight)
-		return TRUE;
+	//if (gBSPRenderer.m_bTexRectangeSupport &&
+	//	gBSPRenderer.m_iTexRectangleSize >= ScreenWidth &&
+	//	gBSPRenderer.m_iTexRectangleSize >= ScreenHeight)
+	//	return TRUE;
 
 	return FALSE;
 }
@@ -148,15 +150,18 @@ void CPostProcess::InitScreenTexture()
 		int oldbinding;
 		// GL START
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldbinding);
-		glBindTexture(GL_TEXTURE_2D, current_ext_texture_id);
+
+		GLuint texid;
+		glGenTextures(1, &texid);
+		m_iScreenTextureVal = texid;
+		glBindTexture(GL_TEXTURE_2D, m_iScreenTextureVal);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexImage2D(GL_TEXTURE_2D, 0, 3, 256, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, pBlankTex);
 		glBindTexture(GL_TEXTURE_2D, oldbinding);
 		// GL END
 		delete[] pBlankTex;
-		m_iScreenTextureVal = current_ext_texture_id;
-		current_ext_texture_id++;
+
 		gEngfuncs.Con_Printf("Grayscale: created 256x256 2D texture\n");
 		return;
 	}
@@ -166,7 +171,10 @@ void CPostProcess::InitScreenTexture()
 
 	// GL START
 	glEnable(GL_TEXTURE_RECTANGLE_NV);
-	glBindTexture(GL_TEXTURE_RECTANGLE_NV, current_ext_texture_id);
+	GLuint texid;
+	glGenTextures(1, &texid);
+	m_iScreenTextureVal = texid;
+	glBindTexture(GL_TEXTURE_RECTANGLE_NV, m_iScreenTextureVal);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, 3, ScreenWidth, ScreenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pBlankTex);
@@ -174,8 +182,6 @@ void CPostProcess::InitScreenTexture()
 	// GL END
 	gEngfuncs.Con_Printf("Grayscale: created %dx%d rectangle texture\n", ScreenWidth, ScreenHeight);
 
-	m_iScreenTextureVal = current_ext_texture_id;
-	current_ext_texture_id++;
 	delete[] pBlankTex;
 }
 
@@ -196,15 +202,17 @@ void CPostProcess::MakeWeightsTexture()
 
 	// GL START
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldbinding);
-	glBindTexture(GL_TEXTURE_2D, current_ext_texture_id);
+	GLuint texid;
+	glGenTextures(1, &texid);
+	m_iWeightsTextureVal = texid;
+	glBindTexture(GL_TEXTURE_2D, m_iWeightsTextureVal);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, 16, 16, 0, GL_RGB, GL_UNSIGNED_BYTE, buf);
 	glBindTexture(GL_TEXTURE_2D, oldbinding);
 	// GL END
 
-	m_iWeightsTextureVal = current_ext_texture_id;
-	current_ext_texture_id++;
+
 	gEngfuncs.Con_Printf("Grayscale: created weights texture\n");
 }
 
@@ -227,7 +235,7 @@ void CPostProcess::ApplyPostEffects()
 	TempGrayscaleThink(); //Think if temporary Grayscale is active
 
 	// GL START
-	if (!gBSPRenderer.m_bShaderSupport || !gBSPRenderer.m_pCvarPostProcessing->value)
+	//if (!gBSPRenderer.m_bShaderSupport || !gBSPRenderer.m_pCvarPostProcessing->value)
 		return;
 	// GL END
 
@@ -257,88 +265,88 @@ void CPostProcess::ApplyPostEffects()
 	//
 	// Setup grayscale shader
 	//
-	if (gBSPRenderer.m_bNVCombinersSupport && !gBSPRenderer.m_pCvarSpecNoCombiners)
-	{
-		// GL START
-		// use combiners
-		GLfloat grayscale_weights[] = { 0.320000, 0.590000, 0.090000, 0.000000 };
-		gBSPRenderer.glCombinerParameteriNV(GL_NUM_GENERAL_COMBINERS_NV, 1);
-
-		// RC 1 setup: 
-		// spare0.rgb = dot(tex0.rgb, {0.32, 0.59, 0.09})
-		gBSPRenderer.glCombinerParameterfvNV(GL_CONSTANT_COLOR0_NV, grayscale_weights);
-		gBSPRenderer.glCombinerInputNV(GL_COMBINER0_NV, GL_RGB, GL_VARIABLE_A_NV, GL_CONSTANT_COLOR0_NV,
-			GL_SIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glCombinerInputNV(GL_COMBINER0_NV, GL_RGB, GL_VARIABLE_B_NV, GL_TEXTURE0_ARB,
-			GL_SIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glCombinerOutputNV(GL_COMBINER0_NV, GL_RGB,
-			GL_SPARE0_NV,          // AB output
-			GL_DISCARD_NV,         // CD output
-			GL_DISCARD_NV,         // sum output
-			GL_NONE, GL_NONE,
-			GL_TRUE,               // AB = A dot B
-			GL_FALSE, GL_FALSE);
-
-		// Final RC setup:
-		//	out.rgb = spare0.rgb
-		//	out.a = spare0.a
-		gBSPRenderer.glFinalCombinerInputNV(GL_VARIABLE_A_NV, GL_ZERO,
-			GL_UNSIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glFinalCombinerInputNV(GL_VARIABLE_B_NV, GL_ZERO,
-			GL_UNSIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glFinalCombinerInputNV(GL_VARIABLE_C_NV, GL_ZERO,
-			GL_UNSIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glFinalCombinerInputNV(GL_VARIABLE_D_NV, GL_SPARE0_NV,
-			GL_UNSIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glFinalCombinerInputNV(GL_VARIABLE_E_NV, GL_ZERO,
-			GL_UNSIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glFinalCombinerInputNV(GL_VARIABLE_F_NV, GL_ZERO,
-			GL_UNSIGNED_IDENTITY_NV, GL_RGB);
-		gBSPRenderer.glFinalCombinerInputNV(GL_VARIABLE_G_NV, GL_PRIMARY_COLOR_NV,
-			GL_UNSIGNED_IDENTITY_NV, GL_ALPHA);
-
-		glEnable(GL_REGISTER_COMBINERS_NV);
-		// GL END
-	}
-	else
-	{
-		// use env_dot3
-		MakeWeightsTexture();
-
-		// GL START
-		// 1st TU:
-		// out = texture * 0.5 + 0.5
-		gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
-		glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &texenvmode1);
-
-		GLfloat temp[] = { 0.5, 0.5, 0.5, 0.5 };
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
-		glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, temp);
-		glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_INTERPOLATE_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PRIMARY_COLOR_ARB); // {1, 1, 1}
-		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_CONSTANT_ARB); // {0.5, 0.5, 0.5}
-		glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);
-		// GL END
-
-		// GL START
-		// 2nd TU:
-		// make dot3
-		gBSPRenderer.glActiveTextureARB(GL_TEXTURE1_ARB);
-		glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &texenvmode2);
-		glEnable(GL_TEXTURE_2D);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_DOT3_RGB_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_PREVIOUS_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_TEXTURE);
-		glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);
-
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldbinding2);
-		glBindTexture(GL_TEXTURE_2D, m_iWeightsTextureVal);
-
-		gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
-		// GL END
-	}
+	//if (gBSPRenderer.m_bNVCombinersSupport && !gBSPRenderer.m_pCvarSpecNoCombiners)
+	//{
+	//	// GL START
+	//	// use combiners
+	//	GLfloat grayscale_weights[] = { 0.320000, 0.590000, 0.090000, 0.000000 };
+	//	glCombinerParameteriNV(GL_NUM_GENERAL_COMBINERS_NV, 1);
+	//
+	//	// RC 1 setup: 
+	//	// spare0.rgb = dot(tex0.rgb, {0.32, 0.59, 0.09})
+	//	glCombinerParameterfvNV(GL_CONSTANT_COLOR0_NV, grayscale_weights);
+	//	glCombinerInputNV(GL_COMBINER0_NV, GL_RGB, GL_VARIABLE_A_NV, GL_CONSTANT_COLOR0_NV,
+	//		GL_SIGNED_IDENTITY_NV, GL_RGB);
+	//	glCombinerInputNV(GL_COMBINER0_NV, GL_RGB, GL_VARIABLE_B_NV, GL_TEXTURE0_ARB,
+	//		GL_SIGNED_IDENTITY_NV, GL_RGB);
+	//	glCombinerOutputNV(GL_COMBINER0_NV, GL_RGB,
+	//		GL_SPARE0_NV,          // AB output
+	//		GL_DISCARD_NV,         // CD output
+	//		GL_DISCARD_NV,         // sum output
+	//		GL_NONE, GL_NONE,
+	//		GL_TRUE,               // AB = A dot B
+	//		GL_FALSE, GL_FALSE);
+	//
+	//	// Final RC setup:
+	//	//	out.rgb = spare0.rgb
+	//	//	out.a = spare0.a
+	//	glFinalCombinerInputNV(GL_VARIABLE_A_NV, GL_ZERO,
+	//		GL_UNSIGNED_IDENTITY_NV, GL_RGB);
+	//	glFinalCombinerInputNV(GL_VARIABLE_B_NV, GL_ZERO,
+	//		GL_UNSIGNED_IDENTITY_NV, GL_RGB);
+	//	glFinalCombinerInputNV(GL_VARIABLE_C_NV, GL_ZERO,
+	//		GL_UNSIGNED_IDENTITY_NV, GL_RGB);
+	//	glFinalCombinerInputNV(GL_VARIABLE_D_NV, GL_SPARE0_NV,
+	//		GL_UNSIGNED_IDENTITY_NV, GL_RGB);
+	//	glFinalCombinerInputNV(GL_VARIABLE_E_NV, GL_ZERO,
+	//		GL_UNSIGNED_IDENTITY_NV, GL_RGB);
+	//	glFinalCombinerInputNV(GL_VARIABLE_F_NV, GL_ZERO,
+	//		GL_UNSIGNED_IDENTITY_NV, GL_RGB);
+	//	glFinalCombinerInputNV(GL_VARIABLE_G_NV, GL_PRIMARY_COLOR_NV,
+	//		GL_UNSIGNED_IDENTITY_NV, GL_ALPHA);
+	//
+	//	glEnable(GL_REGISTER_COMBINERS_NV);
+	//	// GL END
+	//}
+	//else
+	//{
+	//	// use env_dot3
+	//	MakeWeightsTexture();
+	//
+	//	// GL START
+	//	// 1st TU:
+	//	// out = texture * 0.5 + 0.5
+	//	gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
+	//	glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &texenvmode1);
+	//
+	//	GLfloat temp[] = { 0.5, 0.5, 0.5, 0.5 };
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+	//	glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, temp);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_INTERPOLATE_ARB);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PRIMARY_COLOR_ARB); // {1, 1, 1}
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_CONSTANT_ARB); // {0.5, 0.5, 0.5}
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);
+	//	// GL END
+	//
+	//	// GL START
+	//	// 2nd TU:
+	//	// make dot3
+	//	gBSPRenderer.glActiveTextureARB(GL_TEXTURE1_ARB);
+	//	glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &texenvmode2);
+	//	glEnable(GL_TEXTURE_2D);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_DOT3_RGB_ARB);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_PREVIOUS_ARB);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_TEXTURE);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);
+	//
+	//	glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldbinding2);
+	//	glBindTexture(GL_TEXTURE_2D, m_iWeightsTextureVal);
+	//
+	//	gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
+	//	// GL END
+	//}
 
 	// GL START
 	// copy screen to texture
@@ -387,19 +395,19 @@ void CPostProcess::ApplyPostEffects()
 	}
 	// GL END
 
-	if (gBSPRenderer.m_bNVCombinersSupport && !gBSPRenderer.m_pCvarSpecNoCombiners)
-	{
-		glDisable(GL_REGISTER_COMBINERS_NV);
-	}
-	else
-	{
-		gBSPRenderer.glActiveTextureARB(GL_TEXTURE1_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, texenvmode2);
-		glBindTexture(GL_TEXTURE_2D, oldbinding2);
-		glDisable(GL_TEXTURE_2D);
-		gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, texenvmode1);
-	}
+	//if (gBSPRenderer.m_bNVCombinersSupport && !gBSPRenderer.m_pCvarSpecNoCombiners)
+	//{
+	//	glDisable(GL_REGISTER_COMBINERS_NV);
+	//}
+	//else
+	//{
+	//	gBSPRenderer.glActiveTextureARB(GL_TEXTURE1_ARB);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, texenvmode2);
+	//	glBindTexture(GL_TEXTURE_2D, oldbinding2);
+	//	glDisable(GL_TEXTURE_2D);
+	//	gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
+	//	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, texenvmode1);
+	//}
 
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();

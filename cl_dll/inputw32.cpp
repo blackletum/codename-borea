@@ -241,9 +241,7 @@ void Force_CenterView_f ()
 
 	if (!iMouseInUse)
 	{
-		gEngfuncs.GetViewAngles( (float *)viewangles );
-	    viewangles[PITCH] = 0;
-		gEngfuncs.SetViewAngles( (float *)viewangles );
+		engine_cl->viewangles.x = 0;
 	}
 }
 
@@ -558,7 +556,7 @@ void IN_MouseMove ( float frametime, usercmd_t *cmd)
 	Vector viewangles;
 	Vector oldviewangles;
 
-	gEngfuncs.GetViewAngles( (float *)viewangles );
+	viewangles = engine_cl->viewangles;
 	oldviewangles = viewangles; //LRC 1.8
 
 	//if ( in_mlook.state & 1) //magic nipples - commented this out
@@ -676,7 +674,7 @@ void IN_MouseMove ( float frametime, usercmd_t *cmd)
 	viewangles[PITCH] = V_ClampPitch(oldviewangles[PITCH], viewangles[PITCH]); //LRC 1.8
 	viewangles = V_LimitClampSpeed(oldviewangles, viewangles, frametime);
 
-	gEngfuncs.SetViewAngles( (float *)viewangles );
+	engine_cl->viewangles = viewangles;
 
 #ifdef _WIN32
 	if (!m_bRawInput && mouseRelative)
@@ -984,7 +982,7 @@ void IN_JoyMove ( float frametime, usercmd_t *cmd )
 	Vector viewangles;
 	Vector oldviewangles;
 
-	gEngfuncs.GetViewAngles( (float *)viewangles );
+	viewangles = engine_cl->viewangles;
 	oldviewangles = viewangles; //LRC 1.8
 
 	// complete initialization if first time in
@@ -1158,7 +1156,7 @@ void IN_JoyMove ( float frametime, usercmd_t *cmd )
 
 	viewangles[YAW] = V_ClampYaw(oldviewangles[YAW], viewangles[YAW]); //LRC 1.8
 
-	gEngfuncs.SetViewAngles( (float *)viewangles );
+	engine_cl->viewangles = viewangles;
 }
 
 /*

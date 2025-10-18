@@ -1,10 +1,9 @@
 /*
 Trinity Rendering Engine - Copyright Andrew Lucas 2009-2012
-Spirinity Rendering Engine - Copyright FranticDreamer 2020-2021
 
 The Trinity Engine is free software, distributed in the hope th-
-at it will be useful, but WITHOUT ANY WARRANTY; without even the 
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+at it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE. See the GNU Lesser General Public License for more det-
 ails.
 
@@ -13,14 +12,13 @@ Written by Andrew Lucas
 Transparency code by Neil "Jed" Jedrzejewski
 */
 
-#if !defined( BSPLOADER_H )
+#if !defined(BSPLOADER_H)
 #define BSPLOADER_H
-#if defined( _WIN32 )
+#if defined(_WIN32)
 #pragma once
 #endif
 
-#include "windows.h"
-#include "gl/gl.h"
+#include "PlatformHeaders.h"
 #include "pm_defs.h"
 #include "cl_entity.h"
 #include "ref_params.h"
@@ -30,79 +28,71 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "textureloader.h"
 #include "rendererdefs.h"
 
+class GL_BufferHandler;
+class GL_VertexArrayObject;
+
 class CPropManager
 {
 public:
-	void Init( );
-	void VidInit();
-	void Shutdown( );
-	void ClearEntityData();
+	void Init(void);
+	void VidInit(void);
+	void Shutdown(void);
+	void ClearEntityData(void);
 
-	void GenerateEntityList( );
-	void SetupVBO( );
+	void GenerateEntityList(void);
+	void SetupVBO(void);
 
-	void Reset( );
-	void RenderProps(bool isWater = false);
-	void RenderSkyProps( );
-	void RenderPropsSolid( );
+	void Reset(void);
+	void RenderProps(bool bSkybox = false);
+	void RenderPropsSolid(void);
 
 	// Models
-	bool PostLoadModel( char *modelname, studiohdr_t *hdr, cl_entity_t *pEntity );
-	bool LoadMDL(char *name, cl_entity_t *pEntity, entity_t *pBSPEntity);
-	modeldata_t *GetHeader( const char *name );
+	bool LoadMDL(const char* name, cl_entity_t* pEntity, entity_t* pBSPEntity);
+	modeldata_t* GetHeader(const char* name);
 
-	bool SetupCable( cabledata_t *cable, entity_t *entity );
-	void CalcCable(cabledata_t* cable);
-	void DrawCables( );
+	bool SetupCable(cabledata_t* cable, entity_t* entity);
+	void DrawCables(void);
 
-	void ParseEntities( );
-	void LoadEntVars( );
-	char *ValueForKey (entity_t *ent, char *key);
+	void ParseEntities(void);
+	void LoadEntVars(void);
+	char* ValueForKey(entity_t* ent, const char* key);
+
 public:
-
-	int	m_iEntDataSize;
-	char *m_pEntData;
+	int m_iEntDataSize;
+	char* m_pEntData;
 
 	bool m_bAvailable;
 
 	// Entity list extracted from BSP.
-	int	m_iNumBSPEntities;
-	entity_t m_pBSPEntities[MAXRENDERENTS];
+	std::vector<entity_t> m_pBSPEntities;
 
 	// Total amount of renderable entities.
-	int m_iNumEntities;
-	cl_entity_t m_pEntities[MAXRENDERENTS];
+	std::vector<cl_entity_t> m_pEntities;
 
 	// Total amount of renderable entities.
-	int m_iNumModelLights;
-	cl_entity_t m_pModelLights[MAXRENDERENTS];
+	std::vector<cl_entity_t> m_pModelLights;
 
 	// Studio header pointers.
-	int m_iNumHeaders;
-	modeldata_t	m_pHeaders[MAXRENDERENTS];
+	std::vector<std::unique_ptr<modeldata_t>> m_pHeaders;
 
 	// Decals
-	decal_msg_cache m_pDecals[MAXRENDERENTS];
-	int m_iNumDecals;
+	std::vector<decal_msg_cache> m_pDecals;
 
-	cabledata_t		m_pCables[MAXRENDERENTS];
-	int	m_iNumCables;
-
-	cvar_t *m_pCvarDrawClientEntities;
-	cvar_t* m_pCvarDrawCable;
-	cvar_t* m_pCvarDrawCableDebug;
+	std::vector<cabledata_t> m_pCables;
 
 	// Extra data for all entities.
-	entextradata_t *m_pCurrentExtraData;
-	entextradata_t m_pExtraData[MAXRENDERENTS];
-	entextrainfo_t m_pExtraInfo[MAXRENDERENTS];
-	int m_iNumExtraData;
+	entextradata_t* m_pCurrentExtraData;
+	std::vector<std::unique_ptr<entextradata_t>> m_pExtraData;
+	std::vector<std::unique_ptr<entextrainfo_t>> m_pExtraInfo;
 
-	brushvertex_t *m_pVertexData;
-	int	m_iNumTotalVerts;
+	brushvertex_t* m_pVertexData;
+	int m_iNumTotalVerts;
 
-	GLuint m_uiIndexBuffer;
-	unsigned int *m_pIndexBuffer;
+	GL_BufferHandler *m_pStaticModelBuffer;
+	GL_VertexArrayObject* m_pStaticModelVAO;
+	unsigned int* m_pIndexBuffer;
+
+	cvar_t* m_pCvarDrawClientEntities;
 };
 
 extern CPropManager gPropManager;

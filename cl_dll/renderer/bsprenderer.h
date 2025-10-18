@@ -1,10 +1,9 @@
 /*
 Trinity Rendering Engine - Copyright Andrew Lucas 2009-2012
-Spirinity Rendering Engine - Copyright FranticDreamer 2020-2021
 
 The Trinity Engine is free software, distributed in the hope th-
-at it will be useful, but WITHOUT ANY WARRANTY; without even the 
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+at it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE. See the GNU Lesser General Public License for more det-
 ails.
 
@@ -13,14 +12,9 @@ Original code by Buzer and Id Software
 Extended and/or recoded by Andrew Lucas
 */
 
-#if !defined ( BSPRENDERER_H )
-#define BSPRENDERER_H
-#if defined( _WIN32 )
 #pragma once
-#endif
 
-#include "windows.h"
-#include "gl/gl.h"
+#include "PlatformHeaders.h"
 #include "pm_defs.h"
 #include "cl_entity.h"
 #include "ref_params.h"
@@ -30,6 +24,10 @@ Extended and/or recoded by Andrew Lucas
 #include "textureloader.h"
 #include "rendererdefs.h"
 
+#include "BSPModel_Gen.h"
+
+#include <memory>
+
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #undef clamp
 
@@ -37,7 +35,37 @@ Extended and/or recoded by Andrew Lucas
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <algorithm>
+
+#include "stb_image_write.h"
+
+#define LIGHTMAP_TEXUNIT GL_TEXTURE0
+#define SURFTEXTURE_TEXUNIT GL_TEXTURE1
+#define SURF_DETAILTEXTURE_TEXUNIT GL_TEXTURE2
+#define SPOTLIGHT_TEXUNIT GL_TEXTURE3
+#define SHADOWMAP_TEXUNIT GL_TEXTURE4
+#define CUBEMAPSHADOW_TEXUNIT GL_TEXTURE5
+
+#define DEFAULT_SHADOWMAP_RES 256
+
+
+struct DecalVert_t
+{
+	Vector pos;
+	float texcoord[2];
+	byte _padding[12];
+};
+
+struct skyvert_t
+{
+	Vector pos;
+	float texcoord[2];
+	byte _padding[12];
+};
+
+class GL_FBOHandler;
+class GL_BufferHandler;
+class GL_ShaderProgram;
+class GL_VertexArrayObject;
 
 /*
 ====================
@@ -48,402 +76,373 @@ CBSPRenderer
 class CBSPRenderer
 {
 public:
-	void Init( );
-	void VidInit( );
-	void Shutdown( );
-	void SetupRenderer( );
-	void SetupPreFrame( ref_params_t *vieworg );
-	void CheckTextures( );
+	void Init(void);
+	void VidInit(void);
+	void Shutdown(void);
+	void SetupRenderer(void);
+	void SetupPreFrame(ref_params_t* vieworg);
+	void CheckTextures(void);
 
-	void DrawShadowPasses( );
-	void CreateShadowMap( bool isPointLight = false );
-	void DrawWorldSolid( );
-	void SetupSpotlightVis( );
+	void Make_ShadowMaps(void);
+	void Generate_Sun_Shadow(void);
+	void Generate_Spotlight_Shadow(void);
+	void Generate_Pointlight_Shadow(void);
+	void DrawWorldSolid(void);
 
-	void DrawDetailsSolid ( );
-	void RecursiveWorldNodeSolid( mnode_t *node );
-	void DrawBrushModelSolid( cl_entity_t *pEntity );
+	void RecursiveWorldNodeSolid(mnode_t* node);
+	void DrawBrushModelSolid(cl_entity_t* pEntity);
 
-	void ClearDetailObjects( );
-	void LoadDetailFile( );
-	void DrawDetails( );
+	bool IsInPotentiallyVisibleSet(int visframe) { return m_pPVS[visframe >> 3] & (1 << (visframe & 7)); };
 
 	Vector TriWorldToScreen(Vector point);
 
-	void RendererRefDef ( ref_params_t *pparams );
-	void DrawNormalTriangles( bool onlysky = false );
-	void DrawTransparentTriangles( );
-	void RenderFirstPass( bool bSecond = false );
-	void RenderFinalPasses( );
-	void DrawWorld( );
+	void RendererRefDef(ref_params_t* pparams);
+	void DrawNormalTriangles(bool draw_world = true);
+	void DrawNormalTriangles_Cheap();
+	void DrawTransparentTriangles(void);
+	void RenderFirstPass();
+	void RenderFinalPasses();
+	void RenderWireframe(void);
+	void DrawWorld(bool m_bSkyBox = false);
 
-	void GetRenderEnts ( );
-	void AddEntity( cl_entity_t *pEntity );
-	int FilterEntities ( int type, struct cl_entity_s *pEntity,const char *modelname );//
+	void RenderSunShadow(void);
 
-	void DecayLights( );
-	bool HasDynLights( );
-	void GetAdditionalLights( );
-	cl_dlight_t *CL_AllocDLight( int key );
-	int MsgDynLight( const char *pszName, int iSize, void *pbuf );
+	void LoadWADDecals(void);
 
-	void SetupDynLight( );
-	void FinishDynLight( );
-	void SetDynLightBBox( );
-	void SetupSpotLight( );
-	void FinishSpotLight( );
-	bool LightCanShadow( );
-	int	CullDynLightBBox (Vector mins, Vector maxs);
+	void GetRenderEnts(void);
+	void AddEntity(cl_entity_t* pEntity);
+	int FilterEntities(int type, struct cl_entity_s* pEntity, const char* modelname); //
 
-	void PushDynLights ( );
-	void MarkLights( cl_dlight_t *pLight, int iBit, mnode_t *node);
-	void MarkBrushFaces( Vector mins, Vector maxs );
-	void AddDynamicLights( msurface_t *surf );
+	void DecayLights(void);
+	bool HasDynLights(void);
+	void GetAdditionalLights(void);
+	cl_dlight_t* CL_AllocDLight(int key);
 
-	void CreateTextures( );
+	int MsgDynLight(const char* pszName, int iSize, void* pbuf);
 
-	void FreeBuffer( );
-	void GenerateVertexArray( );
-	void EnableVertexArray( );
-	void DisableVertexArray( );
+	void SetupDynLight(void);
+	void FinishDynLight(void);
+	void SetDynLightBBox(void);
+	void SetupSpotLight(void);
+	void FinishSpotLight(void);
+	bool LightCanShadow(void);
+	int CullDynLightBBox(Vector mins, Vector maxs);
 
-	void DrawBrushModel ( cl_entity_t *pEntity, bool bStatic = false );
-	void RecursiveWorldNode ( mnode_t *node );
+	void CreateTextures(void);
 
-	void SurfaceToChain( msurface_t *s, bool dynlit );
-	void DrawScrollingPoly( msurface_t *s );
-	void DrawLowQualitySpecular(msurface_t* s);
-	void DrawBumpmap(msurface_t* s, bool lightmapOnly = false);
-	void EmitWaterPolys( msurface_t *fa );
-	void DrawPolyFromArray( glpoly_t *p );
+	void FreeBuffer(void);
+	void GenerateVertexArray(void);
 
-	bool DynamicLighted( const Vector &vmins, const Vector &vmaxs );
-	void DrawDynamicLightsForWorld( );
-	void DrawDynamicLightsForDetails( );
-	void RecursiveWorldNodeLight (mnode_t *node);
-	void DrawDynamicLightsForEntity( cl_entity_t *pEntity );
-	void DrawEntityFacesForLight( cl_entity_t *pEntity );
+	void DrawBrushModel(cl_entity_t* pEntity, bool bStatic = false);
+	void RecursiveWorldNode(mnode_t* node);
 
-	void InitSky ( );
-	void DrawSky( );
-	void RemoveSky ( );
-	int MsgSkyMarker_Sky( const char *pszName, int iSize, void *pbuf );
-	int MsgSkyMarker_World( const char *pszName, int iSize, void *pbuf );
+	void UpdateLightStylesLM();
 
-	void PrepareRenderer ( );
-	void ResetRenderer( );
-	void ResetCache( );
+	void SurfaceToChain(msurface_t* psurfbase, msurface_t* s);
+	void DrawPolyFromArray(msurface_t* pbaseptr, msurface_t* psurf);
 
-	bool ExtensionSupported( const char *ext );
-	cl_texture_t *LoadDetailTexture( char *texname );
-	void ParseDetailTextureFile( );
-	void LoadDetailTextures( );
+	bool DynamicLighted(const Vector& vmins, const Vector& vmaxs);
+	void DrawDynamicLightsForWorld(void);
+	void RecursiveWorldNodeLight(mnode_t* node);
+	void DrawDynamicLightsForEntity(cl_entity_t* pEntity);
+	void DrawEntityFacesForLight(cl_entity_t* pEntity);
 
-	void AnimateLight( );
-	void UploadLightmaps( );
-	void BuildLightmap( msurface_t *surf, int surfindex, color24 *out );
-	void AddLightStyle( int iNum, char *szStyle );
+	void InitSky(void);
+	void DrawSky(void);
+	void RemoveSky(void);
+	int MsgSkyMarker_Sky(const char* pszName, int iSize, void* pbuf);
+	int MsgSkyMarker_World(const char* pszName, int iSize, void* pbuf);
 
-	void SetTexEnvs( int env0 = 0, int env1 = 0, int env2 = 0, int env3 = 0 );
-	void SetTexEnv_Internal( int env );
-	void SetTexPointer( int unitnum, int tc );
-	void Bind2DTexture( GLenum texture, GLuint id );
+	void ClearSurfaceDrawChain(void);
 
-	texture_t *TextureAnimation( texture_t *base, int frame );
+	bool ExtensionSupported(const char* ext);
+	cl_texture_t* LoadDetailTexture(char* texname);
+	void ParseDetailTextureFile(void);
+	void LoadDetailTextures(void);
 
-	void LoadGLSLShaders();
-	void DrawGLSLTextures();
+	void AnimateLight(void);
+	void UploadLightmaps(void);
+	void BuildLightmap(msurface_t* surf, int surfindex, color24* out);
+	void AddLightStyle(int iNum, const char* szStyle);
 
-	GLuint compileShader(const char* source, GLenum type);
+	void BindGLTexture(GLenum texture, GLuint id);
 
-	GLuint createShaderProgram(const char* vertexSrc, const char* fragmentSrc);
-
+	texture_t* TextureAnimation(texture_t* base, int frame);
 
 public:
-	void DrawDecals( );
-	void LoadDecals( );
-	void DeleteDecals( );
+	void DrawDecals(bool m_bTransPass = false);
+	void LoadDecals(void);
+	void DeleteDecals(void);
 
-	decalgroup_t *FindGroup(const char *_name);
-	cl_texture_t *LoadDecalTexture(const char *texname);
-	decalgroupentry_t *GetRandomDecal( decalgroup_t *group );
-	decalgroupentry_t *FindDecalByName( const char *szName );
+	decalgroup_t* FindGroup(const char* _name);
+	cl_texture_t* LoadDecalTexture(const char* texname);
+	decalgroupentry_t* GetRandomDecal(decalgroup_t* group);
+	decalgroupentry_t* FindDecalByName(const char* szName);
 
-	bool CullDecalBBox( Vector mins, Vector maxs );
-	void CreateDecal(Vector endpos, Vector pnormal, const char *name, int persistent = 0);
-	void RecursiveCreateDecal( mnode_t *node, decalgroupentry_t *texptr, customdecal_t *pDecal, Vector endpos, Vector pnormal);
-	void DecalSurface(msurface_t *surf, decalgroupentry_t *texptr, cl_entity_t *pEntity, customdecal_t *pDecal, Vector endpos, Vector pnormal);
+	bool CullDecalBBox(Vector mins, Vector maxs);
+	void CreateDecal(Vector endpos, Vector pnormal, const char* name, int persistent = 0, bool fromwad = false, float angle = 0);
+	void RecursiveCreateDecal(mnode_t* node, decalgroupentry_t* texptr, customdecal_t* pDecal, Vector endpos, Vector pnormal, float angle = 0);
+	void DecalSurface(msurface_t* surf, decalgroupentry_t* texptr, cl_entity_t* pEntity, customdecal_t* pDecal, Vector endpos, Vector pnormal, float angle = 0);
+
+	int MsgCustomDecal(const char* pszName, int iSize, void* pbuf);
+
+	void CreateCachedDecals(void);
+	void DrawSingleDecal(customdecal_t* decal, std::vector<DecalVert_t>& decalvertlist, bool m_bTransPass = false, bool *bNeedsBufferUpdate = nullptr);
+
+	customdecal_t* AllocDecal(void);
+	customdecal_t* AllocStaticDecal(void);
+
+	void GetUpRight(Vector forward, Vector& up, Vector& right);
+	int ClipPolygonByPlane(const Vector* arrIn, int numpoints, Vector normal, Vector planepoint, Vector* arrOut);
+	void FindIntersectionPoint(const Vector& p1, const Vector& p2, const Vector& normal, const Vector& planepoint, Vector& newpoint);
+
+public:
+
+	enum QuadDebug_Sections
+	{
+		quad_FullScreen = 0,
+		quad_TopRight = 6,
+		quad_BottomRight = 12,
+		quad_BottomLeft = 18,
+		quad_TopLeft = 24
+		
+	};
+
+	GL_BufferHandler *m_pMainBuffer;
+	GL_BufferHandler *m_pBasicFullscreenQuad;
+	GL_BufferHandler *m_pDecalsBuffer;
+	brushvertex_t* m_pBufferData;
+	brushface_t* m_pFacesExtraData;
+
+	GL_BufferHandler* m_pSimpleSky_Buffer;
+
+	GL_VertexArrayObject* m_pBSP_VAO;
+	GL_VertexArrayObject* m_pDecalVAO;
+	GL_VertexArrayObject* m_pSimpleSkyVAO;
+	GL_VertexArrayObject* m_pScreenQuadVAO;
+
 	
-	int MsgCustomDecal(const char *pszName, int iSize, void *pbuf);
+	int m_iNumTotalShadows; // total number of shadowmaps made in this frame
 
-	void CreateCachedDecals( );
-	void DrawSingleDecal(customdecal_t *decal);
+	cl_entity_t* m_pCurrentEntity;
+	cl_dlight_t* m_pCurrentDynLight;
+	byte* m_pPVS;
+	mleaf_t* m_pViewLeaf;
 
-	customdecal_t *AllocDecal( );
-	customdecal_t *AllocStaticDecal( );
+	dlight_t* m_pFirstDLight;
+	dlight_t* m_pFirstELight;
 
-	void GetUpRight(Vector forward, Vector &up, Vector &right);
-	int ClipPolygonByPlane (const Vector *arrIn, int numpoints, Vector normal, Vector planepoint, Vector *arrOut);
-	void FindIntersectionPoint( const Vector &p1, const Vector &p2, const Vector &normal, const Vector &planepoint, Vector &newpoint );
+	ref_params_t m_RefParams;
+
+	int m_iTotalVertCount;
+	int m_iTotalFaceCount;
+	int m_iTotalTriCount;
+
+	int m_iTexPointer[4];
+	int m_iEnvStates[4];
+	int m_iTUSupport;
+
+	int m_iVisFrame;
+	int m_iFrameCount;
+
+	cl_texture_t* m_pFlashlightTextures[MAX_SPOTLIGHT_TEXTURES];
+	int m_iNumFlashlightTextures;
+
+	bool m_bDrawSky;
+	bool m_bMirroring;
+	bool m_bLightShadow;
+	bool m_bMainPass;
+	bool m_bSunShadowMapPass;
+
+	bool m_bReloaded;
+	bool m_bGotAdditional;
+
+	bool m_bFullBright;
+
+	bool m_bLoaded_decal_wad = false;
+
+	Vector m_vRenderOrigin;
+	Vector m_vViewAngles;
+	Vector m_vVecToEyes;
+
+	Vector m_vSkyOrigin;
+	Vector m_vSkyWorldOrigin;
+
+	Vector m_vCurDLightOrigin;
+	Vector m_vCurSpotForward;
+
+	cvar_t* m_pCvarSpeeds;
+	cvar_t* m_pCvarDetailTextures;
+	cvar_t* m_pCvarDynamic;
+	cvar_t* m_pCvarDrawWorld;
+	cvar_t* m_pCvarWireFrame;
+	cvar_t* m_pCvarShadows;
+	cvar_t* m_pCvarFlashLightDepthRes;
+	cvar_t* m_pCvarLightmapDebug;
+	cvar_t* m_pCvar3DSkybox;
+	cvar_t* m_pCvarSunShadowsQuality;
+	cvar_t* m_pCvarBlurShadows;
+
+
+	cvar_t* lightgamma;
+	cvar_t* texgamma;
+	cvar_t* r_fullbright;
+	cvar_t* gl_fog;
+	cvar_t* gl_widescreen_yfov;
+
+	Vector m_vDLightMins;
+	Vector m_vDLightMaxs;
+
+	float m_fSkySpeed;
+
+	cl_entity_t* m_pRenderEntities[MAXRENDERENTS];
+	int m_iNumRenderEntities;
+
+	std::vector<std::unique_ptr<cl_dlight_t>> m_pDynLights;
+
+	GL_ShadowMap* m_pSunShadowMap;
+
+	mlight_t m_pModelLights[MAXRENDERENTS];
+	int m_iNumModelLights;
+
+	lightstyle_t m_pLightStyles[MAX_LIGHTSTYLES];
+	int m_iLightStyleValue[MAX_LIGHTSTYLES];
+
+	color24 m_pBlockLights[BLOCKLIGHTS_SIZE];
+	int m_iNumLightmaps;
+
+	color24 m_pEngineLightmaps[MAX_LIGHTMAPS * BLOCK_WIDTH * BLOCK_HEIGHT];
+	GLuint m_iEngineLightmapIndex;
+
+	brushface_t** m_pSurfacePointersArray;
+
+	clientsurfdata_t* m_pSurfaces;
+	int m_iNumSurfaces;
+
+	int m_iSkyTextures[6];
+
+	int m_iBSPVertsCounter;
+	int m_iBrushPolyCounter;  // bmodel poly counter
+	int m_iStudioPolyCounter; // studiomodel poly counter
+
+	double m_fShadowGenerationTime;
+	double m_fMainWorldRenderTime;
+
+	char m_szSkyName[64];
+	char m_szMapName[64];
+
+	detailtexentry_t m_pDetailTextures[MAX_DETAIL_TEXTURES];
+	int m_iNumDetailTextures;
+
+	texture_t m_pNormalTextureList[MAX_MAP_TEXTURES];
+	int m_iNumTextures;
+
+
+	GL_ShaderProgram *m_WorldShader;
+	GL_ShaderProgram *m_WorldSolidShader;
+	GL_ShaderProgram *m_DecalShader;
+	GL_ShaderProgram *m_SimpleSkyboxShader;
+	GL_ShaderProgram *m_FilterShader;
+
+	enum worldshader_uniforms
+	{
+		world_projectionmatrix = 0,
+		world_viewmatrix,
+		world_pointlight_viewmatrix_test,
+		world_modelmatrix,
+
+		world_spotlight_texturematrix,
+
+		world_spotlight,
+		world_pointlight,
+		world_shadow,
+		world_onlyshadow,
+
+		world_sundir,
+		
+		world_waterpolys,
+		world_scrollingpolys,
+		world_fltime,
+
+		world_detailtexture,
+		world_dt_opacity,
+
+		world_renderamt,
+		world_rendercolor,
+
+		world_light_pos,
+		world_light_color,//red green blue
+		world_light_radius,
+		world_renderorigin,
+		world_renderforward,
+
+		world_lightmap_pass,
+		world_texture_pass,
+
+		world_fog_active,
+		world_fogcolor,
+		world_fogstart,
+		world_fogend,
+
+		world_lightgamma,
+		world_texgamma,
+
+		world_wireframe,
+
+		world_shaderlocs_size, //must be last
+	};
+
+	enum worldshadersolid_uniforms
+	{
+		worldsolid_projviewmatrix = 0,
+		worldsolid_modelmatrix,
+
+		worldsolid_alphatest,
+
+		worldsolid_light_pos,
+
+		worldsolid_shaderlocs_size, //must be last
+	};
+
+	enum decalshader_uniforms
+	{
+		decal_projviewmatrix = 0,
+
+		decal_wireframe,
+
+		decal_shaderlocs_size,
+	};
+
+	enum skyboxshader_uniforms
+	{
+		skybox_projviewmatrix = 0,
+
+		skybox_skyfog,
+		skybox_fogcolor,
+
+		skybox_shaderlocs_size,
+	};
+
+	GLuint m_WorldShader_locs[world_shaderlocs_size];
+
+	GLuint m_WorldSolidShader_locs[worldsolid_shaderlocs_size];
+
+	GLuint m_SimpleSkyboxShader_locs[skybox_shaderlocs_size];
+
+	GLuint m_DecalShader_locs[decal_shaderlocs_size];
+
+	glm::mat4 m_ProjectionMatrix; //	fov, aspect, near, far
+	glm::mat4 m_ViewMatrix;  //	camera position, camera angles
+	glm::mat4 m_ModelMatrix;		//	moving entities
+
 
 public:
-	GLuint				m_uiBufferIndex;
-	brushvertex_t		*m_pBufferData;
-	brushface_t			*m_pFacesExtraData;
+	std::vector<std::unique_ptr<customdecal_t>> m_pDecals;
+	std::vector<std::unique_ptr<customdecal_t>> m_pStaticDecals;
+	std::vector<std::unique_ptr<decal_msg_cache>> m_pMsgCache;
+	std::vector<std::unique_ptr<decalgroup_t>> m_pDecalGroups;
 
-	GLuint				m_uiCurrentBinds[16];
-
-	cl_entity_t			*m_pCurrentEntity;
-	cl_dlight_t			*m_pCurrentDynLight;
-	model_t				*m_pWorld;
-	byte				*m_pPVS;
-	mleaf_t				*m_pViewLeaf;
-
-	dlight_t			*m_pFirstDLight;
-	dlight_t			*m_pFirstELight;
-
-	ref_params_t		m_RefDef;
-
-	int					m_iTotalVertCount;
-	int					m_iTotalFaceCount;
-	int					m_iTotalTriCount;
-
-	int					m_iTexPointer[4];
-	int					m_iEnvStates[4];
-	int					m_iTUSupport;
-
-	int					m_iVisFrame;
-	int					m_iFrameCount;
-
-	cl_texture_t		*m_pFlashlightTextures[MAX_SPOTLIGHT_TEXTURES];
-	int					m_iNumFlashlightTextures;
-
-	int					m_iAttenuation1DTexture;
-
-	int					m_iTexRectangleSize;
-
-	GLuint				m_uiMainGLFBO;
-	GLuint				m_uiShadowFBO;
-
-	bool				m_bCanDraw;
-	bool				m_bDrawSky;
-	bool				m_bSecondPassNeeded;
-	bool				m_bMirroring;
-	bool				m_bLightShadow;
-
-	bool				m_bReloaded;
-	bool				m_bRadialFogSupport;
-	bool				m_bShaderSupport;
-	bool				m_bShadowSupport;
-	bool				m_bShadowPCFSupport;
-	bool				m_bSpecialFog;
-	bool				m_bGotAdditional;
-	bool				m_bNVCombinersSupport;
-	bool				m_bTexRectangeSupport;
-
-	bool				m_bDontPromptShaders;
-	bool				m_bDontPromptShadersError;
-	bool				m_bDontPromptShadow;
-	bool				m_bDontPromptShadowPCF;
-	bool				m_bDontPromptParanoia;
-
-	Vector				m_vRenderOrigin;
-	Vector				m_vViewAngles;
-	Vector				m_vVecToEyes;
-
-	Vector				m_vSkyOrigin;
-	Vector				m_vSkyWorldOrigin;
-
-	Vector				m_vCurDLightOrigin;
-	Vector				m_vCurSpotForward;
-
-	cvar_t				*m_pCvarSpeeds;
-	cvar_t				*m_pCvarDetailTextures;
-	cvar_t				*m_pCvarDynamic;
-	cvar_t				*m_pCvarDrawWorld;
-	cvar_t				*m_pCvarWireFrame;
-	cvar_t				*m_pCvarWorldShaders;
-	cvar_t				*m_pCvarRadialFog;
-	cvar_t				*m_pCvarPCFShadows;
-	cvar_t				*m_pCvarShadows;
-	cvar_t				*m_pCvarOvDecals;
-	cvar_t				*m_pCvarSpecNoCombiners;
-	cvar_t				*m_pCvarPostProcessing;
-	cvar_t				*m_pCvarPPGrayscale;
-
-	Vector				m_vDLightMins;
-	Vector				m_vDLightMaxs;
-
-	float				m_fSavedMinsMaxs[6];
-	float				m_fSkySpeed;
-
-	cl_entity_t			*m_pRenderEntities[MAXRENDERENTS];
-	int					m_iNumRenderEntities;
-
-	cl_dlight_t			m_pDynLights[MAX_DYNLIGHTS];
-
-	mlight_t			m_pModelLights[MAXRENDERENTS];
-	int					m_iNumModelLights;
-
-	lightstyle_t		m_pLightStyles[MAX_LIGHTSTYLES];
-	int					m_iLightStyleValue[MAX_LIGHTSTYLES];
-
-	color24				m_pBlockLights[BLOCKLIGHTS_SIZE];
-	int					m_iNumLightmaps;
-
-	color24				m_pEngineLightmaps[MAX_LIGHTMAPS*BLOCK_WIDTH*BLOCK_HEIGHT];
-	int					m_iEngineLightmapIndex;
-
-	color24				m_pDetailLightmaps[MAX_LIGHTMAPS*BLOCK_WIDTH*BLOCK_HEIGHT];
-	int					m_iDetailLightmapIndex;
-
-	clientsurfdata_t	*m_pSurfaces;
-	int					m_iNumSurfaces;
-
-	detailobject_t		m_pDetailObjects[MAX_MAP_DETAILOBJECTS];
-	int					m_iNumDetailObjects;
-	int					m_iNumDetailSurfaces;
-
-	int					m_iAtten3DPoint;
-	int					m_iLightDummy;
-	
-	int					m_iSkyTextures[6];
-
-	int					m_iWorldPolyCounter; // wpoly counter
-	int					m_iBrushPolyCounter; // bmodel poly counter
-	int					m_iStudioPolyCounter; // studiomodel poly counter
-	int					m_iTotalFoliage; // bacontsu - foliage
-	int					m_iCable; // bacontsu - cable
-
-	char				m_szSkyName[64];
-	char				m_szMapName[64];
-
-	detailtexentry_t	m_pDetailTextures[MAX_DETAIL_TEXTURES];
-	int					m_iNumDetailTextures;
-
-	texture_t			m_pNormalTextureList[MAX_MAP_TEXTURES];
-	texture_t			m_pMultiPassTextureList[MAX_MAP_TEXTURES];
-	int					m_iNumTextures;
-
-	GLuint				m_iFogFragmentID;
-	GLuint				m_iShadowFragmentID;
-	GLuint				m_iDecalFragmentID;
-
-	PFNGLCLIENTACTIVETEXTUREARBPROC	glClientActiveTextureARB;
-	PFNGLACTIVETEXTUREARBPROC		glActiveTextureARB;
-	PFNGLMULTITEXCOORD2FARBPROC		glMultiTexCoord2fARB;
-	PFNGLMULTITEXCOORD4FARBPROC		glMultiTexCoord4fARB;
-
-	PFNGLBINDBUFFERARBPROC			glBindBufferARB;
-	PFNGLGENBUFFERSARBPROC			glGenBuffersARB;
-	PFNGLBUFFERDATAARBPROC			glBufferDataARB;
-	PFNGLDELETEBUFFERSARBPROC		glDeleteBuffersARB;
-
-	PFNGLLOCKARRAYSEXTPROC			glLockArraysEXT;
-	PFNGLUNLOCKARRAYSEXTPROC		glUnlockArraysEXT;
-
-	PFNGLTEXIMAGE3DEXTPROC			glTexImage3DEXT;
-
-	PFNGLGENPROGRAMSARBPROC			glGenProgramsARB;
-	PFNGLBINDPROGRAMARBPROC			glBindProgramARB;
-	PFNGLPROGRAMSTRINGARBPROC		glProgramStringARB;
-	PFNGLGETPROGRAMIVARBPROC		glGetProgramivARB;
-
-	PFNGLPROGRAMLOCALPARAMETER4FARBPROC		glProgramLocalParameter4fARB;
-
-	PFNGLFOGCOORDPOINTEREXTPROC				glFogCoordPointer;
-
-	// NV_register_combiner
-	PFNGLCOMBINERPARAMETERFVNVPROC					glCombinerParameterfvNV;
-	PFNGLCOMBINERPARAMETERFNVPROC					glCombinerParameterfNV;
-	PFNGLCOMBINERPARAMETERIVNVPROC					glCombinerParameterivNV;
-	PFNGLCOMBINERPARAMETERINVPROC					glCombinerParameteriNV;
-	PFNGLCOMBINERINPUTNVPROC						glCombinerInputNV;
-	PFNGLCOMBINEROUTPUTNVPROC						glCombinerOutputNV;
-	PFNGLFINALCOMBINERINPUTNVPROC					glFinalCombinerInputNV;
-	PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC			glGetCombinerInputParameterfvNV;
-	PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC			glGetCombinerInputParameterivNV;
-	PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC			glGetCombinerOutputParameterfvNV;
-	PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC			glGetCombinerOutputParameterivNV;
-	PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC		glGetFinalCombinerInputParameterfvNV;
-	PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC		glGetFinalCombinerInputParameterivNV;
-
-public:
-	customdecal_t		m_pDecals[MAX_CUSTOMDECALS];
-	customdecal_t		m_pStaticDecals[MAX_STATICDECALS];
-	decal_msg_cache		m_pMsgCache[MAX_DECAL_MSG_CACHE];
-	decalgroup_t		m_pDecalGroups[MAX_DECAL_GROUPS];
-
-	int					m_iNumDecals;
-	int					m_iNumStaticDecals;
-	int					m_iCurDecal;
-	int					m_iCacheDecals;
-	int					m_iNumDecalGroups;
-
-	Vector				m_vDecalMins;
-	Vector				m_vDecalMaxs;
-
-	float				m_flRenderFXUpdate;
-	int					m_iRenderFXCount;
-
+	Vector m_vDecalMins;
+	Vector m_vDecalMaxs;
 };
 extern CBSPRenderer gBSPRenderer;
-
-#define MAX_STYLE_LEN 100
-#define NUM_STYLES 20
-
-// every 10th of a second. 'z' is max light, 'a' is darkness
-inline char R_RenderFXTable[NUM_STYLES][MAX_STYLE_LEN + 1] =
-{
-	"z",
-	"mmnmmommommnonmmonqnmmo",
-	"abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba",
-	"mmmmmaaaaammmmmaaaaaabcdefgabcdefg",
-	"mamamamamama",
-	"jklmnopqrstuvwxyzyxwvutsrqponmlkj",
-	"nmonqnmomnmomomno",
-	"mmmaaaabcdefgmmmmaaaammmaamm",
-	"mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa",
-	"aaaaaaaazzzzzzzz",
-	"zzazazzzzazzazazaaazazzza",
-	"zyxxzyxyzxyxzyxzyxyzxyzxy",
-	"azzaazazaaazzzaaazzzaaaaaaza",
-	"aaaazzzaazazazzzaazzazzzaaaz",
-	"aabbccddeeffgghhiijjkkllmmmmmmmmmmmmmm",
-	"abcdefghijklmmmmmmmmmmmmmmmmmmmmmmmmmm",
-	"acegikmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
-	"llkkjjiihhggffeeddccbbaaaaaaaaaaaaaaaa",
-	"lkjihgfedcbaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-	"kigecaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-};
-
-// Utitlity class to load, compile and attach a vertex- and fragment shader to a program
-class ShaderUtil
-{
-
-private:
-	unsigned int mProgramId;
-
-	unsigned int GetCompiledShader(unsigned int shader_type, const std::string& shader_source, const std::string& path);
-
-public:
-	ShaderUtil() {}
-	~ShaderUtil() {}
-
-	// Load a vertex and a fragment shader from file
-	bool Load(const std::string& vertexShaderFile, const std::string& fragmentShaderFile);
-
-	// Use the program
-	void Use();
-
-	// Unuse the program
-	void Unuse();
-
-	// Delete the program
-	void Delete();
-
-	// Give the programID
-	unsigned int GetProgramID() { return mProgramId; }
-
-};
-#endif

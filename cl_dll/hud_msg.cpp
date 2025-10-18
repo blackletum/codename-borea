@@ -179,12 +179,12 @@ void CHud :: MsgFunc_KeyedDLight( const char *pszName, int iSize, void *pbuf )
 	if (!bActive)
 	{
 		// die instantly
-		dl->die = gEngfuncs.GetClientTime();
+		dl->die = engine_cl->time;
 	}
 	else
 	{
 		// never die
-		dl->die = gEngfuncs.GetClientTime() + 1E6;
+		dl->die = engine_cl->time + 1E6;
 
 		dl->origin[0] = READ_COORD();
 		dl->origin[1] = READ_COORD();
@@ -419,7 +419,7 @@ int CHud::MsgFunc_KickPunch( const char *pszName, int iSize, void *pbuf )
 
 	if (gHUD.KickStage == 1)
 	{
-		cl_entity_s* vm = gEngfuncs.GetViewModel();
+		cl_entity_s* vm = &engine_cl->viewent;
 		saved_vm_sequence = vm->curstate.sequence;
 		saved_vm_frame = weaponstarttime;
 	}
@@ -443,7 +443,7 @@ int CHud::MsgFunc_PPGray(const char* pszName, int iSize, void* pbuf)
 int CHud::MsgFunc_WpnSkn(const char* pszName, int iSize, void* pbuf)
 {
 	BEGIN_READ(pbuf, iSize);
-		g_iViewmodelSkin = READ_SHORT();
+	READ_SHORT();
 
 	return 1;
 }

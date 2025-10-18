@@ -192,7 +192,7 @@ void CGlock::GlockFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	// add aim "bloom" system (from Diffusion)
 	float Cone = m_pPlayer->pev->velocity.Length() * 0.00019;
-	Cone = clamp( Cone, 0.01, 0.05 );
+	Cone = std::clamp( Cone, 0.01f, 0.05f );
 	if( Cone < 0.02 )
 	{
 		if( m_pPlayer->pev->flags & FL_DUCKING )

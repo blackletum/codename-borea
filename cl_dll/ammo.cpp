@@ -90,10 +90,10 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 	if ( !pWeapon )
 		return;
 
-	memset( &pWeapon->rcActive, 0, sizeof(wrect_t) );
-	memset( &pWeapon->rcInactive, 0, sizeof(wrect_t) );
-	memset( &pWeapon->rcAmmo, 0, sizeof(wrect_t) );
-	memset( &pWeapon->rcAmmo2, 0, sizeof(wrect_t) );
+	memset( &pWeapon->rcActive, 0, sizeof(Rect) );
+	memset( &pWeapon->rcInactive, 0, sizeof(Rect) );
+	memset( &pWeapon->rcAmmo, 0, sizeof(Rect) );
+	memset( &pWeapon->rcAmmo2, 0, sizeof(Rect) );
 	pWeapon->hInactive = 0;
 	pWeapon->hActive = 0;
 	pWeapon->hAmmo = 0;
@@ -235,7 +235,7 @@ WEAPON* WeaponsResource :: GetNextActivePos( int iSlot, int iSlotPos )
 
 int giBucketHeight, giBucketWidth, giABHeight, giABWidth; // Ammo Bar width and height
 
-HL_HSPRITE ghsprBuckets;					// Sprite for top row of weapons menu
+HSPRITE_GOLDSRC ghsprBuckets;					// Sprite for top row of weapons menu
 
 DECLARE_MESSAGE(m_Ammo, CurWeapon );	// Current weapon and clip
 DECLARE_MESSAGE(m_Ammo, WeaponList);	// new weapon type
@@ -397,7 +397,7 @@ void CHudAmmo::Think()
 // Helper function to return a Ammo pointer from id
 //
 
-HL_HSPRITE* WeaponsResource :: GetAmmoPicFromWeapon( int iAmmoId, wrect_t& rect )
+HSPRITE_GOLDSRC* WeaponsResource :: GetAmmoPicFromWeapon( int iAmmoId, Rect& rect )
 {
 	for ( int i = 0; i < MAX_WEAPONS; i++ )
 	{
@@ -557,7 +557,7 @@ int CHudAmmo::MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf )
 	}
 	else if ( (m_pWeapon == nullptr) || (gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
 	{
-		static wrect_t nullrc;
+		static Rect nullrc;
 		gpActiveSel = nullptr;
 		SetCrosshair( 0, nullrc, 0, 0, 0 );
 //		CONPRINT("Blanking crosshair\n");
@@ -579,7 +579,7 @@ int CHudAmmo::MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf )
 //
 int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 {
-	static wrect_t nullrc;
+	static Rect nullrc;
 	int fOnTarget = FALSE;
 
 	BEGIN_READ( pbuf, iSize );
@@ -941,13 +941,13 @@ int CHudAmmo::Draw(float flTime)
 		if (pw->iClip >= 0)
 		{
 			// room for the number and the '|' and the current ammo
-			
+			//
 			x = ScreenWidth - spritewidth;
 			y = ScreenHeight - 30 - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, pw->iClip, r, g, b);
 
 
-			wrect_t rc;
+			Rect rc;
 			rc.top = 0;
 			rc.left = 0;
 			rc.right = AmmoWidth;

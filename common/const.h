@@ -743,6 +743,11 @@ typedef struct
 
 typedef struct
 {
+	byte r, g, b, a;
+} color32;
+
+typedef struct
+{
 	unsigned r, g, b, a;
 } colorVec;
 

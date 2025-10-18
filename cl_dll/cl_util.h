@@ -16,6 +16,7 @@
 // cl_util.h
 //
 
+#pragma once
 #include "cvardef.h"
 
 #include "Platform.h"
@@ -42,20 +43,20 @@ inline struct cvar_s *CVAR_CREATE( const char *cv, const char *val, const int fl
 
 extern void SPR_Init();
 
-extern HL_HSPRITE SPR_Load(const char* szPicName);
-extern int SPR_Frames(HL_HSPRITE hPic);
-extern int SPR_Height(HL_HSPRITE hPic, int frame);
-extern int SPR_Width(HL_HSPRITE hPic, int frame);
-extern void SPR_Set(HL_HSPRITE hPic, int r, int g, int b);
+extern HSPRITE_GOLDSRC SPR_Load(const char* szPicName);
+extern int SPR_Frames(HSPRITE_GOLDSRC hPic);
+extern int SPR_Height(HSPRITE_GOLDSRC hPic, int frame);
+extern int SPR_Width(HSPRITE_GOLDSRC hPic, int frame);
+extern void SPR_Set(HSPRITE_GOLDSRC hPic, int r, int g, int b);
 extern void SPR_Draw(int frame, int x, int y, const Rect* prc);
 extern void SPR_DrawHoles(int frame, int x, int y, const Rect* prc);
 extern void SPR_DrawAdditive(int frame, int x, int y, const Rect* prc);
 extern void SPR_EnableScissor(int x, int y, int width, int height);
 extern void SPR_DisableScissor(void);
 
-extern model_t* GetSpritePointer(HL_HSPRITE hSprite);
+extern model_t* GetSpritePointer(HSPRITE_GOLDSRC hSprite);
 
-extern void SetCrosshair(HL_HSPRITE hspr, Rect rc, int r, int g, int b);
+extern void SetCrosshair(HSPRITE_GOLDSRC hspr, Rect rc, int r, int g, int b);
 extern void DrawCrosshair();
 
 
@@ -81,7 +82,6 @@ extern void FillRGBA(float x, float y, float w, float h, int r, int g, int b, in
 #define GetScreenInfo (*gEngfuncs.pfnGetScreenInfo)
 #define ServerCmd (*gEngfuncs.pfnServerCmd)
 #define EngineClientCmd (*gEngfuncs.pfnClientCmd)
-#define AngleVectors (*gEngfuncs.pfnAngleVectors)
 
 
 inline 	client_textmessage_t	*TextMessageGet( const char *pName ) { return gEngfuncs.pfnTextMessageGet( pName ); }
@@ -168,7 +168,7 @@ void VectorInverse ( float *v );
 // disable 'truncation from 'const double' to 'float' warning message
 #pragma warning( disable: 4305 )
 
-HL_HSPRITE LoadSprite(const char *pszName);
+HSPRITE_GOLDSRC LoadSprite(const char *pszName);
 
 void GetFallbackDir(char* falldir);
 char* strUpper(char* str);

@@ -277,7 +277,7 @@ void CSoundSystem::Update()
 	bool volume_changed;
 	static float volume = 0;
 
-	ffmpeg_soundvolume->value = clamp(ffmpeg_soundvolume->value, 0, 100);
+	ffmpeg_soundvolume->value = std::clamp(ffmpeg_soundvolume->value, 0.f, 100.f);
 
 	volume_changed = volume != ffmpeg_soundvolume->value;
 	volume = ffmpeg_soundvolume ? ffmpeg_soundvolume->value : 0;

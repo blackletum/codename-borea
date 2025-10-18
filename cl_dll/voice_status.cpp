@@ -300,7 +300,7 @@ int CVoiceStatus::VidInit()
 		gEngfuncs.COM_FreeFile(pFile);
 	}
 
-	m_VoiceHeadModel = gEngfuncs.pfnSPR_Load("sprites/voiceicon.spr");
+	m_VoiceHeadModel = SPR_Load("sprites/voiceicon.spr");
 	return TRUE;
 }
 
@@ -308,7 +308,7 @@ int CVoiceStatus::VidInit()
 void CVoiceStatus::Frame(double frametime)
 {
 	// check server banned players once per second
-	if(gEngfuncs.GetClientTime() - m_LastUpdateServerState > 1)
+	if(engine_cl->time - m_LastUpdateServerState > 1)
 	{
 		UpdateServerState(false);
 	}
@@ -575,7 +575,7 @@ void CVoiceStatus::UpdateServerState(bool bForce)
 		}
 	}
 	
-	m_LastUpdateServerState = gEngfuncs.GetClientTime();
+	m_LastUpdateServerState = engine_cl->time;
 }
 
 void CVoiceStatus::UpdateSpeakerImage(Label *pLabel, int iPlayer)

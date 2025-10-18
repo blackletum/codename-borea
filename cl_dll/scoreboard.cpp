@@ -31,8 +31,8 @@
 struct icon_sprite_t
 {
 	char szSpriteName[24];
-	HL_HSPRITE spr;
-	wrect_t rc;
+	HSPRITE_GOLDSRC spr;
+	Rect rc;
 	unsigned char r;
 	unsigned char g;
 	unsigned char b;
@@ -454,8 +454,8 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 
 			if (sprite.spr)
 			{
-				gEngfuncs.pfnSPR_Set(sprite.spr, sprite.r, sprite.g, sprite.b);
-				gEngfuncs.pfnSPR_DrawAdditive(0, xpos_icon, ypos, &sprite.rc);
+				SPR_Set(sprite.spr, sprite.r, sprite.g, sprite.b);
+				SPR_DrawAdditive(0, xpos_icon, ypos, &sprite.rc);
 				xpos_icon += sprite.rc.left - sprite.rc.right - 5;
 			}
 		}

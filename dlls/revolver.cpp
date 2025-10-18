@@ -188,7 +188,7 @@ void CPython::PrimaryAttack()
 
 	// add aim "bloom" system (from Diffusion)
 	float Cone = m_pPlayer->pev->velocity.Length() * 0.00017;
-	Cone = clamp( Cone, 0.01, 0.04 );
+	Cone = std::clamp( Cone, 0.01f, 0.04f );
 	if( Cone < 0.02 )
 	{
 		if( m_pPlayer->pev->flags & FL_DUCKING )

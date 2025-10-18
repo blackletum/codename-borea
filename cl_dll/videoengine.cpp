@@ -8,13 +8,20 @@
 #include "cl_util.h"
 
 #include "openal/OpenAL_System.h"
-extern CSoundSystem gSoundSystem;
+
+#include "opengl_utils/GL_TextureHandler.h"
+#include "opengl_utils/GL_Buffers.h"
+#include "opengl_utils/GL_VertexArrayObject.h"
+#include "opengl_utils/GL_ShaderProgram.h"
 
 double start_time = 0;
 
 bool first_init = true;
 
 float scale_X, scale_Y;
+
+GL_VertexArrayObject* m_pVideoVAO;
+GL_BufferHandler* m_pVideoQuad;
 
 cvar_t* ffmpeg_soundvolume = nullptr;
 
@@ -120,7 +127,7 @@ swr_convert_func swr_convert_;
 
 CVideoEngine gVideoEngine;
 
-GLuint m_iVideoTexture = 0;
+GL_TextureHandler* m_pVideoTexture = nullptr;
 
 uint8_t *frame_data = nullptr;
 
@@ -420,6 +427,7 @@ void InitFFMPEG()
     // even work, so we'll have to use our own dlls. wish i could use static libraries instead
     // but compiling ffmpeg static libraries is damn near impossible on windows.
     //
+    // salsatobias: todo: load the dlls using window's delay load dll because this is so ugly
 
     sprintf_s(buffer, "%s/cl_dlls/ffmpeg/avcodec-62.dll", gamedir);
 
@@ -497,18 +505,28 @@ void InitFFMPEG()
 
 void drawFrame(VideoData* data) {
 
-    // Render
+    // clear viewport
 
-    // clear viewport (video should not be drawn if menu is on)
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 1.0f); glVertex2f(-scale_X, -scale_Y);
-    glTexCoord2f(1.0f, 1.0f); glVertex2f(scale_X, -scale_Y);
-    glTexCoord2f(1.0f, 0.0f); glVertex2f(scale_X, scale_Y);
-    glTexCoord2f(0.0f, 0.0f); glVertex2f(-scale_X, scale_Y);
-    glEnd();
+    gBSPRenderer.m_FilterShader->Bind();
+    gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 0);
+    gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("flipped"), 1);
+
+    m_pVideoVAO->BindVAO();
+
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    GL_VertexArrayObject::ResetVAOBinding();
+
+    gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("flipped"), 0);
+
+    GL_ShaderProgram::ResetShaderBind();
 }
 
 void CVideoEngine::Init()
@@ -534,10 +552,10 @@ void CVideoEngine::VidInit()
     Init();
     videoended = true;
 
-    if (m_iVideoTexture)
+    if (m_pVideoTexture)
     {
-        glDeleteTextures(1, &m_iVideoTexture);
-        m_iVideoTexture = 0;
+        delete m_pVideoTexture;
+        m_pVideoTexture = nullptr;
     }
     gSoundSystem.StopSounds(true);
 }
@@ -548,10 +566,10 @@ void CVideoEngine::LoadVideo(const char* video_path)
 
     if (!strcmp(video_path, "STOP"))
     {
-        if (m_iVideoTexture)
+        if (m_pVideoTexture)
         {
-            glDeleteTextures(1, &m_iVideoTexture);
-            m_iVideoTexture = 0;
+            delete m_pVideoTexture;
+            m_pVideoTexture = nullptr;
         }
         gSoundSystem.StopSounds(false);
 
@@ -580,24 +598,13 @@ void CVideoEngine::LoadVideo(const char* video_path)
         return;
     }
 
-    if (m_iVideoTexture)
-    {
-        glDeleteTextures(1, &m_iVideoTexture);
-        m_iVideoTexture = 0;
-    }
+    if (m_pVideoTexture)
+        delete m_pVideoTexture;
 
-    m_iVideoTexture = current_ext_texture_id;
-    current_ext_texture_id++;
+    GL_TextureHandler::gl_texturecreationinfo_t texinfo;
+    texinfo.SetInfo(std::string("ffmpegvideoframe"), GL_TextureHandler::_2DTexture, GL_RGB, viddata.width, viddata.height, 0, GL_RGB, GL_UNSIGNED_BYTE);
 
-    glBindTexture(GL_TEXTURE_2D, m_iVideoTexture);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, viddata.width, viddata.height,
-        0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    m_pVideoTexture = new GL_TextureHandler(&texinfo);
 
     float videoAspect = (float)viddata.width / (float)viddata.height;
     float screenAspect = (float)ScreenWidth / (float)ScreenHeight;
@@ -611,50 +618,73 @@ void CVideoEngine::LoadVideo(const char* video_path)
     else {
         scale_X = videoAspect / screenAspect;
     }
+
+    //glVertex2f(-scale_X, -scale_Y)
+    //glVertex2f(scale_X, -scale_Y);
+    //glVertex2f(scale_X, scale_Y);
+    //glVertex2f(-scale_X, scale_Y);
+
+    Vector verts[] =
+    {
+        Vector(scale_X, scale_Y, 0.0),		// Top-right
+        Vector(-scale_X, scale_Y, 0.0),		// Top-left
+        Vector(-scale_X, -scale_Y, 0.0),		// Bottom-left
+
+        Vector(-scale_X, -scale_Y, 0.0),		// Bottom-left
+        Vector(scale_X, -scale_Y, 0.0),		// Bottom-right
+        Vector(scale_X, scale_Y, 0.0),		// Top-right
+    };
+
+    if (m_pVideoVAO)
+    {
+        delete m_pVideoVAO;
+        delete  m_pVideoQuad;
+    }
+
+    m_pVideoVAO = new GL_VertexArrayObject();
+    m_pVideoVAO->BindVAO();
+
+    m_pVideoQuad = new GL_BufferHandler();
+
+    m_pVideoQuad->Bind(GL_BufferHandler::ArrayBuffer);
+    m_pVideoQuad->BufferData(GL_BufferHandler::ArrayBuffer, sizeof(verts), verts, GL_BufferHandler::StaticDraw);
+
+    glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
+    glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(Vector), 0);
+
+    GL_VertexArrayObject::ResetVAOBinding();
 }
 
 void CVideoEngine::DrawVideo(float flTime)
 {
-    if (!m_iVideoTexture)
+    if (!m_pVideoTexture)
         return;
 
     if (videoended)
     {
-        glDeleteTextures(1, &m_iVideoTexture);
-        m_iVideoTexture = 0;
+        delete m_pVideoTexture;
+        m_pVideoTexture = nullptr;
         Init();
         return;
     }
 
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    glOrtho(-1, 1, -1, 1, -1, 1);
-
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, m_iVideoTexture);
-    glColor4f(1, 1, 1, 1);
-
-    double currentvideotime = gEngfuncs.GetClientTime() - start_time;
+    double currentvideotime = engine_cl->time - start_time;
     if (!start_time)
         start_time = currentvideotime;
+
+    glActiveTexture(GL_TEXTURE0);
+
+    glBindTexture(GL_TEXTURE_2D, m_pVideoTexture->GetTextureID());
+
     if (currentvideotime >= viddata.pts) {
+
         videoended = !video_reader_readframe(&viddata, frame_data);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, viddata.width, viddata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, frame_data);
+        if (videoended)
+            return;
+
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, viddata.width, viddata.height, GL_RGBA, GL_UNSIGNED_BYTE, frame_data);
     }
-    if(!videoended)
-        drawFrame(&viddata);
 
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
-
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-
-    glMatrixMode(GL_MODELVIEW);
+    drawFrame(&viddata);
 
 }

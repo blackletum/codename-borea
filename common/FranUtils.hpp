@@ -254,11 +254,11 @@ namespace FranUtils
 			WRITE_COORD(emitOrigin.x);	// X
 			WRITE_COORD(emitOrigin.y);	// Y
 			WRITE_COORD(emitOrigin.z);	// Z
-			WRITE_BYTE(radius);			// radius * 0.1
+			WRITE_BYTE(radius);			// radius * 64
 			WRITE_BYTE(colour.x);		// r
 			WRITE_BYTE(colour.y);		// g
 			WRITE_BYTE(colour.z);		// b
-			WRITE_LONG(FranUtils::ftol_asm(time));  //WRITE_BYTE(time);			// time * 10
+			WRITE_FLOAT(time);  //WRITE_BYTE(time);			// time * 10
 			WRITE_BYTE(decay);			// decay * 0.1
 		MESSAGE_END();
 	}

@@ -92,8 +92,8 @@ int CHudStatusIcons::Draw( float flTime )
 			{
 				const int x = (i < (MAX_CUSTOMSPRITES / 2)) ? 100 : (ScreenWidth - 100);
 
-				gEngfuncs.pfnSPR_Set(icon.spr, icon.r, icon.g, icon.b);
-				gEngfuncs.pfnSPR_DrawAdditive(0, x, y, &icon.rc);
+				SPR_Set(icon.spr, icon.r, icon.g, icon.b);
+				SPR_DrawAdditive(0, x, y, &icon.rc);
 				y += (icon.rc.bottom - icon.rc.top) + 5;
 			}
 		}
@@ -145,7 +145,7 @@ int CHudStatusIcons::MsgFunc_CustomIcon(const char* pszName, int iSize, void* pb
 		int g = READ_BYTE();
 		int b = READ_BYTE();
 
-		wrect_t aRect;
+		Rect aRect;
 		aRect.left = READ_BYTE();
 		aRect.top = READ_BYTE();
 		aRect.right = READ_BYTE();
@@ -221,7 +221,7 @@ void CHudStatusIcons::DisableIcon( const char *pszIconName )
 	}
 }
 
-void CHudStatusIcons::EnableCustomIcon(int nIndex, char* pszIconName, unsigned char red, unsigned char green, unsigned char blue, const wrect_t& aRect)
+void CHudStatusIcons::EnableCustomIcon(int nIndex, char* pszIconName, unsigned char red, unsigned char green, unsigned char blue, const Rect& aRect)
 {
 	if (nIndex < MAX_CUSTOMSPRITES)
 	{
@@ -230,7 +230,7 @@ void CHudStatusIcons::EnableCustomIcon(int nIndex, char* pszIconName, unsigned c
 
 		auto& icon = m_CustomList[nIndex];
 
-		icon.spr = gEngfuncs.pfnSPR_Load(szTemp);
+		icon.spr = SPR_Load(szTemp);
 		icon.rc = aRect;
 		icon.r = red;
 		icon.g = green;

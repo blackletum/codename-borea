@@ -200,7 +200,7 @@ int CPointMessageRenderer::Draw(float flTime)
 			Vector forward, angle;
 			angle = gEngfuncs.GetLocalPlayer()->curstate.angles;
 			angle.x = 0;
-			AngleVectors(angle, forward, null, null);
+			AngleVectors(angle, &forward, null, null);
 
 			// check if the coords are simply out of the screen coord
 			if (((((x - (len / 2)) > 0) && ((x - (len / 2)) < ScreenWidth)) && ((y > 0) && (y < ScreenHeight)))

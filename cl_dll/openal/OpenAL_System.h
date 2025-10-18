@@ -58,3 +58,5 @@ public:
 	bool m_Paused;
 
 };
+
+extern CSoundSystem gSoundSystem;

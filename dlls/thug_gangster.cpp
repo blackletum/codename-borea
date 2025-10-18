@@ -852,7 +852,7 @@ void CHGrunt :: Shoot ()
 	SetBlending( 0, angDir.x );
 	
 	// Teh_Freak: World Lighting!
-		FranUtils::EmitDlight(pev->origin, 16, { 255, 255, 160 }, 0.05f, 0);
+		FranUtils::EmitDlight(pev->origin, 4, { 255, 255, 160 }, 0.05f, 0);
 	// Teh_Freak: World Lighting!
 
 }
@@ -902,7 +902,7 @@ void CHGrunt :: Shotgun ()
 	SetBlending( 0, angDir.x );
 
 	// Teh_Freak: World Lighting!
-	FranUtils::EmitDlight(pev->origin, 16, { 255, 255, 160 }, 0.05f, 0);
+	FranUtils::EmitDlight(pev->origin, 4, { 255, 255, 160 }, 0.05f, 0);
 	// Teh_Freak: World Lighting!
 
 }
@@ -4742,7 +4742,7 @@ void CMonsterGangster::Pistol( void )
 	SetBlending( 0, angDir.x );
 
 	// Teh_Freak: World Lighting!
-	FranUtils::EmitDlight( pev->origin, 16, { 255, 255, 160 }, 0.05f, 0 );
+	FranUtils::EmitDlight( pev->origin, 4, { 255, 255, 160 }, 0.05f, 0 );
 	// Teh_Freak: World Lighting!
 }
 

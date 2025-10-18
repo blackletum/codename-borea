@@ -1,5 +1,5 @@
-//==============================================================================//
-//			Copyright (c) 2010 - 2011, Richard Roháè, All rights reserved.		//
+ï»¿//==============================================================================//
+//			Copyright (c) 2010 - 2011, Richard Rohï¿½ï¿½, All rights reserved.		//
 //==============================================================================//
 
 //==============================================================================//
@@ -7,10 +7,6 @@
 //								Based on code from Quake						//
 //					  Written for Half-Life: Amnesia modification				//
 //==============================================================================//
-
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
 
 #include "hud.h"
 #include "cl_util.h"
@@ -21,14 +17,17 @@
 #include "ref_params.h"
 #include "bsprenderer.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <memory.h>
+#include <math.h>
 
 #ifndef M_PI
-#define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
+#define M_PI 3.14159265358979323846 // matches value in gcc v2 math.h
 #endif
 
-#define DEG2RAD( a ) ( a * M_PI ) / 180.0F
+#define DEG2RAD(a) (a * M_PI) / 180.0F
+#define RAD2DEG(x) ((double)(x) * (double)(180.0 / M_PI))
 
 /*
 ====================
@@ -36,24 +35,55 @@ CalcFov
 
 ====================
 */
-float FrustumCheck::CalcFov( float flFovX, float flWidth, float flHeight )
+float FrustumCheck::CalcFov(float flFovX, float flWidth, float flHeight)
 {
-    float a;
-    float x;
+	float a;
+	float x, half_fov_y;
 
-    if(flFovX < 1 || flFovX > 179)
+	if (flFovX < 1 || flFovX > 179)
 	{
 		gEngfuncs.Con_Printf("CalcFov(): bad field of view value!\n");
 		flFovX = 90;
 	}
 
-    x = flWidth/tan(flFovX/360*M_PI);
+	x = flWidth / tan(flFovX / 360 * M_PI);
 
-    a = atan(flHeight/x);
+	a = atan(flHeight / x);
 
-    a = a*360/M_PI;
+	a = a * 360 / M_PI;
 
-    return a;
+	return a;
+}
+
+/*
+====================
+V_AdjustFov
+====================
+*/
+void FrustumCheck::V_AdjustFov(float& fov_x, float& fov_y, float width, float height, bool lock_x)
+{
+	float x, y;
+
+	if (!gBSPRenderer.gl_widescreen_yfov->value || width * 3 == 4 * height || width * 4 == height * 5)
+	{
+		fov_x = 2.0f * atan(tan(glm::radians(fov_x) / 2.0f) / (width / height));
+		return;
+	}
+
+	if (lock_x)
+	{
+		fov_y = 2 * atan((width * 3) / (height * 4) * tan(fov_y * M_PI / 360.0f * 0.5f)) * 360 / M_PI;
+		return;
+	}
+
+	y = CalcFov(fov_x, 640, 480);
+	x = fov_x;
+
+	fov_x = CalcFov(y, height, width);
+	if (fov_x < x)
+		fov_x = x;
+	else
+		fov_y = y;
 }
 
 /*
@@ -62,86 +92,65 @@ SetupFrustum
 
 =====================
 */
-void FrustumCheck::SetFrustum( Q_Vector vAngles, Q_Vector vOrigin, float flFOV_x, float flFarDist, bool bView )
+void FrustumCheck::SetFrustum(Vector vAngles, Vector vOrigin, float flFOV_x, float flFarDist, bool bView)
 {
-	Q_Vector vVpn, vUp, vRight;
-	Q_AngleVectors(vAngles, vVpn, vRight, vUp);
+	Vector vVpn, vUp, vRight;
+	AngleVectors(vAngles, &vVpn, &vRight, &vUp);
 
-	if(flFOV_x == 90) 
+	if (bView)
 	{
-		VectorAdd(vVpn, vRight, m_sFrustum[0].vNormal);
-		VectorSubtract(vVpn, vRight, m_sFrustum[1].vNormal);
+		float flFOV_y = flFOV_x;
 
-		VectorAdd(vVpn, vUp, m_sFrustum[2].vNormal);
-		VectorSubtract(vVpn, vUp, m_sFrustum[3].vNormal);
+		if (gBSPRenderer.gl_widescreen_yfov->value)
+			V_AdjustFov(flFOV_x, flFOV_y, ScreenWidth, ScreenHeight, 0);
+
+
+		Q_RotatePointAroundVector(m_sFrustum[0].normal, vUp, vVpn, -(90 - flFOV_x / 2));
+		Q_RotatePointAroundVector(m_sFrustum[1].normal, vUp, vVpn, 90 - flFOV_x / 2);
+		Q_RotatePointAroundVector(m_sFrustum[2].normal, vRight, vVpn, 90 - flFOV_y / 2);
+		Q_RotatePointAroundVector(m_sFrustum[3].normal, vRight, vVpn, -(90 - flFOV_y / 2));
 	}
 	else
 	{
-		if(bView)
-		{
-			float flFOV_y = CalcFov(flFOV_x, ScreenWidth, ScreenHeight);
-
-			Q_RotatePointAroundVector(m_sFrustum[0].vNormal, vUp, vVpn, -(90-flFOV_x / 2));
-			Q_RotatePointAroundVector(m_sFrustum[1].vNormal, vUp, vVpn, 90-flFOV_x / 2);
-			Q_RotatePointAroundVector(m_sFrustum[2].vNormal, vRight, vVpn, 90-flFOV_y / 2);
-			Q_RotatePointAroundVector(m_sFrustum[3].vNormal, vRight, vVpn, -(90 - flFOV_y / 2));
-		}
-		else
-		{
-			Q_RotatePointAroundVector(m_sFrustum[0].vNormal, vUp, vVpn, -(90-flFOV_x / 2));
-			Q_RotatePointAroundVector(m_sFrustum[1].vNormal, vUp, vVpn, 90-flFOV_x / 2);
-			Q_RotatePointAroundVector(m_sFrustum[2].vNormal, vRight, vVpn, 90-flFOV_x / 2);
-			Q_RotatePointAroundVector(m_sFrustum[3].vNormal, vRight, vVpn, -(90 - flFOV_x / 2));
-		}
+		Q_RotatePointAroundVector(m_sFrustum[0].normal, vUp, vVpn, -(90 - flFOV_x / 2));
+		Q_RotatePointAroundVector(m_sFrustum[1].normal, vUp, vVpn, 90 - flFOV_x / 2);
+		Q_RotatePointAroundVector(m_sFrustum[2].normal, vRight, vVpn, 90 - flFOV_x / 2);
+		Q_RotatePointAroundVector(m_sFrustum[3].normal, vRight, vVpn, -(90 - flFOV_x / 2));
 	}
 
-	for(int i = 0; i < 4; i++)
+
+	for (int i = 0; i < 4; i++)
 	{
 		m_sFrustum[i].type = PLANE_ANYZ;
-		m_sFrustum[i].flDist = DotProduct(vOrigin, m_sFrustum[i].vNormal);
+		m_sFrustum[i].dist = DotProduct(vOrigin, m_sFrustum[i].normal);
 		m_sFrustum[i].signbits = Q_SignbitsForPlane(&m_sFrustum[i]);
 	}
 
 	// Reset this value
 	m_iFarClip = FARCLIP_OFF;
 
-	if(bView && !gHUD.m_pFogSettings.affectsky)
+	if (bView && !gHUD.m_pFogSettings.affectsky)
 		return;
 
-	if(flFarDist)
+	if (flFarDist)
 	{
-		if(gBSPRenderer.m_pCvarRadialFog->value > 0 
-			&& gBSPRenderer.m_bRadialFogSupport && bView)
-		{
-			m_vCullBoxMins[0] = vOrigin[0] - flFarDist;
-			m_vCullBoxMins[1] = vOrigin[1] - flFarDist;
-			m_vCullBoxMins[2] = vOrigin[2] - flFarDist;
+		Vector vFarPoint;
+		VectorCopy(vVpn, vFarPoint);
 
-			m_vCullBoxMaxs[0] = vOrigin[0] + flFarDist;
-			m_vCullBoxMaxs[1] = vOrigin[1] + flFarDist;
-			m_vCullBoxMaxs[2] = vOrigin[2] + flFarDist;
-			m_iFarClip = FARCLIP_RADIAL;
-		}
-		else
-		{
-			Q_Vector vFarPoint;
-			VectorCopy(vVpn, vFarPoint);
+		vFarPoint[0] *= flFarDist;
+		vFarPoint[1] *= flFarDist;
+		vFarPoint[2] *= flFarDist;
 
-			vFarPoint[0] *= flFarDist;
-			vFarPoint[1] *= flFarDist;
-			vFarPoint[2] *= flFarDist;
+		VectorAdd(vOrigin, vFarPoint, vFarPoint);
 
-			VectorAdd(vOrigin, vFarPoint, vFarPoint);
+		m_sFrustum[4].normal[0] = vVpn[0] * (-1);
+		m_sFrustum[4].normal[1] = vVpn[1] * (-1);
+		m_sFrustum[4].normal[2] = vVpn[2] * (-1);
 
-			m_sFrustum[4].vNormal[0] = vVpn[0] * (-1);
-			m_sFrustum[4].vNormal[1] = vVpn[1] * (-1);
-			m_sFrustum[4].vNormal[2] = vVpn[2] * (-1);
-
-			m_sFrustum[4].type = PLANE_ANYZ;
-			m_sFrustum[4].flDist = DotProduct(vFarPoint, m_sFrustum[4].vNormal);
-			m_sFrustum[4].signbits = Q_SignbitsForPlane(&m_sFrustum[4]);
-			m_iFarClip = FARCLIP_DEPTH;
-		}
+		m_sFrustum[4].type = PLANE_ANYZ;
+		m_sFrustum[4].dist = DotProduct(vFarPoint, m_sFrustum[4].normal);
+		m_sFrustum[4].signbits = Q_SignbitsForPlane(&m_sFrustum[4]);
+		m_iFarClip = FARCLIP_DEPTH;
 	}
 }
 
@@ -153,7 +162,7 @@ SetExtraCullBox
 
 =====================
 */
-void FrustumCheck::SetExtraCullBox( Q_Vector vMins, Q_Vector vMaxs )
+void FrustumCheck::SetExtraCullBox(Vector vMins, Vector vMaxs)
 {
 	VectorCopy(vMins, m_vExtraCullMins);
 	VectorCopy(vMaxs, m_vExtraCullMaxs);
@@ -166,7 +175,7 @@ DisableExtraCullBox
 
 =====================
 */
-void FrustumCheck::DisableExtraCullBox( )
+void FrustumCheck::DisableExtraCullBox(void)
 {
 	m_bExtraCull = false;
 }
@@ -177,15 +186,21 @@ RadialCullBox
 
 =====================
 */
-bool FrustumCheck::RadialCullBox( Q_Vector vMins, Q_Vector vMaxs )
+bool FrustumCheck::RadialCullBox(Vector vMins, Vector vMaxs)
 {
-	if (m_vCullBoxMins[0] > vMaxs[0]) return true;
-	if (m_vCullBoxMins[1] > vMaxs[1]) return true;
-	if (m_vCullBoxMins[2] > vMaxs[2]) return true;
+	if (m_vCullBoxMins[0] > vMaxs[0])
+		return true;
+	if (m_vCullBoxMins[1] > vMaxs[1])
+		return true;
+	if (m_vCullBoxMins[2] > vMaxs[2])
+		return true;
 
-	if (m_vCullBoxMaxs[0] < vMins[0]) return true;
-	if (m_vCullBoxMaxs[1] < vMins[1]) return true;
-	if (m_vCullBoxMaxs[2] < vMins[2]) return true;
+	if (m_vCullBoxMaxs[0] < vMins[0])
+		return true;
+	if (m_vCullBoxMaxs[1] < vMins[1])
+		return true;
+	if (m_vCullBoxMaxs[2] < vMins[2])
+		return true;
 
 	return false;
 }
@@ -196,15 +211,21 @@ ExtraCullBox
 
 =====================
 */
-bool FrustumCheck::ExtraCullBox( Q_Vector vMins, Q_Vector vMaxs )
+bool FrustumCheck::ExtraCullBox(Vector vMins, Vector vMaxs)
 {
-	if (m_vExtraCullMins[0] > vMaxs[0]) return true;
-	if (m_vExtraCullMins[1] > vMaxs[1]) return true;
-	if (m_vExtraCullMins[2] > vMaxs[2]) return true;
+	if (m_vExtraCullMins[0] > vMaxs[0])
+		return true;
+	if (m_vExtraCullMins[1] > vMaxs[1])
+		return true;
+	if (m_vExtraCullMins[2] > vMaxs[2])
+		return true;
 
-	if (m_vExtraCullMaxs[0] < vMins[0]) return true;
-	if (m_vExtraCullMaxs[1] < vMins[1]) return true;
-	if (m_vExtraCullMaxs[2] < vMins[2]) return true;
+	if (m_vExtraCullMaxs[0] < vMins[0])
+		return true;
+	if (m_vExtraCullMaxs[1] < vMins[1])
+		return true;
+	if (m_vExtraCullMaxs[2] < vMins[2])
+		return true;
 
 	return false;
 }
@@ -215,124 +236,32 @@ CullBox
 
 =====================
 */
-bool FrustumCheck::CullBox( Q_Vector vMins, Q_Vector vMaxs )
-{	
-	if(m_bExtraCull)
+bool FrustumCheck::CullBox(Vector vMins, Vector vMaxs)
+{
+	if (m_bExtraCull)
 	{
-		if(ExtraCullBox(vMins, vMaxs))
+		if (ExtraCullBox(vMins, vMaxs))
 			return true;
 	}
 
-	if(m_iFarClip == FARCLIP_DEPTH)
+	if (m_iFarClip == FARCLIP_DEPTH)
 	{
-		if(Q_BoxOnPlaneSide(vMins, vMaxs, &m_sFrustum[4]) == 2)
+		if (BoxOnPlaneSide(vMins, vMaxs, &m_sFrustum[4]) == 2)
 			return true;
 	}
-	else if(m_iFarClip == FARCLIP_RADIAL)
+	else if (m_iFarClip == FARCLIP_RADIAL)
 	{
-		if(RadialCullBox(vMins, vMaxs))
+		if (RadialCullBox(vMins, vMaxs))
 			return true;
 	}
 
-	for(int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; i++)
 	{
-		if(Q_BoxOnPlaneSide(vMins, vMaxs, &m_sFrustum[i]) == 2)
+		if (BoxOnPlaneSide(vMins, vMaxs, &m_sFrustum[i]) == 2)
 			return true;
 	}
 
 	return false;
-}
-
-/*
-=====================
-Q_AngleVectors
-
-=====================
-*/
-void FrustumCheck::Q_AngleVectors( Q_Vector vAngles, Q_Vector vForward, Q_Vector vRight, Q_Vector vUp )
-{
-	float angle;
-	float sr, sp, sy, cr, cp, cy;
-	
-	angle = vAngles[YAW] * (M_PI*2 / 360);
-	sy = sin(angle);
-	cy = cos(angle);
-	angle = vAngles[PITCH] * (M_PI*2 / 360);
-	sp = sin(angle);
-	cp = cos(angle);
-	angle = vAngles[ROLL] * (M_PI*2 / 360);
-	sr = sin(angle);
-	cr = cos(angle);
-
-	vForward[0] = cp*cy;
-	vForward[1] = cp*sy;
-	vForward[2] = -sp;
-	vRight[0] = (-1*sr*sp*cy+-1*cr*-sy);
-	vRight[1] = (-1*sr*sp*sy+-1*cr*cy);
-	vRight[2] = -1*sr*cp;
-	vUp[0] = (cr*sp*cy+-sr*-sy);
-	vUp[1] = (cr*sp*sy+-sr*cy);
-	vUp[2] = cr*cp;
-}
-
-/*
-==================
-Q_BoxOnPlaneSide
-
-==================
-*/
-int FrustumCheck::Q_BoxOnPlaneSide( Q_Vector emins, Q_Vector emaxs, Q_mplane_t *p )
-{
-	float	dist1, dist2;
-	int		sides;
-
-	switch(p->signbits)
-	{
-		case 0:
-			dist1 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emaxs[2];
-			dist2 = p->vNormal[0]*emins[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emins[2];
-			break;
-		case 1:
-			dist1 = p->vNormal[0]*emins[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emaxs[2];
-			dist2 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emins[2];
-			break;
-		case 2:
-			dist1 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emaxs[2];
-			dist2 = p->vNormal[0]*emins[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emins[2];
-			break;
-		case 3:
-			dist1 = p->vNormal[0]*emins[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emaxs[2];
-			dist2 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emins[2];
-			break;
-		case 4:
-			dist1 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emins[2];
-			dist2 = p->vNormal[0]*emins[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emaxs[2];
-			break;
-		case 5:
-			dist1 = p->vNormal[0]*emins[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emins[2];
-			dist2 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emaxs[2];
-			break;
-		case 6:
-			dist1 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emins[2];
-			dist2 = p->vNormal[0]*emins[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emaxs[2];
-			break;
-		case 7:
-			dist1 = p->vNormal[0]*emins[0] + p->vNormal[1]*emins[1] + p->vNormal[2]*emins[2];
-			dist2 = p->vNormal[0]*emaxs[0] + p->vNormal[1]*emaxs[1] + p->vNormal[2]*emaxs[2];
-			break;
-		default:
-			dist1 = dist2 = 0;
-			gEngfuncs.Con_Printf("Q_BoxOnPlaneSide error\n");
-			break;
-	}
-
-	sides = 0;
-	if(dist1 >= p->flDist)
-		sides = 1;
-	if(dist2 < p->flDist)
-		sides |= 2;
-
-	return sides;
 }
 
 /*
@@ -341,14 +270,14 @@ Q_SignbitsForPlane
 
 ==================
 */
-int FrustumCheck::Q_SignbitsForPlane( Q_mplane_t *pOut )
+int FrustumCheck::Q_SignbitsForPlane(mplane_t* pOut)
 {
-	int	nBits = 0;
+	int nBits = 0;
 
-	for(int j = 0; j < 3; j++)
+	for (int j = 0; j < 3; j++)
 	{
-		if(pOut->vNormal[j] < 0)
-			nBits |= 1<<j;
+		if (pOut->normal[j] < 0)
+			nBits |= 1 << j;
 	}
 
 	return nBits;
@@ -360,11 +289,11 @@ Q_RotatePointAroundVector
 
 ==========================
 */
-void FrustumCheck::Q_RotatePointAroundVector( Q_Vector vDest, const Q_Vector vDir, Q_Vector vPoint, float flDegrees )
+void FrustumCheck::Q_RotatePointAroundVector(Vector& vDest, const Vector vDir, Vector& vPoint, float flDegrees)
 {
-	float q[3];
+	Vector q;
 	float q3;
-	float t[3];
+	Vector t;
 	float t3;
 
 	{
@@ -377,24 +306,11 @@ void FrustumCheck::Q_RotatePointAroundVector( Q_Vector vDest, const Q_Vector vDi
 		q3 = cos(hrad);
 	}
 
-	Q_CrossProduct(q, vPoint, t);
+	CrossProduct(q, vPoint, t);
 	VectorMA(t, q3, vPoint, t);
 	t3 = DotProduct(q, vPoint);
 
-	Q_CrossProduct(q, t, vDest);
+	CrossProduct(q, t, vDest);
 	VectorMA(vDest, t3, q, vDest);
 	VectorMA(vDest, q3, t, vDest);
-}
-
-/*
-=================
-Q_CrossProduct
-
-=================
-*/
-void FrustumCheck::Q_CrossProduct( Q_Vector v1, Q_Vector v2, Q_Vector cross )
-{
-	cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
-	cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
-	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 }

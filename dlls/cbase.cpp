@@ -27,7 +27,7 @@ void EntvarsKeyvalue( entvars_t *pev, KeyValueData *pkvd );
 
 void PM_Move ( struct playermove_s *ppmove, int server );
 void PM_Init ( struct playermove_s *ppmove  );
-int PM_FindTextureTypeID( std::string name );
+char PM_FindTextureTypeID( const char* name );
 
 void OnFreeEntPrivateData(edict_s* pEdict);
 

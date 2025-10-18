@@ -1534,7 +1534,7 @@ void TeamFortressViewport::ShowScoreBoard()
 	if (m_pScoreBoard)
 	{
 		// No Scoreboard in single-player
-		if ( gEngfuncs.GetMaxClients() > 1 )
+		if ( engine_cl->maxclients > 1 )
 		{
 			m_pScoreBoard->Open();
 			UpdateCursorState();
@@ -1708,7 +1708,7 @@ void TeamFortressViewport::UpdateSpectatorPanel()
 			strcat(helpString2, " - HLTV");
 
 		// check if we're locked onto a target, show the player's name
-		if ( (g_iUser2 > 0) && (g_iUser2 <= gEngfuncs.GetMaxClients()) && (g_iUser1 != OBS_ROAMING) )
+		if ( (g_iUser2 > 0) && (g_iUser2 <= engine_cl->maxclients) && (g_iUser1 != OBS_ROAMING) )
 		{
 			player = g_iUser2;
 		}

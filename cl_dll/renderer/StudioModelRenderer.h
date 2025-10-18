@@ -1,10 +1,9 @@
 /*
 Trinity Rendering Engine - Copyright Andrew Lucas 2009-2012
-Spirinity Rendering Engine - Copyright FranticDreamer 2020-2021
 
 The Trinity Engine is free software, distributed in the hope th-
-at it will be useful, but WITHOUT ANY WARRANTY; without even the 
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+at it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE. See the GNU Lesser General Public License for more det-
 ails.
 
@@ -14,22 +13,32 @@ Additional code written by Andrew Lucas
 Transparency code by Neil "Jed" Jedrzejewski
 */
 
-#if !defined ( STUDIOMODELRENDERER_H )
-#define STUDIOMODELRENDERER_H
-#if defined( _WIN32 )
 #pragma once
-#endif
 
 #include "windows.h"
-#include "gl/gl.h"
-#include "gl/glext.h"
 #include "dlight.h"
 
-#include "rendererdefs.h"
+#include <vector>
+#include <array>
+#include <list>
+#include <unordered_map>
 
-#define MAX_FRAGMENT_SHADERS 2
+#include "../renderer/rendererdefs.h"
 
-extern int g_iViewmodelSkin;
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#undef clamp
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+class GL_ShaderProgram;
+class GL_BufferHandler;
+class GL_VertexArrayObject;
+class StudioMDL_Model;
+class StudioMDL_BodyPart;
+class StudioMDL_Mesh;
+class StudioMDL_Texture;
 
 /*
 ====================
@@ -40,318 +49,366 @@ CStudioModelRenderer
 class CStudioModelRenderer
 {
 public:
-	// Construction/Destruction
-	CStudioModelRenderer( );
-	virtual ~CStudioModelRenderer( );
 
 	// Initialization
-	virtual void Init( );
-	virtual void VidInit( );
+	static void Init(void);
+	static void VidInit(void);
 
-public:  
-	// Public Interfaces
-	virtual int StudioDrawModel ( int flags );
-	virtual int StudioDrawPlayer ( int flags, struct entity_state_s *pplayer );
+private:
+
+	static void StudioDrawModel(int flags);
+	static void StudioDrawPlayer(int flags, struct entity_state_s* pplayer);
+
 
 public:
 	// Local interfaces
 	//
 
+	//	setup per-frame/per-pov info
+	static void StudioPreFrame(ref_params_t* pparams);
+
+	//	makes a render list sorted by models
+	static void StudioPushEntityToDraw(cl_entity_s* pEnt); //dont add entities twice as this function doesnt test against that. unless thats what you wanna do, be smart
+
+	// clears draw list
+	static void StudioClearDrawList();
+
+	// draw from list made by StudioMakeOrganizedRenderList
+	static void StudioDrawModels( bool bDrawLocalPlayer = true);
+	static void StudioDrawViewmodel();
+
+	// draw (to shadowmaps) from list made by StudioMakeOrganizedRenderList
+	static void StudioDrawModelsSolid();
+
+	// just so StudioDrawModels is a bit smaller and compact
+	static void StudioHandleDeadPlayer(int flags);
+
+	// cleanup a entity's custom data (m_pCurrentEntity->efrag)
+	static void StudioFreeEntity();
+
 	// Look up animation data for sequence
-	virtual mstudioanim_t *StudioGetAnim ( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc );
+	static mstudioanim_t* StudioGetAnim(model_t* m_pModel, mstudioseqdesc_t* pseqdesc);
 
 	// Interpolate model position and angles and set up matrices
-	virtual void StudioSetUpTransform ( int trivial_accept );
+	static void StudioSetUpTransform(int trivial_accept);
 
 	// Set up model bone positions
-	virtual void StudioSetupBones ( );	
+	static void StudioSetupBones(void);
 
 	// Find final attachment points
-	virtual void StudioCalcAttachments ( );
-
-	// Fixes engine's broken viewmodel events
-	virtual void StudioClientEvents();
+	static void StudioCalcAttachments(void);
 
 	// Determine interpolation fraction
-	virtual float StudioEstimateInterpolant( );
+	static float StudioEstimateInterpolant(void);
 
 	// Determine current frame for rendering
-	virtual float StudioEstimateFrame ( mstudioseqdesc_t *pseqdesc );
+	static float StudioEstimateFrame(mstudioseqdesc_t* pseqdesc);
 
 	// Apply special effects to transform matrix
-	virtual void StudioFxTransform( cl_entity_t *ent, float transform[3][4] );
+	static void StudioFxTransform(cl_entity_t* ent, matrix3x4_t transform);
 
 	// Spherical interpolation of bones
-	virtual void StudioSlerpBones ( vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s );
+	static void StudioSlerpBones(vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s);
 
 	// Compute bone adjustments ( bone controllers )
-	virtual void StudioCalcBoneAdj ( float dadt, float *adj, const byte *pcontroller1, const byte *pcontroller2, byte mouthopen );
+	static void StudioCalcBoneAdj(float dadt, float* adj, const byte* pcontroller1, const byte* pcontroller2, byte mouthopen);
 
 	// Get bone quaternions
-	virtual void StudioCalcBoneQuaterion ( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *q );
+	static void StudioCalcBoneQuaterion(int frame, float s, mstudiobone_t* pbone, mstudioanim_t* panim, float* adj, float* q);
 
 	// Get bone positions
-	virtual void StudioCalcBonePosition ( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *pos );
+	static void StudioCalcBonePosition(int frame, float s, mstudiobone_t* pbone, mstudioanim_t* panim, float* adj, float* pos);
 
 	// Compute rotations
-	virtual void StudioCalcRotations ( float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f );
+	static void StudioCalcRotations(float pos[][3], vec4_t* q, mstudioseqdesc_t* pseqdesc, mstudioanim_t* panim, float f);
+
+	//checks general mdl projection matrix and viewmdl projection matrix.
+	static void CheckProjection();
+
+	//client anim events
+	static void StudioClientEvents();
 
 	// Send bones and verts to renderer
-	virtual void StudioRenderModel ( );
+	static void StudioRenderModel(void);
 
 	// Finalize rendering
-	virtual void StudioRenderFinal ();
+	static void StudioRenderFinal(void);
 
-	virtual void StudioSaveBones( );
-	virtual void StudioMergeBones ( model_t *m_pSubModel );
+	static void StudioSaveBones(void);
+	static void StudioMergeBones(model_t* m_pSubModel);
 
 	// Player specific data
 	// Determine pitch and blending amounts for players
-	virtual void StudioPlayerBlend ( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch );
+	static void StudioPlayerBlend(mstudioseqdesc_t* pseqdesc, int* pBlend, float* pPitch);
 
 	// Estimate gait frame for player
-	virtual void StudioEstimateGait ( entity_state_t *pplayer );
+	static void StudioEstimateGait(entity_state_t* pplayer);
 
 	// Process movement of player
-	virtual void StudioProcessGait ( entity_state_t *pplayer );
+	static void StudioProcessGait(entity_state_t* pplayer);
 
 public:
 
-	// Client clock
-	double			m_clTime;				
-	// Old Client clock
-	double			m_clOldTime;			
-
 	// Do interpolation?
-	int				m_fDoInterp;			
+	static bool m_fDoInterp;
 	// Do gait estimation?
-	int				m_fGaitEstimation;		
-
-	// Current render frame #
-	int				m_nFrameCount;
+	static bool m_fGaitEstimation;
 
 	// Cvars that studio model code needs to reference
 	//
 	// Use high quality models?
-	cvar_t			*m_pCvarHiModels;	
+	static cvar_t* m_pCvarHiModels;
 	// Developer debug output desired?
-	cvar_t			*m_pCvarDeveloper;
+	static cvar_t* m_pCvarDeveloper;
 	// Draw entities bone hit boxes, etc?
-	cvar_t			*m_pCvarDrawEntities;
+	static cvar_t* m_pCvarDrawEntities;
+	// Draw viewmodel?
+	static cvar_t* m_pCvarDrawViewmodel;
 
 	// The entity which we are currently rendering.
-	cl_entity_t		*m_pCurrentEntity;		
+	static cl_entity_t* m_pCurrentEntity;
+
+	//extra ent data for static props
+	static entextradata_t* CStudioModelRenderer::m_pCurrentExtraData;
 
 	// The model for the entity being rendered
-	model_t			*m_pRenderModel;
+	static model_t* m_pRenderModel;
 
 	// Player info for current player, if drawing a player
-	player_info_t	*m_pPlayerInfo;
+	static player_info_t* m_pPlayerInfo;
 
 	// The index of the player being drawn
-	int				m_nPlayerIndex;
-
-	// The player's gait movement
-	float			m_flGaitMovement;
+	static int m_nPlayerIndex;
 
 	// Pointer to header block for studio model data
-	studiohdr_t		*m_pStudioHeader;
-	
+	static studiohdr_t* m_pStudioHeader;
+
 	// Pointers to current body part and submodel
-	mstudiobodyparts_t *m_pBodyPart;
-	mstudiomodel_t	*m_pSubModel;
+	static mstudiobodyparts_t* m_pBodyPart;
+	static mstudiomodel_t* m_pSubModel;
+
+	static StudioMDL_Model* m_pCurrentStudioMDL;
+	static studioentity_data_t* m_pCurrentStudioEntData;
 
 	// Palette substition for top and bottom of model
-	int				m_nTopColor;			
-	int				m_nBottomColor;
+	static int m_nTopColor;
+	static int m_nBottomColor;
 
 	//
 	// Sprite model used for drawing studio model chrome
-	model_t			*m_pChromeSprite;
-
-	// Current view vectors and render origin
-	float			m_vUp[ 3 ];
-	float			m_vRight[ 3 ];
-	float			m_vNormal[ 3 ];
-
-	float			m_vRenderOrigin[ 3 ];
-	
-	// Model render counters ( from engine )
-	int				*m_pStudioModelCount;
-	int				*m_pModelsDrawn;
+	static model_t* m_pChromeSprite;
 
 	// Matrices
 	// Model to world transformation
-	float			(*m_protationmatrix)[ 3 ][ 4 ];	
+	static matrix3x4_t(*m_protationmatrix);
 	// Model to view transformation
-	float			(*m_paliastransform)[ 3 ][ 4 ];	
+	static matrix3x4_t(*m_paliastransform);
 
 	// Concatenated bone and light transforms
-	float			(*m_pbonetransform) [ MAXSTUDIOBONES ][ 3 ][ 4 ];
-	float			(*m_plighttransform) [ MAXSTUDIOBONES ][ 3 ][ 4 ];
+	static matrix3x4_t (*m_pbonetransform)[MAXSTUDIOBONES];
+	static matrix3x4_t (*m_plighttransform)[MAXSTUDIOBONES];
+
+	static std::unordered_map<StudioMDL_Model*, std::vector<cl_entity_s*>> m_vStudioDrawList;
 
 	// Caching
 	// Number of bones in bone cache
-	int				m_nCachedBones; 
+	static int m_nCachedBones;
 	// Names of cached bones
-	char			m_nCachedBoneNames[ MAXSTUDIOBONES ][ 32 ];
+	static char m_nCachedBoneNames[MAXSTUDIOBONES][32];
 	// Cached bone & light transformation matrices
-	float			m_rgCachedBoneTransform [ MAXSTUDIOBONES ][ 3 ][ 4 ];
+	static matrix3x4_t m_rgCachedBoneTransform[MAXSTUDIOBONES];
 
 public:
-	virtual void	StudioSetupModel( int bodypart );
-	virtual void	StudioDrawPoints( );
-	virtual void	StudioDrawMesh( mstudiomesh_t *pmesh, mstudiotexture_t *ptex );
-	virtual void	StudioDrawWireframe( );
+	static void StudioSetupModel(int bodypart);
+	static void StudioDrawPoints(StudioMDL_BodyPart* bodypart);
+	static void StudioDrawMesh(StudioMDL_Mesh* pmesh, StudioMDL_Texture* ptex);
+	static void StudioDrawWireframe(void);
 
-	virtual void	StudioSetupTextureHeader( );
-	virtual void	StudioSetupRenderer( int rendermode );
-	virtual void	StudioRestoreRenderer( );
-	virtual qboolean	StudioCheckBBox( );
+	static void StudioSetupRenderer(int rendermode);
+	static qboolean StudioCheckBBox(void);
 
-	virtual void	StudioEntityLight( );
-	virtual bool	StudioCullBBox( const Vector &mins, const Vector &maxs );
+	static void StudioEntityLight(void);
+	static bool StudioCullBBox(const Vector& mins, const Vector& maxs);
 
-	virtual void	StudioSetupLighting( bool bStatic = false );
-	virtual int		StudioRecursiveLightPoint(entextrainfo_t* ext, mnode_t* node, const Vector& start, const Vector& end, Vector& color, bool bStatic = false, bool isParticle = false);
-	
-	virtual void	StudioSetTextureFlags( );
-	virtual void	StudioSetChromeVectors( );
-	virtual void	StudioChromeForMesh( int j, mstudiomesh_t *pmesh );
+	static void StudioSetupLighting(void);
+	static bool StudioRecursiveLightPoint(entextrainfo_t* ext, mnode_t* node, Vector start, Vector end, Vector& color);
 
-	virtual void	StudioSwapEngineCache( );
+	static void StudioSwapEngineCache(void);
 
-	virtual entextrainfo_t *StudioAllocExtraInfo( );
+	static entextrainfo_t* StudioAllocExtraInfo(void);
 
-	virtual void	StudioDrawBBox( );
-	virtual void	StudioDrawModelSolid( );
-	virtual void	StudioDrawPointsSolid( );
+	static void StudioDrawBBox(void);
+	static void StudioDrawModelSolid(void);
+	static void StudioDrawPlayerSolid(entity_state_t* pplayer);
+	static void StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart);
 
-	float			m_fChrome[MAXSTUDIOVERTS][2];
-	Vector			m_vChromeUp[MAXSTUDIOBONES];
-	Vector			m_vChromeRight[MAXSTUDIOBONES];
+	static Vector m_vMins;
+	static Vector m_vMaxs;
 
-	studiohdr_t		*m_pTextureHeader;
+	static Vector m_vVertexTransform[MAXSTUDIOVERTS]; // transformed vertices
+	static Vector m_vNormalTransform[MAXSTUDIOVERTS]; // transformed normals
 
-	Vector			m_vMins;
-	Vector			m_vMaxs;
+	static Vector* m_pVertexTransform; // pointer to vertex transform
+	static Vector* m_pNormalTransform; // pointer to normal transform
 
-	Vector			m_vVertexTransform[MAXSTUDIOVERTS];	// transformed vertices
-	Vector			m_vNormalTransform[MAXSTUDIOVERTS]; // transformed normals
+	static lighting_ext m_pLighting; // buz
 
-	Vector			*m_pVertexTransform; // pointer to vertex transform
-	Vector			*m_pNormalTransform; // pointer to normal transform
+	static mlight_t* m_pModelLights[MAX_MODEL_LIGHTS];
+	static int m_iNumModelLights;
 
-	lighting_ext	m_pLighting; // buz
+	static entextrainfo_t m_pExtraInfo[MAXRENDERENTS];
+	static int m_iNumExtraInfo;
 
-	mlight_t		*m_pModelLights[MAX_MODEL_LIGHTS];
-	int				m_iNumModelLights;
+	static float m_flLastFov, m_flLastVMFov;
 
-	entextrainfo_t	m_pExtraInfo[MAXRENDERENTS];
-	int				m_iNumExtraInfo;
+	static double m_fStudioMDLRenderTime;
 
-	float			m_fAlpha;
+	static bool m_bExternalEntity;
+	static bool m_bChromeShell;
+	static bool m_bShadowMapOn;
 
-	bool			m_bUseBlending;
-	bool			m_bExternalEntity;
-	bool			m_bChromeShell;
+	// glsl start
 
-	int				m_iCurrentBinding;
-	int				m_iEngineBinding;
+	static GL_BufferHandler* m_Model_PerEntityBuffer;
+	static GL_BufferHandler* m_Model_PerFrameBuffer;
+	static GL_BufferHandler* m_ModelBones_Buffer;
+	static GL_BufferHandler* m_ModelSolid_Buffer;
 
-	cvar_t			*m_pCvarDrawModels;
-	cvar_t			*m_pCvarModelsBBoxDebug;
-	cvar_t			*m_pCvarModelsLightDebug;
-	cvar_t			*m_pCvarModelShaders;
-	cvar_t			*m_pCvarModelDecals;
-	cvar_t			*m_pCvarGlowShellFreq;
+	static GL_ShaderProgram *m_ModelShader;
+	static GL_ShaderProgram *m_ModelSolidShader;
 
-	cvar_t			*m_pCvarSkyVecX;
-	cvar_t			*m_pCvarSkyVecY;
-	cvar_t			*m_pCvarSkyVecZ;
+	enum modelshader_uniforms
+	{
+		mdlshader_texturescale,
+		mdlshader_viewmodel,
 
-	cvar_t			*m_pCvarSkyColorX;
-	cvar_t			*m_pCvarSkyColorY;
-	cvar_t			*m_pCvarSkyColorZ;
+		mdlshader_texturematrix,
+
+		mdlshader_fullbright,
+		mdlshader_wireframe,
+		mdlshader_chrometexture,
+
+
+
+		_mdlshader_uniformsize //must be last
+	};
+
+	static GLuint m_ModelShaderLocs[_mdlshader_uniformsize];
+
+	enum modelshadersolid_uniforms
+	{
+		mdlshadersolid_texturescale = 0,
+		mdlshadersolid_sunshadow,
+		mdlshadersolid_alphatest,
+
+		_mdlshadersolid_uniformsize //must be last
+	};
+
+	static GLuint m_ModelShaderSolidLocs[_mdlshadersolid_uniformsize];
+
+	static glm::mat4 m_VM_ProjectionMatrix;
+
+	struct mdlshadersolid_data_t
+	{
+		glm::mat4 projviewmatrix;
+		glm::mat4 modelmatrix;
+		glm::vec4 light_pos;
+		glm::ivec4 int_values; // x represents if we're rendering a static model or not
+
+		matrix3x4_t bonematrixes[128];
+	};
+
+	struct mdlshader_perframedata_t
+	{
+		glm::mat4 projviewmatrix;
+		glm::mat4 VMprojviewmatrix;
+		glm::vec4 fogcolor_n_fogstart; // w = fogstart
+		glm::vec4 fogend_n_fogactive_n_lightdebug;  // x = fogend, y = fogactive, z = light debug cvar
+
+		// w is empty for both these :( wasted space
+
+		glm::vec4 renderorigin;
+		glm::vec4 renderright;
+	};
+
+	struct mdlshader_perentitydata_t
+	{
+		glm::vec4 lightdir;
+		glm::vec4 ambientlight;
+		glm::vec4 diffuselight;
+
+		glm::mat4 modelmatrix;
+
+		glm::ivec4 int_values; // x = numlights; y = chromeshell boolean; z = is this entity is static (prop_static) or not
+
+		glm::mat3x4 modellight_info[MAX_MODEL_LIGHTS];
+	};
+
+	static mdlshadersolid_data_t m_dSolidModelData;
+	static mdlshader_perframedata_t m_dModelPerFrameData;
+	static mdlshader_perentitydata_t m_dModelPerEntityData;
+
+	// glsl end
+
+	static cvar_t* m_pCvarDrawStudioModels;
+	static cvar_t* m_pCvarStudioModelBBox;
+	static cvar_t* m_pCvarStudioModelLightDebug;
+	static cvar_t* m_pCvarStudioModelDecals;
+	static cvar_t* m_pCvarGlowShellFreq;
+
+	static cvar_t* m_pCvarSkyVecX;
+	static cvar_t* m_pCvarSkyVecY;
+	static cvar_t* m_pCvarSkyVecZ;
+
+	static cvar_t* m_pCvarSkyColorX;
+	static cvar_t* m_pCvarSkyColorY;
+	static cvar_t* m_pCvarSkyColorZ;
+
+	static cvar_t* m_pCvarViewmodelFov;
 
 public:
-	virtual void	StudioDrawExternalEntity( cl_entity_t *pEntity );
-	virtual void	StudioRenderModelEXT( );
-	virtual void	StudioDrawPointsEXT( );
-	virtual void	StudioDrawMeshEXT( mstudiotexture_t *ptex, vbomesh_t *pmesh );
-	virtual void	StudioDrawWireframeEXT( );
-	
-	virtual void	StudioDrawExternalEntitySolid( cl_entity_t *pEntity );
-	virtual void	StudioDrawPointsSolidEXT( );
+	static void StudioDrawExternalEntity(cl_entity_t* pEntity, bool bSkybox = false);
+	static void StudioSetupLightingEXT(void);
+	static void StudioRenderModelEXT(void);
+	static void StudioDrawPointsEXT(void);
+	static void StudioDrawMeshEXT(StudioMDL_Texture *ptex, vbomesh_t* pmesh);
+	static void StudioDrawWireframeEXT(void);
 
-	virtual void	StudioSaveModelData( modeldata_t *pExtraData );
-	virtual void	StudioSaveUniqueData( entextradata_t *pExtraData );
-	virtual void	StudioManageVertex( studiovert_t *pvert );
+	static void StudioDrawExternalEntitySolid(cl_entity_t* pEntity);
+	static void StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart, int baseindex);
 
-	vboheader_t		*m_pVBOHeader;
-	vbosubmodel_t	*m_pVBOSubModel;
+	static void StudioSaveModelData(modeldata_t* pExtraData);
+	static void StudioSaveUniqueData(entextradata_t* pExtraData);
+	static void StudioManageVertex(studiovert_t* pvert);
 
-	int				m_iNumEngineCacheModels;
-public:
-	virtual model_t	*Mod_LoadModel( char *szName );
-	virtual void	Mod_LoadTexture( mstudiotexture_t *ptexture, byte *pbuffer, char *szmodelname );
-
-	model_t			m_pStudioModels[MAX_CACHE_MODELS];
-	int				m_iNumStudioModels;
-	
-	studiovert_t	m_pRefArray[65535];
-	int				m_iNumRefVerts;
-
-	brushvertex_t	m_pVBOVerts[65535];
-	int				m_iNumVBOVerts;
-
-	unsigned int	m_usIndexes[65535];
-	int				m_iNumIndexes;
-	int				m_iCurStart;
+	static vboheader_t* m_pVBOHeader;
+	static vbosubmodel_t* m_pVBOSubModel;
 
 public:
-	virtual void	StudioDrawDecals( );
-	virtual studiodecal_t *StudioAllocDecal( );
-	virtual studiodecal_t *StudioAllocDecalSlot( );
 
-	virtual void	StudioDecalExternal( Vector vpos, Vector vnorm, const char *name );
-	virtual void	StudioDecalForEntity( Vector position, Vector normal, const char *szName, cl_entity_t *pEntity );
-	virtual void	StudioDecalForSubModel( Vector position, Vector normal, studiodecal_t *decal );
-	virtual void	StudioDecalTriangle( studiotri_t *tri, Vector position, Vector normal, studiodecal_t *decal );
+	static std::vector<studiovert_t> m_pRefArray;
 
-	studiodecal_t	m_pStudioDecals[MAX_CUSTOMDECALS];
-	int				m_iNumStudioDecals;
+	static std::vector<brushvertex_t> m_pVBOVerts;
 
-	// Render distance
-	cvar_t* m_pCvarRenderDistance;
+	static std::vector<unsigned int> m_usIndexes;
 
-	//glsl start
+	static int m_iCurStart;
 
-	GLuint m_ModelShader;
+public:
+	static studioentity_data_t* StudioAllocEntityData(void);
 
-	GLuint m_uiUniformLoc_modelviewmatrix;
-	GLuint m_uiUniformLoc_projectionmatrix;
-	GLuint m_uiUniformLoc_lightdir;
-	GLuint m_uiUniformLoc_ambientlight;
-	GLuint m_uiUniformLoc_diffuselight;
-	GLuint m_uiUniformLoc_numlights;
-	GLuint m_uiUniformLoc_fog;
-	GLuint m_uiUniformLoc_texture0;
+public:
+	static void StudioDrawDecals(void);
+	static studiodecal_t* StudioAllocDecal(void);
+	static studiodecal_t* StudioAllocDecalSlot(void);
 
-	GLuint m_uiUniformLoc_texturescale;
+	static void StudioDecalExternal(Vector vpos, Vector vnorm, const char* name);
+	static void StudioDecalForEntity(Vector position, Vector normal, const char* szName, cl_entity_t* pEntity);
+	static void StudioDecalForSubModel(Vector position, Vector normal, studiodecal_t* decal);
+	static void StudioDecalTriangle(studiotri_t* tri, Vector position, Vector normal, studiodecal_t* decal);
 
-	GLuint m_uiUniformLoc_texturematrix;
-
-	//glsl end
-
-
-private:
-
-	cvar_t* m_pSkylightDirX;
-	cvar_t* m_pSkylightDirY;
-	cvar_t* m_pSkylightDirZ;
-
-
+	static std::vector<std::unique_ptr<studiodecal_t>> m_pStudioDecals;
+	static std::vector<std::unique_ptr<studioentity_data_t>> m_pStudioEntityData;
 };
 
-#endif // STUDIOMODELRENDERER_H
+extern CStudioModelRenderer g_StudioRenderer;

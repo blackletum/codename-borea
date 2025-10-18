@@ -51,7 +51,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\</OutDir>
     <TargetName>client</TargetName>
-    <IntDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\int\</IntDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\int\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -74,6 +74,10 @@
       <AdditionalDependencies>..\..\utils\vgui\lib\win32_vc6\vgui.lib;wsock32.lib;winmm.lib;Avrt.lib;..\..\lib\public\sdl2.lib;opengl32.lib;..\..\lib\Debug\libnyquist.lib;..\..\lib\Debug\OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <BaseAddress>
       </BaseAddress>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
+      <ForceSymbolReferences>
+      </ForceSymbolReferences>
     </Link>
     <PostBuildEvent>
       <Command>cd /D "$(ProjectDir)..\.."
@@ -93,7 +97,7 @@ EXIT /B 0</Command>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OPFOR;AL_LIBTYPE_STATIC;WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;CLIENT_DLL;CLIENT_WEAPONS;HL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\dlls;..\..\include;..\..\cl_dll;..\..\cl_dll\renderer\..\..\public;..\..\common;..\..\pm_shared;..\..\engine;..\..\utils\vgui\include;..\..\game_shared;..\..\external;..\..\external\imgui;..\..\external\discord_sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\dlls;..\..\include;..\..\cl_dll\renderer;..\..\cl_dll;..\..\public;..\..\common;..\..\pm_shared;..\..\engine;..\..\utils\vgui\include;..\..\game_shared;..\..\external;..\..\external\imgui;..\..\external\discord_sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <AdditionalOptions>/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -112,6 +116,8 @@ EXIT /B 0</Command>
       <AdditionalDependencies>..\..\utils\vgui\lib\win32_vc6\vgui.lib;wsock32.lib;winmm.lib;Avrt.lib;..\..\lib\public\sdl2.lib;opengl32.lib;..\..\lib\Release\libnyquist.lib;..\..\lib\Release\OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <BaseAddress>
       </BaseAddress>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -132,6 +138,7 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\cl_dll\engine_hookfuncs.cpp" />
     <ClCompile Include="..\..\cl_dll\entity.cpp" />
     <ClCompile Include="..\..\cl_dll\events.cpp" />
+    <ClCompile Include="..\..\cl_dll\event_api.cpp" />
     <ClCompile Include="..\..\cl_dll\ev_common.cpp" />
     <ClCompile Include="..\..\cl_dll\ev_hldm.cpp" />
     <ClCompile Include="..\..\cl_dll\flashlight.cpp" />
@@ -161,16 +168,29 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\cl_dll\regs\reGS_enginehook.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\bloom.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\blur.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\BSPModelGen.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\bsprenderer.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\frustum.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\goldsrc_beamrenderer.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\goldsrc_spriterenderer.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\goldsrc_tracerrenderer.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\HLHudSprites.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\imgui_manager.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\lensflare.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\mirrormanager.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_Buffers.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_DebugInterface.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_FBO.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_ShaderProgram.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_ShadowMap.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_StateHandler.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_TextureHandler.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_VertexArrayObject.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\particle_engine.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\postprocess.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\propmanager.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\rendererdefs.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\StudioMDL_MeshGen.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\StudioModelRenderer.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\textureloader.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\tri.cpp" />
@@ -290,13 +310,38 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\cl_dll\regs\reGS_enginehook.h" />
     <ClInclude Include="..\..\cl_dll\regs\reGS_patterns.hpp" />
     <ClInclude Include="..\..\cl_dll\renderer\blur.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\BSPModel_Gen.h" />
     <ClInclude Include="..\..\cl_dll\renderer\bsprenderer.h" />
     <ClInclude Include="..\..\cl_dll\renderer\frustum.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\bsp_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\decal_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\gaussianblur_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\mirror_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\particle_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\shadow\bsp_solid_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\shadow\studiomdl_solid_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\skybox_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\sprite_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\studiomdl_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\water_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\goldsrc_beamrenderer.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\goldsrc_spriterenderer.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\goldsrc_tracerrenderer.h" />
     <ClInclude Include="..\..\cl_dll\renderer\mirrormanager.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_Buffers.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_DebugInterface.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_FBO.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_ShaderProgram.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_ShadowMap.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_StateHandler.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_TextureHandler.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_VertexArrayObject.h" />
     <ClInclude Include="..\..\cl_dll\renderer\particle_engine.h" />
     <ClInclude Include="..\..\cl_dll\renderer\postprocess.h" />
     <ClInclude Include="..\..\cl_dll\renderer\propmanager.h" />
     <ClInclude Include="..\..\cl_dll\renderer\rendererdefs.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\stb_image_write.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\StudioMDL_MeshGen.h" />
     <ClInclude Include="..\..\cl_dll\renderer\StudioModelRenderer.h" />
     <ClInclude Include="..\..\cl_dll\renderer\textureloader.h" />
     <ClInclude Include="..\..\cl_dll\renderer\tri.h" />

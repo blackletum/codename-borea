@@ -89,7 +89,7 @@ char *EV_HLDM_HDDecal( pmtrace_t *ptr, physent_t *pe, float *vecSrc, float *vecE
 	char szbuffer[ 64 ];
 	static char decalname[ 32 ];
 
-	entity = gEngfuncs.pEventAPI->EV_IndexFromTrace( ptr );
+	entity = EV_IndexFromTrace( ptr );
 
 	if ( pe && pe->solid == SOLID_BSP )
 	{
@@ -103,7 +103,7 @@ char *EV_HLDM_HDDecal( pmtrace_t *ptr, physent_t *pe, float *vecSrc, float *vecE
 		{
 
 			// get texture from entity or world (world is ent(0))
-			pTextureName = (char*)gEngfuncs.pEventAPI->EV_TraceTexture(ptr->ent, vecSrc, vecEnd);
+			pTextureName = (char*)EV_TraceTexture(ptr->ent, vecSrc, vecEnd);
 			pStart = pTextureName;
 
 			if(pTextureName && strcmp("black", pTextureName))
@@ -140,7 +140,7 @@ char *EV_HLDM_HDDecal( pmtrace_t *ptr, physent_t *pe, float *vecSrc, float *vecE
 	if(pStart[0] == '{')
 		return nullptr;
 
-	cl_entity_t *pHit = gEngfuncs.GetEntityByIndex(gEngfuncs.pEventAPI->EV_IndexFromTrace(ptr));
+	cl_entity_t *pHit = gEngfuncs.GetEntityByIndex(EV_IndexFromTrace(ptr));
 
 	/*
 	for(auto particleGroup : g_texTypeImpactTypeVector)
@@ -218,7 +218,7 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 	char texname[ 64 ];
 	char szbuffer[ 64 ];
 
-	entity = gEngfuncs.pEventAPI->EV_IndexFromTrace( ptr );
+	entity = EV_IndexFromTrace( ptr );
 
 	// FIXME check if playtexture sounds movevar is set
 	//
@@ -226,7 +226,7 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 	//chStepType = 0;
 
 	// Player
-	if ( entity >= 1 && entity <= gEngfuncs.GetMaxClients() )
+	if ( entity >= 1 && entity <= engine_cl->maxclients )
 	{
 		// hit body
 		chTextureType = g_TextureTypeMap["CHAR_TEX_FLESH"];
@@ -234,7 +234,7 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 	else if ( entity == 0 )
 	{
 		// get texture from entity or world (world is ent(0))
-		pTextureName = (char *)gEngfuncs.pEventAPI->EV_TraceTexture( ptr->ent, vecSrc, vecEnd );
+		pTextureName = (char *)EV_TraceTexture( ptr->ent, vecSrc, vecEnd );
 		
 		if ( pTextureName )
 		{
@@ -319,7 +319,7 @@ void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName )
 		}
 	}
 
-	pe = gEngfuncs.pEventAPI->EV_GetPhysent( pTrace->ent );
+	pe = EV_GetPhysent( pTrace->ent );
 
 //RENDERERS START
 	// Only decal brush models such as the world etc.
@@ -337,7 +337,7 @@ void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType, float *vecSrc, fl
 {
 	physent_t *pe;
 
-	pe = gEngfuncs.pEventAPI->EV_GetPhysent( pTrace->ent );
+	pe = EV_GetPhysent( pTrace->ent );
 
 	if ( pe && pe->solid == SOLID_BSP )
 	{
@@ -366,7 +366,7 @@ int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, flo
 {
 	int tracer = 0;
 	int i;
-	qboolean player = idx >= 1 && idx <= gEngfuncs.GetMaxClients() ? true : false;
+	qboolean player = idx >= 1 && idx <= engine_cl->maxclients ? true : false;
 
 	if ( iTracerFreq != 0 && ( (*tracerCount)++ % iTracerFreq) == 0 )
 	{
@@ -461,12 +461,12 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 		gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
 	
 		// Store off the old count
-		gEngfuncs.pEventAPI->EV_PushPMStates();
+		EV_PushPMStates();
 	
 		// Now add in all of the players.
 		gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
 
-		gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+		EV_SetTraceHull( 2 );
 		gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_STUDIO_BOX, -1, &tr );
 
 		tracer = EV_HLDM_CheckTracer( idx, vecSrc, tr.endpos, forward, right, iBulletType, iTracerFreq, tracerCount );
@@ -534,7 +534,7 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 			}
 		}
 
-		gEngfuncs.pEventAPI->EV_PopPMStates();
+		EV_PopPMStates();
 	}
 }
 
@@ -564,9 +564,9 @@ void EV_FireGlock1( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 
 	empty = args->bparam1;
-	AngleVectors( angles, forward, right, up );
+	AngleVectors( angles, &forward, &right, &up );
 
-	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shell.mdl");// brass shell
+	shell = EV_FindModelIndex ("models/shell.mdl");// brass shell
 
 	if ( EV_IsLocal( idx ) )
 	{
@@ -608,9 +608,9 @@ void EV_FireGlock2( event_args_t *args )
 	VectorCopy( args->angles, angles );
 	VectorCopy( args->velocity, velocity );
 
-	AngleVectors( angles, forward, right, up );
+	AngleVectors( angles, &forward, &right, &up );
 
-	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shell.mdl");// brass shell
+	shell = EV_FindModelIndex ("models/shell.mdl");// brass shell
 
 	if ( EV_IsLocal( idx ) )
 	{
@@ -623,7 +623,7 @@ void EV_FireGlock2( event_args_t *args )
 
 	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4 );
 
-	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, right ); 
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL); 
 
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/pl_gun3.wav", gEngfuncs.pfnRandomFloat(0.92, 1.0), ATTN_NORM, 0, 98 + gEngfuncs.pfnRandomLong( 0, 3 ) );
 
@@ -662,9 +662,9 @@ void EV_FireShotGunDouble( event_args_t *args )
 	VectorCopy( args->angles, angles );
 	VectorCopy( args->velocity, velocity );
 
-	AngleVectors( angles, forward, right, up );
+	AngleVectors( angles, &forward, &right, &up );
 
-	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shotgunshell.mdl");// brass shell
+	shell = EV_FindModelIndex ("models/shotgunshell.mdl");// brass shell
 
 	if ( EV_IsLocal( idx ) )
 	{
@@ -678,7 +678,7 @@ void EV_FireShotGunDouble( event_args_t *args )
 	{
 		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 12 );
 
-		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL, right ); 
+		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL); 
 	}
 
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/m67_fire.wav", gEngfuncs.pfnRandomFloat(0.98, 1.0), ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
@@ -686,7 +686,7 @@ void EV_FireShotGunDouble( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	if ( gEngfuncs.GetMaxClients() > 1 )
+	if ( engine_cl->maxclients > 1 )
 	{
 		EV_HLDM_FireBullets( idx, forward, right, up, 8, vecSrc, vecAiming, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1], 0.17365, 0.04362 );
 	}
@@ -716,9 +716,9 @@ void EV_FireShotGunSingle( event_args_t *args )
 	VectorCopy( args->angles, angles );
 	VectorCopy( args->velocity, velocity );
 
-	AngleVectors( angles, forward, right, up );
+	AngleVectors( angles, &forward, &right, &up );
 
-	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shotgunshell.mdl");// brass shell
+	shell = EV_FindModelIndex ("models/shotgunshell.mdl");// brass shell
 
 	if ( EV_IsLocal( idx ) )
 	{
@@ -731,14 +731,14 @@ void EV_FireShotGunSingle( event_args_t *args )
 
 	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 12 );
 
-	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL, right);
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL);
 
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/m67_fire.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
 
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	if ( gEngfuncs.GetMaxClients() > 1 )
+	if ( engine_cl->maxclients > 1 )
 	{
 		EV_HLDM_FireBullets( idx, forward, right, up, 4, vecSrc, vecAiming, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1], 0.08716, 0.04362 );
 	}
@@ -773,9 +773,9 @@ void EV_FireMP5( event_args_t *args )
 	VectorCopy( args->angles, angles );
 	VectorCopy( args->velocity, velocity );
 
-	AngleVectors( angles, forward, right, up );
+	AngleVectors( angles, &forward, &right, &up );
 
-	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shell.mdl");// brass shell
+	shell = EV_FindModelIndex ("models/shell.mdl");// brass shell
 	
 	if ( EV_IsLocal( idx ) )
 	{
@@ -788,7 +788,7 @@ void EV_FireMP5( event_args_t *args )
 
 	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4 );
 
-	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, right);
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL);
 
 	/* Aynekko: disable this
 	switch( gEngfuncs.pfnRandomLong( 0, 1 ) )
@@ -804,7 +804,7 @@ void EV_FireMP5( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	if ( gEngfuncs.GetMaxClients() > 1 )
+	if ( engine_cl->maxclients > 1 )
 	{
 		EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, 8192, BULLET_PLAYER_MP5, 2, &tracerCount[idx-1], args->fparam1, args->fparam2 );
 	}
@@ -834,12 +834,12 @@ void EV_FirePython( event_args_t *args )
 	VectorCopy( args->angles, angles );
 	VectorCopy( args->velocity, velocity );
 
-	AngleVectors( angles, forward, right, up );
+	AngleVectors( angles, &forward, &right, &up );
 	
 	if ( EV_IsLocal( idx ) )
 	{
 		// Python uses different body in multiplayer versus single player
-		int multiplayer = gEngfuncs.GetMaxClients() == 1 ? 0 : 1;
+		int multiplayer = engine_cl->maxclients == 1 ? 0 : 1;
 
 		const auto body = multiplayer ? 1 : 0;
 

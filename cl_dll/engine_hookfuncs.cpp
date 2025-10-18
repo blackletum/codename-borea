@@ -4,24 +4,32 @@
 
 #include "com_model.h"
 #include "triangleapi.h"
+#include "net_api.h"
 
 #include "client_state.h"
+#include "Exports.h"
 
-#include "StudioModelRenderer.h"
+#include "renderer/StudioModelRenderer.h"
 
-#include "particle_engine.h"
-#include "bsprenderer.h"
+#include "renderer/particle_engine.h"
+#include "renderer/bsprenderer.h"
+#include "renderer/goldsrc_beamrenderer.h"
+#include "renderer/goldsrc_tracerrenderer.h"
+#include "renderer/opengl_utils/GL_StateHandler.h"
+//
+//	Dont worry, this doesnt do any intense raw dll-level function hacking, (like some other mods...) 
+//  this only hooks the given gEngfuncs functions, which arent inlined, and the engine's "cl" 
+//	variable (by calculating address offset of cl.viewent that is given to us with &engine_cl->viewent.
+//	thank meetem for this) that holds some important and useful stuff, like the raw list of precached models,
+//	precached weapon events, etc. this should be compatible with other versions of goldsrc with minimal effort.
+//
 
-#include "entity_types.h"
 
 // Global engine <-> studio model rendering code interface
 extern engine_studio_api_t IEngineStudio;
 
-extern CStudioModelRenderer g_StudioRenderer;
-
-extern int CL_Internal_AddEntity(int type, cl_entity_t* ent);
-
 client_state_s* engine_cl = nullptr;
+client_static_s* engine_cls = nullptr;
 
 extern model_t* cl_sprite_dot;
 extern model_t* cl_sprite_lightning;
@@ -31,7 +39,7 @@ extern model_t* cl_sprite_muzzleflash[3];
 extern model_t* cl_sprite_ricochet;
 extern model_t* cl_sprite_shell;
 
-std::vector<TEMPENTITY*> gpTempEnts;
+std::vector<std::unique_ptr<TEMPENTITY>> gpTempEnts;
 
 
 int ModelFrameCount(model_t* model)
@@ -68,8 +76,6 @@ void SinCos_(float radians, float* sine, float* cosine)
 	*sine = sin(radians);
 	*cosine = cos(radians);
 }
-
-#define MAX_TEMPENTS 4096
 
 
 
@@ -121,7 +127,8 @@ FuncHook(CL_TempEntAlloc, TEMPENTITY*, float* org, struct model_s* model)
 		return nullptr;
 	}
 
-	TEMPENTITY* tempent = new TEMPENTITY{};
+	std::unique_ptr<TEMPENTITY> tempent_ptr = std::make_unique<TEMPENTITY>();
+	TEMPENTITY* tempent = tempent_ptr.get();
 
 	memset(&tempent->entity, 0, sizeof(cl_entity_t));
 	tempent->flags = 0;
@@ -136,7 +143,7 @@ FuncHook(CL_TempEntAlloc, TEMPENTITY*, float* org, struct model_s* model)
 	tempent->priority = 0;
 	tempent->entity.origin = org;
 
-	gpTempEnts.push_back(tempent);
+	gpTempEnts.emplace_back(std::move(tempent_ptr));
 
 	return tempent;
 	//return OrigCL_TempEntAlloc(org, model);
@@ -149,7 +156,8 @@ FuncHook(CL_TempEntAllocNoModel, TEMPENTITY*, float* org)
 		return nullptr;
 	}
 
-	TEMPENTITY* tempent = new TEMPENTITY{};
+	std::unique_ptr<TEMPENTITY> tempent_ptr = std::make_unique<TEMPENTITY>();
+	TEMPENTITY* tempent = tempent_ptr.get();
 
 	memset(&tempent->entity, 0, sizeof(cl_entity_t));
 	tempent->flags |= FTENT_NOMODEL;
@@ -164,7 +172,7 @@ FuncHook(CL_TempEntAllocNoModel, TEMPENTITY*, float* org)
 	tempent->priority = 0;
 	tempent->entity.origin = org;
 
-	gpTempEnts.push_back(tempent);
+	gpTempEnts.emplace_back(std::move(tempent_ptr));
 
 	return tempent;
 }
@@ -176,7 +184,8 @@ FuncHook(CL_TempEntAllocHigh, TEMPENTITY*, float* org, struct model_s* model)
 		return nullptr;
 	}
 
-	TEMPENTITY* tempent = new TEMPENTITY{};
+	std::unique_ptr<TEMPENTITY> tempent_ptr = std::make_unique<TEMPENTITY>();
+	TEMPENTITY* tempent = tempent_ptr.get();
 
 	memset(&tempent->entity, 0, sizeof(cl_entity_t));
 	tempent->flags |= FTENT_NOMODEL;
@@ -191,7 +200,7 @@ FuncHook(CL_TempEntAllocHigh, TEMPENTITY*, float* org, struct model_s* model)
 	tempent->priority = 0;
 	tempent->entity.origin = org;
 
-	gpTempEnts.push_back(tempent);
+	gpTempEnts.emplace_back(std::move(tempent_ptr));
 
 	return tempent;
 }
@@ -214,7 +223,7 @@ FuncHook(CL_TentEntAllocCustom, TEMPENTITY*, float* origin, struct model_s* mode
 
 FuncHook(R_AllocParticle, particle_t*, void (*callback)(struct particle_s* particle, float frametime))
 {
-	return OrigR_AllocParticle(callback);
+	return nullptr;
 }
 
 FuncHook(R_BlobExplosion, void, float* org)
@@ -226,51 +235,66 @@ FuncHook(R_Blood, void, float* org, float* dir, int pcolor, int speed)
 {
 	OrigR_Blood(org, dir, pcolor, speed);
 }
+
+extern char* UTIL_VarArgs_client(const char* format, ...);
+
 FuncHook(R_BloodSprite, void, float* org, int colorindex, int modelIndex, int modelIndex2, float size)
 {
-	OrigR_BloodSprite(org, colorindex, modelIndex, modelIndex2, size);
+
 }
 FuncHook(R_BloodStream, void, float* org, float* dir, int pcolor, int speed)
 {
 	OrigR_BloodStream(org, dir, pcolor, speed);
 }
 
-#define SHARD_VOLUME		12.0f	// on shard ever n^3 units
+#define SHARD_VOLUME 12.0f // on shard ever n^3 units
 
 FuncHook(R_BreakModel, void, float* pos, float* size, float* dir, float random, float life, int count, int modelIndex, char flags)
 {
+	int i, frameCount;
+	TEMPENTITY* pTemp;
+	model_t* pModel;
+	char type;
+
 	if (!modelIndex)
 		return;
 
-	model_t* modelbyindex = IEngineStudio.GetModelByIndex(modelIndex);
-	if (!modelbyindex)
+	type = flags & BREAK_TYPEMASK;
+
+	pModel = engine_cl->model_precache[modelIndex];
+	if (!pModel)
 		return;
 
-	auto RandomLong = gEngfuncs.pfnRandomLong;
-	auto RandomFloat = gEngfuncs.pfnRandomFloat;
+	frameCount = ModelFrameCount(pModel);
 
-	int framecount = ModelFrameCount(modelbyindex);
-
-	if(count == 0)
-	{
+	if (count == 0)
+		// assume surface (not volume)
 		count = (size[0] * size[1] + size[1] * size[2] + size[2] * size[0]) / (3 * SHARD_VOLUME * SHARD_VOLUME);
-	}
 
-	for (int i = 0; i < count; i++)
+	auto RandomFloat = gEngfuncs.pfnRandomFloat;
+	auto RandomLong = gEngfuncs.pfnRandomLong;
+
+	for (i = 0; i < count; i++)
 	{
-		Vector vecSpot = pos;
+		Vector vecSpot;
 
-		TEMPENTITY* pTemp = Hooked_CL_TempEntAlloc(vecSpot, modelbyindex);
+		// fill up the box with stuff
+
+		vecSpot[0] = pos[0] + RandomFloat(-0.5, 0.5) * size[0];
+		vecSpot[1] = pos[1] + RandomFloat(-0.5, 0.5) * size[1];
+		vecSpot[2] = pos[2] + RandomFloat(-0.5, 0.5) * size[2];
+
+		pTemp = Hooked_CL_TempEntAlloc(vecSpot, pModel);
 		if (!pTemp)
-			return;
+			break;
 
 		// keep track of break_type, so we know how to play sound on collision
-		pTemp->hitSound = flags & BREAK_TYPEMASK;
+		pTemp->hitSound = type;
 
-		if (modelbyindex->type == mod_sprite)
-			pTemp->entity.curstate.frame = RandomLong(0, pTemp->frameMax);
-		else if (modelbyindex->type == mod_studio)
-			pTemp->entity.curstate.body = RandomLong(0, pTemp->frameMax);
+		if (pModel->type == mod_sprite)
+			pTemp->entity.curstate.frame = RandomLong(0, frameCount - 1);
+		else if (pModel->type == mod_studio)
+			pTemp->entity.curstate.body = RandomLong(0, frameCount - 1);
 
 		pTemp->flags |= FTENT_COLLIDEWORLD | FTENT_FADEOUT | FTENT_SLOWGRAVITY;
 
@@ -282,25 +306,26 @@ FuncHook(R_BreakModel, void, float* pos, float* size, float* dir, float random, 
 			pTemp->entity.baseline.angles[2] = RandomFloat(-256, 255);
 		}
 
-		if ((RandomLong(0, 255) < 100) && flags & BREAK_SMOKE)
+		if ((RandomLong(0, 255) < 100) && (flags & BREAK_SMOKE))
 			pTemp->flags |= FTENT_SMOKETRAIL;
 
-		if ((flags & BREAK_TYPEMASK == BREAK_GLASS) || flags & BREAK_TRANS)
+		if ((type == BREAK_GLASS) || (flags & BREAK_TRANS))
 		{
 			pTemp->entity.curstate.rendermode = kRenderTransTexture;
-			pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 128;
+			pTemp->entity.curstate.renderamt = 128;
+			pTemp->entity.baseline.renderamt = 128;
 		}
 		else
 		{
 			pTemp->entity.curstate.rendermode = kRenderNormal;
-			pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 255; // set this for fadeout
+			pTemp->entity.baseline.renderamt = 255; // Set this for fadeout
 		}
 
 		pTemp->entity.baseline.origin[0] = dir[0] + RandomFloat(-random, random);
 		pTemp->entity.baseline.origin[1] = dir[1] + RandomFloat(-random, random);
 		pTemp->entity.baseline.origin[2] = dir[2] + RandomFloat(0, random);
 
-		pTemp->die = engine_cl->time + life + RandomFloat(0.0f, 1.0f); // Add an extra 0-1 secs of life
+		pTemp->die = engine_cl->time + life + RandomFloat(0, 1); // Add an extra 0-1 secs of life
 	}
 }
 
@@ -309,7 +334,7 @@ FuncHook(R_Bubbles, void, float* mins, float* maxs, float height, int modelIndex
 	if (!modelIndex)
 		return;
 
-	model_t* modelbyindex = IEngineStudio.GetModelByIndex(modelIndex);
+	model_t* modelbyindex = CL_GetModelByIndex(modelIndex);
 	if (!modelbyindex)
 		return;
 
@@ -356,7 +381,7 @@ FuncHook(R_BubbleTrail, void, float* start, float* end, float height, int modelI
 	if (!modelIndex)
 		return;
 
-	model_t* modelbyindex = IEngineStudio.GetModelByIndex(modelIndex);
+	model_t* modelbyindex = CL_GetModelByIndex(modelIndex);
 	if (!modelbyindex)
 		return;
 
@@ -392,9 +417,31 @@ FuncHook(R_BubbleTrail, void, float* start, float* end, float height, int modelI
 		bubble->entity.curstate.scale = 1.0 / RandomFloat(2, 5);
 	}
 }
+FuncHook(R_SparkStreaks, void, float* pos, int count, int velocityMin, int velocityMax)
+{
+	particle_t* p;
+	Vector vel;
+	int i;
+
+	for (i = 0; i < count; i++)
+	{
+		vel[0] = gEngfuncs.pfnRandomFloat(velocityMin, velocityMax);
+		vel[1] = gEngfuncs.pfnRandomFloat(velocityMin, velocityMax);
+		vel[2] = gEngfuncs.pfnRandomFloat(velocityMin, velocityMax);
+
+		p = g_TracerRenderer.AllocateTracer(pos, vel, gEngfuncs.pfnRandomFloat(0.1f, 0.5f));
+		if (!p)
+			return;
+
+		p->color = 5;
+		p->type = pt_grav;
+		p->ramp = 0.5f;
+	}
+}
+
 FuncHook(R_BulletImpactParticles, void, float* pos)
 {
-	OrigR_BulletImpactParticles(pos);
+	Hooked_R_SparkStreaks(pos, 2, -200, 200);
 }
 FuncHook(R_EntityParticles, void, struct cl_entity_s* ent)
 {
@@ -445,72 +492,75 @@ FuncHook(R_MultiGunshot, void, float* org, float* dir, float* noise, int count, 
 {
 	OrigR_MultiGunshot(org, dir, noise, count, decalCount, decalIndices);
 }
+
+extern int CL_AddVisibleEntity(cl_entity_t* pEntity);
+
 FuncHook(R_MuzzleFlash, void, float* pos1, int type)
 {
 	TEMPENTITY* pTemp;
 	int index;
 	float scale;
-	
+
 	index = (type % 10) % 3;
 	scale = (type / 10) * 0.1f;
 	if (scale == 0.0f)
-	scale = 0.5f;
-	
+		scale = 0.5f;
+
 	if (!cl_sprite_muzzleflash[index])
 		return;
-	
+
 	// must set position for right culling on render
 	pTemp = Hooked_CL_TempEntAlloc(pos1, cl_sprite_muzzleflash[index]);
 	if (!pTemp)
-	return;
+		return;
+	
 	pTemp->entity.curstate.rendermode = kRenderTransAdd;
 	pTemp->entity.curstate.renderamt = 255;
 	pTemp->entity.curstate.framerate = 10;
 	pTemp->entity.curstate.renderfx = 0;
-	pTemp->die = engine_cl->time + (engine_cl->time - engine_cl->oldtime) + 0.02; // die at next frame
+	pTemp->die = engine_cl->time + 0.05; // die at next frame
 	pTemp->entity.curstate.frame = gEngfuncs.pfnRandomLong(0, pTemp->frameMax);
 	pTemp->flags |= FTENT_SPRANIMATE | FTENT_SPRANIMATELOOP;
 	pTemp->entity.curstate.scale = scale;
 	
 	if (index == 0)
-	pTemp->entity.angles[2] = gEngfuncs.pfnRandomLong(0, 20); // rifle flash
+		pTemp->entity.angles[2] = gEngfuncs.pfnRandomLong(0, 20); // rifle flash
 	else
-	pTemp->entity.angles[2] = gEngfuncs.pfnRandomLong(0, 359);
+		pTemp->entity.angles[2] = gEngfuncs.pfnRandomLong(0, 359);
 	
-	CL_Internal_AddEntity(ET_TEMPENTITY, &pTemp->entity);
-
+	CL_AddVisibleEntity(&pTemp->entity);
 }
 
 FuncHook(R_ParticleBox, void, float* mins, float* maxs, unsigned char r, unsigned char g, unsigned char b, float life)
 {
-	//OrigR_ParticleBox(mins, maxs, r, g, b, life);
+	OrigR_ParticleBox(mins, maxs, r, g, b, life);
 }
 FuncHook(R_ParticleBurst, void, float* pos, int size, int color, float life)
 {
-	//OrigR_ParticleBurst(pos, size, color, life);
+	OrigR_ParticleBurst(pos, size, color, life);
 }
+
 FuncHook(R_ParticleExplosion, void, float* org)
 {
-	//OrigR_ParticleExplosion(org);
 }
 FuncHook(R_ParticleExplosion2, void, float* org, int colorStart, int colorLength)
 {
-	//OrigR_ParticleExplosion2(org, colorStart, colorLength);
+	OrigR_ParticleExplosion2(org, colorStart, colorLength);
 }
 FuncHook(R_ParticleLine, void, float* start, float* end, unsigned char r, unsigned char g, unsigned char b, float life)
 {
-	//OrigR_ParticleLine(start, end, r, g, b, life);
+	OrigR_ParticleLine(start, end, r, g, b, life);
 }
 FuncHook(R_PlayerSprites, void, int client, int modelIndex, int count, int size)
 {
-	if (client <= 0 || client >= gEngfuncs.GetMaxClients())
+	if (client <= 0 || client >= engine_cl->maxclients)
 	{
 		gEngfuncs.Con_Printf("Bad ent in R_PlayerSprites!\n");
 		return;
 	}
 
 	cl_entity_s* player = gEngfuncs.GetEntityByIndex(client);
-	model_t* modelbyindex = IEngineStudio.GetModelByIndex(modelIndex);
+	model_t* modelbyindex = CL_GetModelByIndex(modelIndex);
 	if (!modelbyindex)
 	{
 		gEngfuncs.Con_Printf("No model %d!\n", modelIndex);
@@ -570,7 +620,7 @@ FuncHook(R_PlayerSprites, void, int client, int modelIndex, int count, int size)
 }
 FuncHook(R_Projectile, void, float* origin, float* velocity, int modelIndex, int life, int owner, void (*hitcallback)(struct tempent_s* ent, struct pmtrace_s* ptr))
 {
-	model_t* modelbyindex = IEngineStudio.GetModelByIndex(modelIndex);
+	model_t* modelbyindex = CL_GetModelByIndex(modelIndex);
 	if (!modelbyindex)
 	{
 		gEngfuncs.Con_Printf("Couldn't allocate temp ent in R_Projectile!\n");
@@ -580,7 +630,7 @@ FuncHook(R_Projectile, void, float* origin, float* velocity, int modelIndex, int
 	if (!projectile)
 		return;
 
-	if (owner < 0 || owner > gEngfuncs.GetMaxClients())
+	if (owner < 0 || owner > engine_cl->maxclients)
 	{
 		gEngfuncs.Con_Printf("Bad ent in R_Projectile!\n");
 		return;
@@ -629,7 +679,24 @@ FuncHook(R_Projectile, void, float* origin, float* velocity, int modelIndex, int
 }
 FuncHook(R_RicochetSound, void, float* pos)
 {
-	OrigR_RicochetSound(pos);
+	//switch (gEngfuncs.pfnRandomLong(0, 4))
+	//{
+	//case 0:
+	//	S_StartDynamicSound(-1, CHAN_AUTO, cl_sfx_ric1, pos, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
+	//	break;
+	//case 1:
+	//	S_StartDynamicSound(-1, CHAN_AUTO, cl_sfx_ric2, pos, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
+	//	break;
+	//case 2:
+	//	S_StartDynamicSound(-1, CHAN_AUTO, cl_sfx_ric3, pos, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
+	//	break;
+	//case 3:
+	//	S_StartDynamicSound(-1, CHAN_AUTO, cl_sfx_ric4, pos, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
+	//	break;
+	//case 4:
+	//	S_StartDynamicSound(-1, CHAN_AUTO, cl_sfx_ric5, pos, VOL_NORM, ATTN_NORM, 0, PITCH_NORM);
+	//	break;
+	//}
 }
 FuncHook(R_RicochetSprite, void, float* pos, struct model_s* pmodel, float duration, float scale)
 {
@@ -672,25 +739,19 @@ FuncHook(R_RocketFlare, void, float* pos)
 }
 FuncHook(R_RocketTrail, void, float* start, float* end, int type)
 {
-	//OrigR_RocketTrail(start, end, type);
+	OrigR_RocketTrail(start, end, type);
 }
 FuncHook(R_RunParticleEffect, void, float* org, float* dir, int color, int count)
 {
-	//OrigR_RunParticleEffect(org, dir, color, count);
+	OrigR_RunParticleEffect(org, dir, color, count);
 }
 FuncHook(R_ShowLine, void, float* start, float* end)
 {
-	//OrigR_ShowLine(start, end);
-}
-
-FuncHook(R_SparkStreaks, void, float* pos, int count, int velocityMin, int velocityMax)
-{
-	//OrigR_SparkStreaks(pos, count, velocityMin, velocityMax);
+	OrigR_ShowLine(start, end);
 }
 
 FuncHook(R_SparkEffect, void, float* pos, int count, int velocityMin, int velocityMax)
 {
-	// OrigR_SparkEffect(pos, count, velocityMin, velocityMax);
 	Hooked_R_SparkStreaks(pos, count, velocityMin, velocityMax);
 	Hooked_R_RicochetSprite(pos, cl_sprite_ricochet, 0.1, gEngfuncs.pfnRandomFloat(0.5, 1.0));
 }
@@ -713,7 +774,7 @@ FuncHook(R_SparkShower, void, float* pos)
 //called by engine in CL_ParseTEnt on case TE_SPRAY
 FuncHook(R_Spray, void, float* pos, float* dir, int modelIndex, int count, int speed, int spread, int rendermode)
 {
-	model_t* modelbyindex = IEngineStudio.GetModelByIndex(modelIndex);
+	model_t* modelbyindex = CL_GetModelByIndex(modelIndex);
 	if (!modelbyindex)
 	{
 		gEngfuncs.Con_Printf("No model %d!\n", modelIndex);
@@ -765,15 +826,20 @@ FuncHook(R_Spray, void, float* pos, float* dir, int modelIndex, int count, int s
 }
 FuncHook(R_Sprite_Explode, void, TEMPENTITY* pTemp, float scale, int flags)
 {
+	qboolean noadditive;
+
 	if (!pTemp)
 		return;
 
+	noadditive = flags & TE_EXPLFLAG_NOADDITIVE;
+
 	pTemp->entity.curstate.scale = scale;
-	pTemp->entity.curstate.renderamt = (flags & TE_EXPLFLAG_NOADDITIVE) ? 255 : 180;
-	pTemp->entity.curstate.rendermode = (flags & TE_EXPLFLAG_NOADDITIVE) ? kRenderTransAdd : kRenderNormal;
-	pTemp->entity.origin.z += 10.0;
-	pTemp->entity.curstate.renderfx = kRenderFxNone;
-	pTemp->entity.baseline.origin.z = 8.0;
+	pTemp->entity.baseline.origin[2] = 8.0f;
+	pTemp->entity.origin[2] = pTemp->entity.origin[2] + 10.0f;
+
+	pTemp->entity.curstate.rendermode = noadditive ? kRenderNormal : kRenderTransAdd;
+	pTemp->entity.curstate.renderamt = noadditive ? 0xff : 0xb4;
+	pTemp->entity.curstate.renderfx = 0;
 	pTemp->entity.curstate.rendercolor.r = 0;
 	pTemp->entity.curstate.rendercolor.g = 0;
 	pTemp->entity.curstate.rendercolor.b = 0;
@@ -819,19 +885,72 @@ FuncHook(R_Sprite_WallPuff, void, TEMPENTITY* pTemp, float scale)
 }
 FuncHook(R_StreakSplash, void, float* pos, float* dir, int color, int count, float speed, int velocityMin, int velocityMax)
 {
-	OrigR_StreakSplash(pos, dir, color, count, speed, velocityMin, velocityMax);
-}
-FuncHook(R_TracerEffect, void, float* start, float* end)
-{
-	OrigR_TracerEffect(start, end);
-}
-FuncHook(R_UserTracerParticle, void, float* org, float* vel, float life, int colorIndex, float length, unsigned char deathcontext, void (*deathfunc)(struct particle_s* particle))
-{
-	OrigR_UserTracerParticle(org, vel, life, colorIndex, length, deathcontext, deathfunc);
+	Vector vel, vel2;
+	particle_t* p;
+	int i;
+
+	VectorScale(dir, speed, vel);
+
+	for (i = 0; i < count; i++)
+	{
+		vel2 = vel + Vector(gEngfuncs.pfnRandomFloat(velocityMin, velocityMax));
+		p = g_TracerRenderer.AllocateTracer(pos, vel2, gEngfuncs.pfnRandomFloat(0.1f, 0.5f));
+		if (!p)
+			return;
+
+		p->type = pt_grav;
+		p->color = color;
+		p->ramp = 1.0f;
+	}
 }
 FuncHook(R_TracerParticles, particle_t*, float* org, float* vel, float life)
 {
-	return OrigR_TracerParticles(org, vel, life);
+	particle_t* tracer = g_TracerRenderer.AllocateTracer(org, vel, life);
+	tracer->color = TRACER_COLORINDEX_DEFAULT;
+	tracer->packedColor = 255;
+	tracer->type = pt_static;
+	tracer->ramp = gEngfuncs.pfnGetCvarFloat("tracerlength");
+	return tracer;
+}
+FuncHook(R_TracerEffect, void, float* start, float* end)
+{
+	cvar_t* tracerSpeed = gEngfuncs.pfnGetCvarPointer("tracerspeed");
+
+	if (tracerSpeed->value <= 0.0)
+		tracerSpeed->value = 3.0;
+
+	Vector start_ = Vector(start[0], start[1], start[2]);
+	Vector end_ = Vector(end[0], end[1], end[2]);
+
+	Vector dir = end_ - start_;
+	float len = dir.Length();
+	if (len == 0.0f)
+		return;
+
+	dir = dir * (1.0f / len);
+	float offset = gEngfuncs.pfnRandomFloat(-10.0, 9.0f) + gEngfuncs.pfnGetCvarFloat("traceroffset");
+	Vector vel = dir * offset;
+	Vector pos = start_ + vel;
+	vel = dir * tracerSpeed->value;
+
+	Hooked_R_TracerParticles(pos, vel, len / tracerSpeed->value);
+
+
+}
+FuncHook(R_UserTracerParticle, void, float* org, float* vel, float life, int colorIndex, float length, unsigned char deathcontext, void (*deathfunc)(struct particle_s* particle))
+{
+	particle_t* p;
+
+	if (colorIndex < 0)
+		return;
+
+	if ((p = g_TracerRenderer.AllocateTracer(org, vel, life)) != NULL)
+	{
+		p->context = deathcontext;
+		p->deathfunc = deathfunc;
+		p->color = colorIndex;
+		p->ramp = length;
+	}
 }
 FuncHook(R_TeleportSplash, void, float* org)
 {
@@ -842,7 +961,7 @@ FuncHook(R_TempSphereModel, void, float* pos, float speed, float life, int count
 	if (!modelIndex)
 		return;
 
-	model_t* spheremodel = IEngineStudio.GetModelByIndex(modelIndex);
+	model_t* spheremodel = CL_GetModelByIndex(modelIndex);
 	if (!spheremodel)
 		return;
 
@@ -899,7 +1018,7 @@ FuncHook(R_TempModel, TEMPENTITY*, float* pos, float* dir, float* angles, float 
 	if (!modelIndex)
 		return nullptr;
 
-	model_t* model = IEngineStudio.GetModelByIndex(modelIndex);
+	model_t* model = CL_GetModelByIndex(modelIndex);
 	if (!model)
 	{
 		gEngfuncs.Con_Printf("No model %d!\n", modelIndex);
@@ -954,7 +1073,7 @@ FuncHook(R_DefaultSprite, TEMPENTITY*, float* pos, int spriteIndex, float framer
 	if (engine_cl->time == engine_cl->oldtime)
 		return 0;
 
-	model_t* modelbyindex = IEngineStudio.GetModelByIndex(spriteIndex);
+	model_t* modelbyindex = CL_GetModelByIndex(spriteIndex);
 	if (!spriteIndex || !modelbyindex || modelbyindex->type != mod_sprite)
 	{
 		gEngfuncs.Con_DPrintf("No Sprite %d!\n", spriteIndex);
@@ -981,7 +1100,7 @@ FuncHook(R_TempSprite, TEMPENTITY*, float* pos, const float* dir, float scale, i
 	TEMPENTITY* pTemp;
 	model_t* pmodel;
 
-	if ((pmodel = IEngineStudio.GetModelByIndex(modelIndex)) == NULL)
+	if ((pmodel = CL_GetModelByIndex(modelIndex)) == NULL)
 	{
 		gEngfuncs.Con_Printf("No model %d!\n", modelIndex);
 		return NULL;
@@ -990,9 +1109,6 @@ FuncHook(R_TempSprite, TEMPENTITY*, float* pos, const float* dir, float scale, i
 	pTemp = Hooked_CL_TempEntAlloc(pos, pmodel);
 	if (!pTemp)
 		return NULL;
-
-	int framecount = ModelFrameCount(pmodel);
-	pTemp->frameMax = framecount;
 
 	pTemp->entity.curstate.framerate = 10;
 	pTemp->entity.curstate.rendermode = rendermode;
@@ -1007,7 +1123,7 @@ FuncHook(R_TempSprite, TEMPENTITY*, float* pos, const float* dir, float scale, i
 	if (life)
 		pTemp->die = engine_cl->time + life;
 	else
-		pTemp->die = engine_cl->time + (pTemp->frameMax * 0.1f) + 4.0f;
+		pTemp->die = engine_cl->time + (pTemp->frameMax * 0.1f) + 1.0f;
 	pTemp->entity.curstate.frame = 0;
 
 	return pTemp;
@@ -1023,7 +1139,7 @@ FuncHook(Draw_DecalIndexFromName, int, char* name)
 FuncHook(R_DecalShoot, void, int textureIndex, int entity, int modelIndex, float* position, int flags)
 {
 	//OrigR_DecalShoot(textureIndex, entity, modelIndex, position, flags);
-	//no decals in trinity buddy
+	//comment this until we figure out how to get goldsrc decal data
 }
 FuncHook(R_AttachTentToPlayer, void, int client, int modelIndex, float zoffset, float life)
 {
@@ -1040,7 +1156,7 @@ FuncHook(R_AttachTentToPlayer, void, int client, int modelIndex, float zoffset, 
 	if (!pClient || pClient->curstate.messagenum != engine_cl->parsecount)
 		return;
 
-	if ((pModel = IEngineStudio.GetModelByIndex(modelIndex)) == NULL)
+	if ((pModel = CL_GetModelByIndex(modelIndex)) == NULL)
 		return;
 
 	VectorCopy(pClient->origin, position);
@@ -1082,8 +1198,9 @@ FuncHook(R_KillAttachedTents, void, int client)
 		return;
 	}
 
-	for (auto tempent : gpTempEnts)
+	for (int i = 0; i < gpTempEnts.size(); i++)
 	{
+		auto tempent = gpTempEnts[i].get();
 		if (tempent->flags & FTENT_PLYRATTACHMENT)
 		{
 			if (client == tempent->clientIndex)
@@ -1093,31 +1210,188 @@ FuncHook(R_KillAttachedTents, void, int client)
 }
 FuncHook(R_BeamCirclePoints, BEAM*, int type, float* start, float* end, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b)
 {
-	return nullptr;
+	BEAM* pbeam = g_BeamRenderer.AllocateTempBeam();
+
+	if (!pbeam || modelIndex < 0)
+		return nullptr;
+
+	pbeam->die = engine_cl->time;
+
+	g_BeamRenderer.R_BeamSetup(pbeam, start, end, modelIndex, life, width, amplitude, brightness, speed);
+
+	pbeam->type = type;
+	if (life == 0.0)
+		pbeam->flags |= FBEAM_FOREVER;
+
+	pbeam->frameRate = framerate;
+	pbeam->frame = startFrame;
+
+	pbeam->r = r;
+	pbeam->g = g;
+	pbeam->b = b;
+
+	return pbeam;
 }
 FuncHook(R_BeamEntPoint, BEAM*, int startEnt, float* end, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b)
 {
-	return nullptr;
+	cl_entity_t* ent;
+	if (startEnt < 0)
+	{
+		ent = HUD_GetUserEntity(-startEnt & 0xFFF);
+	}
+	else
+	{
+		ent = gEngfuncs.GetEntityByIndex(startEnt & 0xFFF);
+	}
+
+	if (!(ent && (life == 0.0 || ent->model)))
+		return nullptr;
+
+	BEAM* pbeam = g_BeamRenderer.AllocateTempBeam();
+
+	if (!pbeam)
+		return NULL;
+
+	pbeam->die = engine_cl->time;
+	if (modelIndex < 0)
+		return nullptr;
+
+	g_BeamRenderer.R_BeamSetup(pbeam, vec3_origin, end, modelIndex, life, width, amplitude, brightness, speed);
+	pbeam->type = TE_BEAMPOINTS;
+	pbeam->flags = FBEAM_STARTENTITY;
+
+	if (life == 0.0)
+		pbeam->flags = -2147483647; //the fuck ?
+
+	pbeam->startEntity = startEnt;
+	pbeam->endEntity = 0;
+	pbeam->frameRate = framerate;
+	pbeam->r = r;
+	pbeam->frame = startFrame;
+	pbeam->g = g;
+	pbeam->b = b;
+
+	return pbeam;
+
 }
 FuncHook(R_BeamEnts, BEAM*, int startEnt, int endEnt, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b)
 {
-	return nullptr;
+	cl_entity_t* ent;
+	if (startEnt < 0)
+	{
+		ent = HUD_GetUserEntity(-startEnt & 0xFFF);
+	}
+	else
+	{
+		ent = gEngfuncs.GetEntityByIndex(startEnt & 0xFFF);
+	}
+
+	if (!(ent && (life == 0.0 || ent->model)))
+		return nullptr;
+
+	BEAM* pbeam = g_BeamRenderer.AllocateTempBeam();
+
+	if (!pbeam)
+		return NULL;
+
+	pbeam->die = engine_cl->time;
+	if (modelIndex < 0)
+		return nullptr;
+
+	g_BeamRenderer.R_BeamSetup(pbeam, vec3_origin, vec3_origin, modelIndex, life, width, amplitude, brightness, speed);
+	pbeam->type = TE_BEAMPOINTS;
+	pbeam->flags = FBEAM_STARTENTITY | FBEAM_ENDENTITY;
+
+	if (life == 0.0)
+		pbeam->flags = -2147483647; // the fuck ?
+
+	pbeam->startEntity = startEnt;
+	pbeam->endEntity = endEnt;
+	pbeam->frameRate = framerate;
+	pbeam->r = r;
+	pbeam->frame = startFrame;
+	pbeam->g = g;
+	pbeam->b = b;
+
+	return pbeam;
 }
 FuncHook(R_BeamFollow, BEAM*, int startEnt, int modelIndex, float life, float width, float r, float g, float b, float brightness)
 {
-	return nullptr;
+	BEAM* pbeam = g_BeamRenderer.AllocateTempBeam();
+
+	if (!pbeam)
+		return NULL;
+	pbeam->die = engine_cl->time;
+
+	if (modelIndex < 0)
+		return NULL;
+
+	g_BeamRenderer.R_BeamSetup(pbeam, vec3_origin, vec3_origin, modelIndex, life, width, life, brightness, 1.0f);
+
+	pbeam->type = TE_BEAMFOLLOW;
+	pbeam->flags |= FBEAM_STARTENTITY;
+	pbeam->startEntity = startEnt;
+
+	g_BeamRenderer.SetBeamAttributes(pbeam, r, g, b, 1.0f, 0);
+
+	return pbeam;
 }
 FuncHook(R_BeamKill, void, int deadEntity)
 {
-	return;
+
+	for (auto& beam : g_BeamRenderer.GetTempBeamList())
+	{
+		if ((beam->flags & FBEAM_STARTENTITY) && beam->startEntity == deadEntity)
+		{
+			if (beam->type != TE_BEAMFOLLOW)
+				beam->die = engine_cl->time;
+
+			beam->flags &= ~FBEAM_STARTENTITY;
+		}
+
+		if ((beam->flags & FBEAM_ENDENTITY) && beam->endEntity == deadEntity)
+		{
+			beam->die = engine_cl->time;
+			beam->flags &= ~FBEAM_ENDENTITY;
+		}
+	}
 }
 FuncHook(R_BeamLightning, BEAM*, float* start, float* end, int modelIndex, float life, float width, float amplitude, float brightness, float speed)
 {
-	return nullptr;
+	BEAM* pbeam = g_BeamRenderer.AllocateTempBeam();
+
+	if (!pbeam || modelIndex < 0)
+		return NULL;
+
+	pbeam->die = engine_cl->time;
+	g_BeamRenderer.R_BeamSetup(pbeam, start, end, modelIndex, life, width, amplitude, brightness, speed);
+
+	return pbeam;
 }
 FuncHook(R_BeamPoints, BEAM*, float* start, float* end, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b)
 {
-	return nullptr;
+	if (life != 0.0 && g_BeamRenderer.R_BeamCull(start, end, 1))
+		return nullptr;
+
+	BEAM* pbeam = g_BeamRenderer.AllocateTempBeam();
+	if (!pbeam || modelIndex < 0)
+		return nullptr;
+
+	pbeam->die = engine_cl->time;
+
+	g_BeamRenderer.R_BeamSetup(pbeam, start, end, modelIndex, life, width, amplitude, brightness, speed);
+
+	if (life == 0.0)
+		pbeam->flags |= FBEAM_FOREVER;
+
+	pbeam->frameRate = framerate;
+	pbeam->r = r;
+	pbeam->frame = (float)startFrame;
+	pbeam->g = g;
+	pbeam->b = b;
+
+
+	return pbeam;
 }
 FuncHook(R_BeamRing, BEAM*, int startEnt, int endEnt, int modelIndex, float life, float width, float amplitude, float brightness, float speed, int startFrame, float framerate, float r, float g, float b)
 {
@@ -1223,10 +1497,10 @@ FuncHook(Color4f, void, float r, float g, float b, float a)
 }
 FuncHook(Color4ub, void, unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
-	gGlR = float(r) / 255.f;
-	gGlG = float(g) / 255.f;
-	gGlB = float(b) / 255.f;
-	gGlW = float(a) / 255.f;
+	gGlR = r / 255;
+	gGlG = g / 255;
+	gGlB = b / 255;
+	gGlW = a / 255;
 	glColor4f(gGlR, gGlG, gGlB, gGlW);
 }
 FuncHook(TexCoord2f, void, float u, float v)
@@ -1253,36 +1527,27 @@ FuncHook(CullFace, void, TRICULLSTYLE style)
 	if (style)
 	{
 		if (style == TRI_NONE)
-			glDisable(GL_CULL_FACE);
+			g_GlobalGLState.SetCullFace(false);
 	}
 	else
 	{
-		glEnable(GL_CULL_FACE);
+		g_GlobalGLState.SetCullFace(true);
 		glCullFace(GL_FRONT);
 	}
 }
-extern mspriteframe_t* R_GetSpriteFrame(const model_t* pModel, int frame, float yaw);
-
 FuncHook(SpriteTexture, int, struct model_s* pSpriteModel, int frame)
 {
-	OrigBegin(0);
-	OrigEnd();
-
-	mspriteframe_t* sprite = R_GetSpriteFrame(pSpriteModel, frame, 0);
-	if (!sprite)
-		return 0;
-
-	glBindTexture(GL_TEXTURE_2D, sprite->gl_texturenum);
-
-	return 1;
+	return OrigSpriteTexture(pSpriteModel, frame);
 }
 FuncHook(WorldToScreen, int, float* world, float* screen) // Returns 1 if it's z clipped
 {
 	return OrigWorldToScreen(world, screen);
 }
-FuncHook(Fog, void, float flFogColor[3], float flStart, float flEnd, int bOn) // Works just like GL_FOG, flFogColor is r/g/b.
+FuncHook(Fog, void, float flFogColor[3], float flStart, float flEnd, int bOn)
 {
-	OrigFog(flFogColor, flStart, flEnd, bOn);
+	bool NOTHING_SHOULD_CALL_THIS_FOG_FUNCTION_PLS_FIX = false;
+	assert(NOTHING_SHOULD_CALL_THIS_FOG_FUNCTION_PLS_FIX);
+	return;
 }
 FuncHook(ScreenToWorld, void, float* screen, float* world)
 {
@@ -1304,7 +1569,7 @@ FuncHook(Color4fRendermode, void, float r, float g, float b, float a, int render
 {
 	if (rendermode == kRenderTransAlpha)
 	{
-		glColor4f(r, g, b, a / 255.f);
+		glColor4f(r, g, b, a / 255);
 	}
 	else
 	{
@@ -1313,7 +1578,12 @@ FuncHook(Color4fRendermode, void, float r, float g, float b, float a, int render
 }
 FuncHook(FogParams, void, float flDensity, int iFogSkybox) // Used with Fog()...sets fog density and whether the fog should be applied to the skybox
 {
-	OrigFogParams(flDensity, iFogSkybox);
+	return;
+}
+
+FuncHook(GetModelByIndex, struct model_s*, int index)
+{
+	return OrigGetModelByIndex(index);
 }
 
 FuncHook(GetPlayerState, entity_state_t*, int index)
@@ -1324,12 +1594,43 @@ FuncHook(GetPlayerState, entity_state_t*, int index)
 	return &engine_cl->frames[engine_cl->parsecountmod].playerstate[index];
 }
 
+FuncHook(GetTimes, void, int* framecount, double* cl_time, double* cl_oldtime)
+{
+	*framecount = gBSPRenderer.m_iFrameCount;
+	*cl_time = engine_cl->time;
+	*cl_oldtime = engine_cl->oldtime;
+}
+
 FuncHook(PlayerInfo, player_info_t*, int index)
 {
 	if (index < 0 || index >= engine_cl->maxclients)
 		return nullptr;
 
 	return &engine_cl->players[index];
+}
+
+FuncHook(StudioRenderShadow, void, int iSprite, float* p1, float* p2, float* p3, float* p4)
+{
+	if (iSprite > 0 && iSprite)
+	{
+		model_t* spritetexture = Hooked_GetModelByIndex(iSprite);
+		if (!spritetexture || !Hooked_SpriteTexture(spritetexture, 0))
+			return;
+
+		Hooked_RenderMode(kRenderTransAlpha);
+		Hooked_Color4f(0, 0, 0, 1);
+		Hooked_Begin(TRI_QUADS);
+		Hooked_TexCoord2f(0, 0);
+		Hooked_Vertex3fv(p1);
+		Hooked_TexCoord2f(0, 1);
+		Hooked_Vertex3fv(p2);
+		Hooked_TexCoord2f(1, 1);
+		Hooked_Vertex3fv(p3);
+		Hooked_TexCoord2f(1, 0);
+		Hooked_Vertex3fv(p4);
+		Hooked_End();
+		Hooked_RenderMode(kRenderNormal);
+	}
 }
 
 FuncHook(StudioClientEvents, void)
@@ -1442,27 +1743,30 @@ void Hook_TriApi()
 
 void Hook_gEngfuncs_Functions()
 {
-	//
-	//credits to meetem for this cl hooking code
-	//
+	// sowwy goldsrc but i gotta steal your client state
+
 	size_t address = (size_t)gEngfuncs.GetViewModel();
 	size_t viewent_offset = offsetof(client_state_s, viewent);
 	client_state_s* clientState = (client_state_s*)(address - viewent_offset);
 	engine_cl = clientState;
-	if (engine_cl->viewent.curstate.msg_time != gEngfuncs.GetViewModel()->curstate.msg_time)
+	if (engine_cl->time != gEngfuncs.GetClientTime())
 	{
 		gEngfuncs.pfnClientCmd("escape\n");
 		MessageBox(NULL, "FATAL ERROR: engine cl is incorrect!\n\nPress Ok to quit the game.\n", "ERROR", MB_OK);
 		exit(-1);
 	}
 
+	//lets monitor all functions that the goldsrc engine can call
 	Hook_EFX();
 	Hook_TriApi();
 }
 
 void Hook_IEngineStudio_Functions()
 {
+	//InstallIEngineStudioHook(GetModelByIndex);
 	InstallIEngineStudioHook(GetPlayerState);
+	InstallIEngineStudioHook(GetTimes);
 	InstallIEngineStudioHook(PlayerInfo);
+	InstallIEngineStudioHook(StudioRenderShadow);
 	InstallIEngineStudioHook(StudioClientEvents);
 }

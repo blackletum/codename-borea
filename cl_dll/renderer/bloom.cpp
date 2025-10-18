@@ -17,9 +17,10 @@
 
 #include "bsprenderer.h"
 
-extern engine_studio_api_t IEngineStudio;
+#include "opengl_utils/GL_TextureHandler.h"
+#include "opengl_utils/GL_StateHandler.h"
 
-#define GL_TEXTURE_RECTANGLE_NV 0x84F5
+extern engine_studio_api_t IEngineStudio;
 
 cvar_t* glow_blur_steps = NULL;
 cvar_t* glow_darken_steps = NULL;
@@ -34,19 +35,18 @@ bool CBloom::Init(void)
     unsigned char* pBlankTex = new unsigned char[ScreenWidth * ScreenHeight * 3];
     memset(pBlankTex, 0, ScreenWidth * ScreenHeight * 3);
 
+    GL_TextureHandler::gl_texturecreationinfo_t texinfo;
+
     // Create the SCREEN-HOLDING TEXTURE
-    glGenTextures(1, &g_uiScreenTex);
-    glBindTexture(GL_TEXTURE_RECTANGLE_NV, g_uiScreenTex);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGB8, ScreenWidth, ScreenHeight, 0, GL_RGB8, GL_UNSIGNED_BYTE, pBlankTex);
+    texinfo.SetInfo(std::string(), GL_TextureHandler::_Rectangle, GL_RGB8, ScreenWidth, ScreenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE);
+    g_pScreenTex = new GL_TextureHandler(&texinfo);
+    g_pScreenTex->UploadPixelData(pBlankTex);
 
     // Create the BLURRED TEXTURE
-    glGenTextures(1, &g_uiGlowTex);
-    glBindTexture(GL_TEXTURE_RECTANGLE_NV, g_uiGlowTex);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGB8, ScreenWidth / 2, ScreenHeight / 2, 0, GL_RGB8, GL_UNSIGNED_BYTE, pBlankTex);
+    texinfo.SetInfo(std::string(), GL_TextureHandler::_Rectangle, GL_RGB8, ScreenWidth / 2, ScreenHeight / 2, 0, GL_RGB, GL_UNSIGNED_BYTE);
+    g_pGlowTex = new GL_TextureHandler(&texinfo);
+    g_pGlowTex->UploadPixelData(pBlankTex);
+
 
     // free the memory
     delete[] pBlankTex;
@@ -77,9 +77,6 @@ void CBloom::Draw(void)
 {
     // check to see if (a) we can render it, and (b) we're meant to render it
 
-    if (IEngineStudio.IsHardware() != 1)
-        return;
-
     if ((int)glow_blur_steps->value == 0 || (int)glow_strength->value == 0)
         return;
 
@@ -87,14 +84,14 @@ void CBloom::Draw(void)
         return;
 
     // enable some OpenGL stuff
-    glEnable(GL_TEXTURE_RECTANGLE_NV);
+    glEnable(GL_TEXTURE_RECTANGLE);
     glColor3f(1, 1, 1);
-    glDisable(GL_DEPTH_TEST);
+    g_GlobalGLState.SetDepthTest(false);
 
     // STEP 1: Grab the screen and put it into a texture
 
-    glBindTexture(GL_TEXTURE_RECTANGLE_NV, g_uiScreenTex);
-    glCopyTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGB, 0, 0, ScreenWidth, ScreenHeight, 0);
+    glBindTexture(GL_TEXTURE_RECTANGLE, g_pScreenTex->GetTextureID());
+    glCopyTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB, 0, 0, ScreenWidth, ScreenHeight, 0);
 
     // STEP 2: Set up an orthogonal projection
 
@@ -112,17 +109,17 @@ void CBloom::Draw(void)
 
     glViewport(0, 0, ScreenWidth / 2, ScreenHeight / 2);
 
-    glBindTexture(GL_TEXTURE_RECTANGLE_NV, g_uiScreenTex);
+    glBindTexture(GL_TEXTURE_RECTANGLE, g_pScreenTex->GetTextureID());
 
-    glBlendFunc(GL_DST_COLOR, GL_ZERO);
+    g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_ZERO);
 
-    glDisable(GL_BLEND);
+    g_GlobalGLState.SetBlend(false);
 
     glBegin(GL_QUADS);
-    DrawQuad(ScreenWidth, ScreenHeight);
+        DrawQuad(ScreenWidth, ScreenHeight);
     glEnd();
 
-    glEnable(GL_BLEND);
+    g_GlobalGLState.SetBlend(true);
 
     // Dynamic Bloom - some janky ass math here
     auto mult = gHUD.m_fLight - 100.0f;
@@ -137,8 +134,8 @@ void CBloom::Draw(void)
         DrawQuad(ScreenWidth, ScreenHeight);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_RECTANGLE_NV, g_uiGlowTex);
-    glCopyTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGB, 0, 0, ScreenWidth / 2, ScreenHeight / 2, 0);
+    glBindTexture(GL_TEXTURE_RECTANGLE, g_pGlowTex->GetTextureID());
+    glCopyTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB, 0, 0, ScreenWidth / 2, ScreenHeight / 2, 0);
 
     // STEP 4: Blur the now darkened scene in the horizontal direction.
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
@@ -146,13 +143,13 @@ void CBloom::Draw(void)
 
     glColor4f(1, 1, 1, blurAlpha);
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
+    g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ZERO);
 
     glBegin(GL_QUADS);
-    DrawQuad(ScreenWidth / 2, ScreenHeight / 2);
+        DrawQuad(ScreenWidth / 2, ScreenHeight / 2);
     glEnd();
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     glBegin(GL_QUADS);
     for (int i = 1; i <= (int)glow_blur_steps->value; i++) {
@@ -161,17 +158,17 @@ void CBloom::Draw(void)
     }
     glEnd();
 
-    glCopyTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGB, 0, 0, ScreenWidth / 2, ScreenHeight / 2, 0);
+    glCopyTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB, 0, 0, ScreenWidth / 2, ScreenHeight / 2, 0);
 
     // STEP 5: Blur the horizontally blurred image in the vertical direction.
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
+    g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ZERO);
 
     glBegin(GL_QUADS);
-    DrawQuad(ScreenWidth / 2, ScreenHeight / 2);
+     DrawQuad(ScreenWidth / 2, ScreenHeight / 2);
     glEnd();
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     glBegin(GL_QUADS);
     for (int i = 1; i <= (int)glow_blur_steps->value; i++) {
@@ -180,20 +177,20 @@ void CBloom::Draw(void)
     }
     glEnd();
 
-    glCopyTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGB, 0, 0, ScreenWidth / 2, ScreenHeight / 2, 0);
+    glCopyTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGB, 0, 0, ScreenWidth / 2, ScreenHeight / 2, 0);
 
     // STEP 6: Combine the blur with the original image.
 
     glViewport(0, 0, ScreenWidth, ScreenHeight);
 
-    glDisable(GL_BLEND);
+    g_GlobalGLState.SetBlend(false);
 
     glBegin(GL_QUADS);
-    DrawQuad(ScreenWidth / 2, ScreenHeight / 2);
+        DrawQuad(ScreenWidth / 2, ScreenHeight / 2);
     glEnd();
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE);
+    g_GlobalGLState.SetBlend(true);
+    g_GlobalGLState.SetBlendFunc(GL_ONE, GL_ONE);
     glColor4f(glow_mult, glow_mult, glow_mult, 1.0f);
     glBegin(GL_QUADS);
     for (int i = 1; i < (int)glow_strength->value; i++) {
@@ -207,7 +204,7 @@ void CBloom::Draw(void)
     end_mult = 0.5 + end_mult;
 
     glColor4f(end_mult, end_mult, end_mult, 1.0f);
-    glBindTexture(GL_TEXTURE_RECTANGLE_NV, g_uiScreenTex);
+    glBindTexture(GL_TEXTURE_RECTANGLE, g_pScreenTex->GetTextureID());
     glBegin(GL_QUADS);
     DrawQuad(ScreenWidth, ScreenHeight);
     glEnd();
@@ -221,9 +218,9 @@ void CBloom::Draw(void)
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
 
-    glDisable(GL_TEXTURE_RECTANGLE_NV);
-    glEnable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
+    glDisable(GL_TEXTURE_RECTANGLE);
+    g_GlobalGLState.SetDepthTest(true);
+    g_GlobalGLState.SetBlend(false);
 }
 
 // GLSL BLOOM - UNUSED
@@ -231,7 +228,7 @@ void CBloom::Draw(void)
 
 extern engine_studio_api_t IEngineStudio;
 
-#define GL_TEXTURE_RECTANGLE_NV 0x84F5
+#define GL_TEXTURE_RECTANGLE 0x84F5
 
 cvar_t* te_bloom_effect = NULL;
 cvar_t* te_bloom_val = NULL;
@@ -298,7 +295,7 @@ void CBloom::Draw(void)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
 
-    glEnable(GL_TEXTURE_RECTANGLE_NV);
+    glEnable(GL_TEXTURE_RECTANGLE);
     glColor3f(1, 1, 1);
     glDisable(GL_DEPTH_TEST);
     glMatrixMode(GL_MODELVIEW);
@@ -372,7 +369,7 @@ void CBloom::Draw(void)
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
-    glDisable(GL_TEXTURE_RECTANGLE_NV);
+    glDisable(GL_TEXTURE_RECTANGLE);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);

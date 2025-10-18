@@ -68,8 +68,8 @@ public:
 	float nextBeatFrame;
 
 private:
-	HL_HSPRITE m_hSprite;
-	HL_HSPRITE m_hDamage;
+	HSPRITE_GOLDSRC m_hSprite;
+	HSPRITE_GOLDSRC m_hDamage;
 	
 	DAMAGE_IMAGE m_dmg[NUM_DMG_TYPES];
 	int	m_bitsDamage;

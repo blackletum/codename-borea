@@ -1,10 +1,9 @@
 /*
 Trinity Rendering Engine - Copyright Andrew Lucas 2009-2012
-Spirinity Rendering Engine - Copyright FranticDreamer 2020-2021
 
 The Trinity Engine is free software, distributed in the hope th-
-at it will be useful, but WITHOUT ANY WARRANTY; without even the 
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+at it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE. See the GNU Lesser General Public License for more det-
 ails.
 
@@ -13,13 +12,9 @@ Written by Andrew Lucas
 Transparency code by Neil "Jed" Jedrzejewski
 */
 
-#include <cstdlib>
-#include <cmath>
-
-#include "windows.h"
+#include "PlatformHeaders.h"
 #include "hud.h"
 #include "cl_util.h"
-#include <gl/glu.h>
 
 #include "const.h"
 #include "studio.h"
@@ -28,8 +23,10 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "event_api.h"
 #include "pm_defs.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <memory.h>
+#include <math.h>
 
 #include "propmanager.h"
 #include "bsprenderer.h"
@@ -40,9 +37,33 @@ Transparency code by Neil "Jed" Jedrzejewski
 
 #include "textureloader.h"
 #include "particle_engine.h"
+#include "opengl_utils/GL_Buffers.h"
+#include "opengl_utils/GL_StateHandler.h"
+#include "opengl_utils/GL_ShaderProgram.h"
+#include "opengl_utils/GL_VertexArrayObject.h"
 
 #include "StudioModelRenderer.h"
-extern CStudioModelRenderer g_StudioRenderer;
+#include "StudioMDL_MeshGen.h"
+
+CPropManager gPropManager;
+
+modeldata_t* AllocModelHeader()
+{
+	auto& ptr = gPropManager.m_pHeaders.emplace_back(std::make_unique<modeldata_t>());
+	return ptr.get();
+}
+
+entextradata_t* AllocExtraData()
+{
+	auto& ptr = gPropManager.m_pExtraData.emplace_back(std::make_unique<entextradata_t>());
+	return ptr.get();
+}
+
+entextrainfo_t* AllocExtraInfo()
+{
+	auto& ptr = gPropManager.m_pExtraInfo.emplace_back(std::make_unique<entextrainfo_t>());
+	return ptr.get();
+}
 
 /*
 ====================
@@ -50,7 +71,7 @@ Shutdown
 
 ====================
 */
-void CPropManager::Shutdown( )
+void CPropManager::Shutdown(void)
 {
 	Reset();
 }
@@ -61,89 +82,71 @@ Reset
 
 ====================
 */
-void CPropManager::Reset( )
+void CPropManager::Reset(void)
 {
-	if ( m_iNumEntities )
-	{
-		memset(m_pEntities, 0, sizeof(m_pEntities));
-		m_iNumEntities = 0;
-	}
+	m_pEntities.clear();
 
-	if ( m_iNumModelLights )
-	{
-		memset(m_pModelLights, 0, sizeof(m_pModelLights));
-		m_iNumModelLights = 0;
-	}
+	m_pModelLights.clear();
 
-	if ( m_iNumDecals )
-	{
-		memset(m_pDecals, 0, sizeof(m_pDecals));
-		m_iNumDecals = 0;
-	}
+	m_pDecals.clear();
 
-	if ( m_iNumExtraData )
-	{
-		memset(m_pExtraData, 0, sizeof(m_pExtraData));
-		memset(m_pExtraInfo, 0, sizeof(m_pExtraInfo));
-		m_pCurrentExtraData = nullptr;
-		m_iNumExtraData = 0;
-	}
+	m_pExtraData.clear();
 
-	if(m_iNumHeaders)
+	m_pExtraInfo.clear();
+
+	m_pCurrentExtraData = NULL;
+
+	if (!m_pHeaders.empty())
 	{
-		for ( int i = 0; i < m_iNumHeaders; i++ )
+		for (auto &header_ : m_pHeaders)
 		{
-			if(m_pHeaders[i].pHdr)
-			{
-				for(int j = 0; j < m_pHeaders[i].pVBOHeader.numsubmodels; j++)
-					delete [] m_pHeaders[i].pVBOHeader.submodels[j].meshes;
+			auto header = header_.get();
 
-				delete [] m_pHeaders[i].pVBOHeader.submodels;
+			if (header->pHdr)
+			{
+				for (int j = 0; j < header->pVBOHeader.numsubmodels; j++)
+					delete[] header->pVBOHeader.submodels[j].meshes;
+
+				delete[] header->pVBOHeader.submodels;
 			}
 
-			if(m_pHeaders[i].pVBOHeader.pBufferData)
+			if (header->pVBOHeader.pBufferData)
 			{
-				delete [] m_pHeaders[i].pVBOHeader.pBufferData;
-				m_pHeaders[i].pVBOHeader.pBufferData = nullptr;
+				delete[] header->pVBOHeader.pBufferData;
+				header->pVBOHeader.pBufferData = NULL;
 			}
 
-			if(m_pHeaders[i].pVBOHeader.indexes)
+			if (header->pVBOHeader.indexes)
 			{
-				delete [] m_pHeaders[i].pVBOHeader.indexes;
-				m_pHeaders[i].pVBOHeader.indexes = nullptr;
+				delete[] header->pVBOHeader.indexes;
+				header->pVBOHeader.indexes = NULL;
 			}
 		}
-				
-		memset(m_pHeaders, 0, sizeof(m_pHeaders));
-		m_iNumHeaders = NULL;
+		m_pHeaders.clear();
 	}
 
 	ClearEntityData();
 
-	if(m_pEntData)
+	if (m_pEntData)
 	{
-		m_pEntData = nullptr;
+		m_pEntData = NULL;
 		m_iEntDataSize = NULL;
 	}
 
-	if(m_pVertexData)
+	if (m_pVertexData)
 	{
-		delete [] m_pVertexData;
-		m_pVertexData = nullptr;
+		delete[] m_pVertexData;
+		m_pVertexData = NULL;
 		m_iNumTotalVerts = NULL;
 	}
 
-	if(m_pIndexBuffer)
+	if (m_pIndexBuffer)
 	{
-		delete [] m_pIndexBuffer;
-		m_pIndexBuffer = nullptr;
+		delete[] m_pIndexBuffer;
+		m_pIndexBuffer = NULL;
 	}
 
-	if(m_iNumCables)
-	{
-		memset(m_pCables, 0, sizeof(m_pCables));
-		m_iNumCables = NULL;
-	}
+	m_pCables.clear();
 }
 
 /*
@@ -152,11 +155,9 @@ Init
 
 ====================
 */
-void CPropManager::Init( )
+void CPropManager::Init(void)
 {
-	m_pCvarDrawClientEntities = CVAR_CREATE( "te_client_entities", "1", 0 );
-	m_pCvarDrawCable = CVAR_CREATE("te_cables", "1", 0);
-	m_pCvarDrawCableDebug = CVAR_CREATE("te_cables_debug", "0", 0);
+	m_pCvarDrawClientEntities = CVAR_CREATE("r_drawstudiomdl_staticprops", "1", 0);
 }
 
 /*
@@ -165,7 +166,7 @@ VidInit
 
 ====================
 */
-void CPropManager::VidInit()
+void CPropManager::VidInit(void)
 {
 	Reset();
 }
@@ -176,12 +177,12 @@ ClearEntityData
 
 ====================
 */
-void CPropManager::ClearEntityData()
+void CPropManager::ClearEntityData(void)
 {
-	if (!m_iNumBSPEntities)
+	if (m_pBSPEntities.empty())
 		return;
 
-	for (int i = 0; i < m_iNumBSPEntities; i++)
+	for (int i = m_pBSPEntities.size() - 1; i >= 0; i--)
 	{
 		epair_t* pPair = m_pBSPEntities[i].epairs;
 		while (pPair)
@@ -193,11 +194,9 @@ void CPropManager::ClearEntityData()
 			delete[] pFree->value;
 			delete[] pFree;
 		}
+		m_pBSPEntities.erase(m_pBSPEntities.begin() + i);
 	}
-	memset(m_pBSPEntities, 0, sizeof(m_pBSPEntities));
-	m_iNumBSPEntities = 0;
 }
-
 
 /*
 ====================
@@ -205,23 +204,22 @@ LoadBSPFile
 
 ====================
 */
-void CPropManager::GenerateEntityList ( )
+void CPropManager::GenerateEntityList(void)
 {
 	// reset all entity data
 	Reset();
 
 	// get pointer to world model
-	model_t *pWorld = IEngineStudio.GetModelByIndex(1);
-	if(!pWorld)
+	if (!engine_cl->worldmodel)
 	{
-		gEngfuncs.pfnClientCmd("escape\n");	
-		MessageBox(nullptr, "FATAL ERROR: Failed to get world!\n\nPress Ok to quit the game.\n", "ERROR", MB_OK);
+		gEngfuncs.pfnClientCmd("escape\n");
+		MessageBox(NULL, "FATAL ERROR: Failed to get world!\n\nPress Ok to quit the game.\n", "ERROR", MB_OK);
 		exit(-1);
 	}
 
 	// world model already adds pointer to ent data
-	m_iEntDataSize = strlen(pWorld->entities);
-	m_pEntData = pWorld->entities;
+	m_iEntDataSize = strlen(engine_cl->worldmodel->entities);
+	m_pEntData = engine_cl->worldmodel->entities;
 
 	ParseEntities();
 	LoadEntVars();
@@ -234,17 +232,17 @@ GetHeader
 
 ====================
 */
-modeldata_t *CPropManager::GetHeader( const char *name )
+modeldata_t* CPropManager::GetHeader(const char* name)
 {
-	if ( m_iNumHeaders )
+	if (!m_pHeaders.empty())
 	{
-		for(int i = 0; i < m_iNumHeaders; i++)
+		for (auto& header : m_pHeaders)
 		{
-			if (!strcmp( m_pHeaders[i].name, name ))
-				return &m_pHeaders[i];
+			if (!strcmp(header.get()->name, name))
+				return header.get();
 		}
 	}
-	return nullptr;
+	return NULL;
 }
 
 /*
@@ -253,14 +251,14 @@ ValueForKey
 
 ====================
 */
-char *CPropManager::ValueForKey (entity_t *ent, char *key)
+char* CPropManager::ValueForKey(entity_t* ent, const char* key)
 {
-   for (epair_t  *pEPair = ent->epairs; pEPair; pEPair = pEPair->next)
-   {
-      if (!strcmp (pEPair->key, key) )
-         return pEPair->value;
-   }
-   return nullptr;
+	for (epair_t* pEPair = ent->epairs; pEPair; pEPair = pEPair->next)
+	{
+		if (!strcmp(pEPair->key, key))
+			return pEPair->value;
+	}
+	return NULL;
 }
 
 /*
@@ -269,41 +267,42 @@ ParseEntities
 
 ====================
 */
-void CPropManager::ParseEntities ( )
+void CPropManager::ParseEntities(void)
 {
 	// Entity parser done by me, parses nicely, no errors detected ever.
-	char *pCurText = m_pEntData;
-	while(pCurText && pCurText - m_pEntData < m_iEntDataSize)
+	char* pCurText = m_pEntData;
+	while (pCurText && pCurText - m_pEntData < m_iEntDataSize)
 	{
-		if(m_iNumBSPEntities == MAXRENDERENTS)
+		if (m_pBSPEntities.size() == MAXRENDERENTS)
 			break;
 
-		while(1)
+		while (1)
 		{
-			if(pCurText[0] == '{')
+			if (pCurText[0] == '{')
 				break;
-			
-			if(pCurText - m_pEntData >= m_iEntDataSize)
+
+			if (pCurText - m_pEntData >= m_iEntDataSize)
 				break;
 
 			pCurText++;
 		}
 
-		if(pCurText - m_pEntData >= m_iEntDataSize)
+		if (pCurText - m_pEntData >= m_iEntDataSize)
 			break;
 
-		entity_t *pEntity = &m_pBSPEntities[m_iNumBSPEntities];
-		m_iNumBSPEntities++;
+		entity_t pEntitydummy{};
+		m_pBSPEntities.emplace_back(pEntitydummy);
+		entity_t* pEntity = &m_pBSPEntities[m_pBSPEntities.size() - 1];
 
-		while(1)
+		while (1)
 		{
 			// skip to next token
-			while(1)
+			while (1)
 			{
-				if(pCurText[0] == '}')
+				if (pCurText[0] == '}')
 					break;
 
-				if(pCurText[0] == '"')
+				if (pCurText[0] == '"')
 				{
 					pCurText++;
 					break;
@@ -313,25 +312,25 @@ void CPropManager::ParseEntities ( )
 			}
 
 			// end of ent
-			if(pCurText[0] == '}')
+			if (pCurText[0] == '}')
 				break;
 
-			epair_t *pEPair = new epair_t;
+			epair_t* pEPair = new epair_t;
 			memset(pEPair, 0, sizeof(epair_t));
 
-			if(pEntity->epairs)
+			if (pEntity->epairs)
 				pEPair->next = pEntity->epairs;
-				
+
 			pEntity->epairs = pEPair;
 
 			int iLength = 0;
-			char *pTemp = pCurText;
-			while(1)
+			char* pTemp = pCurText;
+			while (1)
 			{
-				if(pTemp[0] == '"')
+				if (pTemp[0] == '"')
 					break;
-				
-				if(pCurText[0] == '}')
+
+				if (pCurText[0] == '}')
 				{
 					gEngfuncs.Con_Printf("BSP LOADER ERROR :: Entity data is corrupt!\n");
 					m_bAvailable = false;
@@ -342,23 +341,23 @@ void CPropManager::ParseEntities ( )
 				pTemp++;
 			}
 
-			pEPair->key = new char[iLength+1];
+			pEPair->key = new char[iLength + 1];
 			pEPair->key[iLength] = NULL; // terminator
 
-			memcpy(pEPair->key, pCurText, sizeof(char)*iLength);
-			pCurText += iLength+1;
+			memcpy(pEPair->key, pCurText, sizeof(char) * iLength);
+			pCurText += iLength + 1;
 
 			// skip to next token
-			while(1)
+			while (1)
 			{
-				if(pCurText[0] == '}')
+				if (pCurText[0] == '}')
 				{
 					gEngfuncs.Con_Printf("BSP LOADER ERROR :: Entity data is corrupt!\n");
 					m_bAvailable = false;
 					return;
 				}
 
-				if(pCurText[0] == '"')
+				if (pCurText[0] == '"')
 				{
 					pCurText++;
 					break;
@@ -369,43 +368,37 @@ void CPropManager::ParseEntities ( )
 
 			iLength = 0;
 			pTemp = pCurText;
-			while(1)
+			while (1)
 			{
-				if(pCurText[0] == '}')
+				if (pCurText[0] == '}')
 				{
 					gEngfuncs.Con_Printf("BSP LOADER ERROR :: Entity data is corrupt!\n");
 					m_bAvailable = false;
 					return;
 				}
 
-				if(pTemp[0] == '"')
+				if (pTemp[0] == '"')
 					break;
-				
+
 				iLength++;
 				pTemp++;
 			}
 
-			pEPair->value = new char[iLength+1];
+			pEPair->value = new char[iLength + 1];
 			pEPair->value[iLength] = NULL;
 
-			memcpy(pEPair->value, pCurText, sizeof(char)*iLength);
-			pCurText += iLength+1;
+			memcpy(pEPair->value, pCurText, sizeof(char) * iLength);
+			pCurText += iLength + 1;
 		}
 	}
 
 	// Get sky name for bsp renderer
-	char *szSky = ValueForKey(&m_pBSPEntities[0], "skyname");
+	char* szSky = ValueForKey(&m_pBSPEntities[0], "skyname");
 
-	if(szSky)
+	if (szSky)
 		strcpy(gBSPRenderer.m_szSkyName, szSky);
 	else
 		sprintf(gBSPRenderer.m_szSkyName, "desert");
-
-	// See if special fog is set
-	char *szSpecial = ValueForKey(&m_pBSPEntities[0], "specialfog");
-
-	if(szSpecial)
-		gBSPRenderer.m_bSpecialFog = true;
 }
 
 /*
@@ -414,241 +407,230 @@ LoadEntVars
 
 ====================
 */
-void CPropManager::LoadEntVars( )
+void CPropManager::LoadEntVars(void)
 {
-	for(int i = 0; i < m_iNumBSPEntities; i++)
+	for (auto& bspent : m_pBSPEntities)
 	{
-		char *pValue = ValueForKey(&m_pBSPEntities[i], "classname");
+		char* pValue = ValueForKey(&bspent, "classname");
 
-		if(!pValue)
+		cl_entity_t modellight{};
+
+		if (!pValue)
 			continue;
 
-		if(!strcmp( pValue, "env_elight"))
+		if (!strcmp(pValue, "env_elight"))
 		{
-			pValue = ValueForKey(&m_pBSPEntities[i], "targetname");
+			pValue = ValueForKey(&bspent, "targetname");
 
-			if(pValue)
+			if (pValue)
 				continue;
 
-			memset(&m_pModelLights[m_iNumModelLights], 0, sizeof(cl_entity_t));
+			memset(&modellight, 0, sizeof(cl_entity_t));
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "origin");
+			pValue = ValueForKey(&bspent, "origin");
 			if (pValue)
 			{
-				sscanf(pValue, "%f %f %f", &m_pModelLights[m_iNumModelLights].origin[0],
-					&m_pModelLights[m_iNumModelLights].origin[1],
-					&m_pModelLights[m_iNumModelLights].origin[2]);
+				sscanf(pValue, "%f %f %f", &modellight.origin[0],
+					&modellight.origin[1],
+					&modellight.origin[2]);
 
-				VectorCopy(m_pModelLights[m_iNumModelLights].origin, m_pModelLights[m_iNumModelLights].curstate.origin);
+				VectorCopy(modellight.origin, modellight.curstate.origin);
 			}
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "renderamt");
+			pValue = ValueForKey(&bspent, "renderamt");
 			if (pValue)
 			{
-				sscanf(pValue, "%d", &m_pModelLights[m_iNumModelLights].curstate.renderamt);
+				sscanf(pValue, "%d", &modellight.curstate.renderamt);
 			}
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "rendercolor");
+			pValue = ValueForKey(&bspent, "rendercolor");
 			if (pValue)
 			{
-				int  iColR, iColG, iColB;
+				int iColR, iColG, iColB;
 				sscanf(pValue, "%d %d %d", &iColR, &iColG, &iColB);
-				m_pModelLights[m_iNumModelLights].curstate.rendercolor.r = iColR;
-				m_pModelLights[m_iNumModelLights].curstate.rendercolor.g = iColG;
-				m_pModelLights[m_iNumModelLights].curstate.rendercolor.b = iColB;
+				modellight.curstate.rendercolor.r = iColR;
+				modellight.curstate.rendercolor.g = iColG;
+				modellight.curstate.rendercolor.b = iColB;
 			}
 
-			model_t *pWorld = IEngineStudio.GetModelByIndex(1);
-			mleaf_t *pLeaf = Mod_PointInLeaf(m_pModelLights[m_iNumModelLights].origin, pWorld);
+			model_t* pWorld = engine_cl->worldmodel;
+			mleaf_t* pLeaf = Mod_PointInLeaf(modellight.origin, pWorld);
 
-			if(pLeaf)
+			if (pLeaf)
 			{
 				// In-void entities can go eat a dick
-				m_pModelLights[m_iNumModelLights].visframe = pLeaf-pWorld->leafs-1;
-				m_iNumModelLights++;
+				modellight.visframe = pLeaf - pWorld->leafs - 1;
+				m_pModelLights.emplace_back(modellight);
 			}
 		}
-		if(!strcmp( pValue, "env_cable"))
+		if (!strcmp(pValue, "env_cable"))
 		{
-			if(SetupCable(&m_pCables[m_iNumCables], &m_pBSPEntities[i]))
-				m_iNumCables++;
+			cabledata_t cabledata;
+			if (SetupCable(&cabledata, &bspent))
+			{
+				m_pCables.emplace_back(cabledata);
+			}
 		}
-		else if(!strcmp( pValue, "env_decal"))
+		else if (!strcmp(pValue, "env_decal"))
 		{
-			pValue = ValueForKey(&m_pBSPEntities[i], "targetname");
+			pValue = ValueForKey(&bspent, "targetname");
 
-			if(pValue)
+			if (pValue)
 				continue;
 
-			// Always TRUE
-			m_pDecals[m_iNumDecals].persistent = TRUE;
+			decal_msg_cache cachedecal{};
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "origin");
+			// Always TRUE
+			cachedecal.persistent = TRUE;
+
+			pValue = ValueForKey(&bspent, "origin");
 			if (pValue)
 			{
-				sscanf(pValue, "%f %f %f", &m_pDecals[m_iNumDecals].pos[0],
-					&m_pDecals[m_iNumDecals].pos[1],
-					&m_pDecals[m_iNumDecals].pos[2]);
+				sscanf(pValue, "%f %f %f", &cachedecal.pos[0],
+					&cachedecal.pos[1],
+					&cachedecal.pos[2]);
 			}
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "message");
+			pValue = ValueForKey(&bspent, "message");
 
 			if (!pValue)
 				continue;
 
-			if(!strlen(pValue))
+			if (!strlen(pValue))
 				continue;
 
-			strcpy(m_pDecals[m_iNumDecals].name, pValue);
-			m_iNumDecals++;
+			strcpy(cachedecal.name, pValue);
+			m_pDecals.emplace_back(cachedecal);
 		}
-		else if(!strcmp( pValue, "item_generic") || !strcmp(pValue, "env_static") || !strcmp(pValue, "prop_static") || !strcmp(pValue, "prop_grass") || !strcmp(pValue, "prop_blimp"))
+		else if (!strcmp(pValue, "item_generic") || !strcmp(pValue, "prop_static"))
 		{
-			bool isGrass = (!strcmp(pValue, "prop_grass"));
+			pValue = ValueForKey(&bspent, "targetname");
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "targetname");
-
-			if(pValue)
+			if (pValue)
 				continue;
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "model");
+			pValue = ValueForKey(&bspent, "parentname");
 
-			if(!pValue)
+			if (pValue)
 				continue;
 
-			if(!stristr(pValue, ".mdl"))
+			pValue = ValueForKey(&bspent, "model");
+
+			if (!pValue)
 				continue;
 
-			m_pCurrentExtraData = &m_pExtraData[m_iNumExtraData];
-			entextrainfo_t *pExtraInfo = &m_pExtraInfo[m_iNumExtraData];
+			if (!stristr(pValue, ".mdl"))
+				continue;
 
-			if ( !LoadMDL( pValue, &m_pEntities[m_iNumEntities], &m_pBSPEntities[i] ) )
+
+			m_pCurrentExtraData = AllocExtraData();
+			entextrainfo_t* pExtraInfo = AllocExtraInfo();
+
+			cl_entity_t propentity{};
+
+			if (!LoadMDL(pValue, &propentity, &bspent))
 			{
 				gEngfuncs.Con_Printf("BSP Loader: Failed to model load %s on the client!\n", pValue);
 				continue;
 			}
 
-			memset(&m_pEntities[m_iNumEntities], 0, sizeof(cl_entity_t));
-			m_pEntities[m_iNumEntities].index = m_iNumEntities+4096;
-			m_pEntities[m_iNumEntities].topnode = (struct mnode_s *)pExtraInfo;
-			m_pEntities[m_iNumEntities].visframe = -1;
+			memset(&propentity, 0, sizeof(cl_entity_t));
+			propentity.index = m_pEntities.size() + 4096;
+			propentity.topnode = (struct mnode_s*)pExtraInfo;
+			propentity.visframe = -1;
 
 			pExtraInfo->pExtraData = m_pCurrentExtraData;
-			m_iNumExtraData++;
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "origin");
+			pValue = ValueForKey(&bspent, "origin");
 			if (pValue)
 			{
-				sscanf(pValue, "%f %f %f", &m_pEntities[m_iNumEntities].origin[0],
-					&m_pEntities[m_iNumEntities].origin[1],
-					&m_pEntities[m_iNumEntities].origin[2]);
+				sscanf(pValue, "%f %f %f", &propentity.origin[0],
+					&propentity.origin[1],
+					&propentity.origin[2]);
 
-				VectorCopy(m_pEntities[m_iNumEntities].origin,m_pEntities[m_iNumEntities].curstate.origin);
+				VectorCopy(propentity.origin, propentity.curstate.origin);
 			}
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "angles");
+			pValue = ValueForKey(&bspent, "angles");
 			if (pValue)
 			{
 				// set the yaw angle...
-				sscanf(pValue, "%f %f %f", &m_pEntities[m_iNumEntities].angles[0],
-										&m_pEntities[m_iNumEntities].angles[1],
-										&m_pEntities[m_iNumEntities].angles[2]);
-				m_pEntities[m_iNumEntities].baseline.angles = m_pEntities[m_iNumEntities].curstate.angles = m_pEntities[m_iNumEntities].angles;
+				sscanf(pValue, "%f %f %f", &propentity.angles[0],
+					&propentity.angles[1],
+					&propentity.angles[2]);
+				propentity.curstate.angles = propentity.angles;
 			}
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "renderamt");
+			pValue = ValueForKey(&bspent, "renderamt");
 			if (pValue)
 			{
-				sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.renderamt);
+				sscanf(pValue, "%d", &propentity.curstate.renderamt);
 			}
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "sequence");
+			pValue = ValueForKey(&bspent, "sequence");
 
 			if (pValue)
-				sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.sequence);
+				sscanf(pValue, "%d", &propentity.curstate.sequence);
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "body");
-
-			if (pValue)
-				sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.body);
-
-			pValue = ValueForKey(&m_pBSPEntities[i], "skin");
+			pValue = ValueForKey(&bspent, "body");
 
 			if (pValue)
-				sscanf(pValue, "%hi", &m_pEntities[m_iNumEntities].curstate.skin);
+				sscanf(pValue, "%d", &propentity.curstate.body);
 
-
-			pValue = ValueForKey(&m_pBSPEntities[i], "scale");
-
-			if (pValue)
-				sscanf(pValue, "%f", &m_pEntities[m_iNumEntities].curstate.scale);
-
-
-			pValue = ValueForKey(&m_pBSPEntities[i], "renderfx");
+			pValue = ValueForKey(&bspent, "skin");
 
 			if (pValue)
-				sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.renderfx);
+				sscanf(pValue, "%d", &propentity.curstate.skin);
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "DisableShadows");
+
+			pValue = ValueForKey(&bspent, "scale");
 
 			if (pValue)
-				m_pEntities[m_iNumEntities].curstate.iuser2 = FL_NOSHADOW;
+				sscanf(pValue, "%f", &propentity.curstate.scale);
 
-			pValue = ValueForKey(&m_pBSPEntities[i], "rendercolor");
+
+			pValue = ValueForKey(&bspent, "renderfx");
+
+			if (pValue)
+				sscanf(pValue, "%d", &propentity.curstate.renderfx);
+
+			pValue = ValueForKey(&bspent, "DisableShadows");
+
+			if (pValue)
+				propentity.curstate.iuser2 = FL_NOSHADOW;
+
+			pValue = ValueForKey(&bspent, "rendercolor");
 			if (pValue)
 			{
-				int  iColR, iColG, iColB;
+				int iColR, iColG, iColB;
 				sscanf(pValue, "%d %d %d", &iColR, &iColG, &iColB);
-				m_pEntities[m_iNumEntities].curstate.rendercolor.r = iColR;
-				m_pEntities[m_iNumEntities].curstate.rendercolor.g = iColG;
-				m_pEntities[m_iNumEntities].curstate.rendercolor.b = iColB;
+				propentity.curstate.rendercolor.r = iColR;
+				propentity.curstate.rendercolor.g = iColG;
+				propentity.curstate.rendercolor.b = iColB;
 			}
 
-			// bacontsu - blimps
-			pValue = ValueForKey(&m_pBSPEntities[i], "prop_blimp");
-			if (pValue)
-			{
-				sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.iuser1);
-			}
-
-			if (m_pEntities[m_iNumEntities].curstate.iuser1 != 0)
-			{
-				pValue = ValueForKey(&m_pBSPEntities[i], "blimpspeed");
-
-				if (pValue)
-				{
-					sscanf(pValue, "%d", &m_pEntities[m_iNumEntities].curstate.fuser4);
-				}
-			}
-
-			// bacontsu - grass swaying
-			m_pEntities[m_iNumEntities].curstate.iuser3 = ValueForKey(&m_pBSPEntities[i], "prop_grass") || isGrass;
-
-			if (m_pEntities[m_iNumEntities].curstate.iuser3 != 0)
-			{
-				m_pEntities[m_iNumEntities].curstate.fuser3 = gEngfuncs.pfnRandomLong(1, 25);
-				m_pEntities[m_iNumEntities].curstate.fuser4 = gEngfuncs.pfnRandomLong(1, 25);
-			}
-
-			pValue = ValueForKey(&m_pBSPEntities[i], "lightorigin");
-			if(pValue && strlen(pValue))
+			pValue = ValueForKey(&bspent, "lightorigin");
+			if (pValue && strlen(pValue))
 			{
 				char szLightTarget[32];
 				strcpy(szLightTarget, pValue);
 
 				int j = 0;
-				for(; j < m_iNumBSPEntities; j++)
+				for (auto bspent2 : m_pBSPEntities)
 				{
 					pValue = ValueForKey(&m_pBSPEntities[j], "classname");
 
-					if (strcmp( pValue, "info_light_origin"))
-						continue;
-					
-					pValue = ValueForKey(&m_pBSPEntities[j], "targetname");
-					
-					if(pValue)
+					if (strcmp(pValue, "info_light_origin"))
 					{
-						if(!strcmp(pValue, szLightTarget))
+						j++;
+						continue;
+					}
+
+					pValue = ValueForKey(&m_pBSPEntities[j], "targetname");
+
+					if (pValue)
+					{
+						if (!strcmp(pValue, szLightTarget))
 						{
 							pValue = ValueForKey(&m_pBSPEntities[j], "origin");
 							if (pValue)
@@ -663,23 +645,23 @@ void CPropManager::LoadEntVars( )
 					}
 				}
 
-				if(j == m_iNumBSPEntities)
+				if (j == m_pBSPEntities.size())
 				{
-					m_pCurrentExtraData->lightorigin = m_pEntities[m_iNumEntities].origin;
+					m_pCurrentExtraData->lightorigin = propentity.origin;
 				}
 			}
 			else
 			{
-				m_pCurrentExtraData->lightorigin = m_pEntities[m_iNumEntities].origin;
+				m_pCurrentExtraData->lightorigin = propentity.origin;
 			}
 
 			g_StudioRenderer.m_bExternalEntity = true;
-			g_StudioRenderer.m_pCurrentEntity = &m_pEntities[m_iNumEntities];
+			m_pEntities.emplace_back(propentity);
+			g_StudioRenderer.m_pCurrentEntity = &m_pEntities[m_pEntities.size() - 1];
 			g_StudioRenderer.m_pStudioHeader = m_pCurrentExtraData->pModelData->pHdr;
-			g_StudioRenderer.m_pStudioHeader = m_pCurrentExtraData->pModelData->pTexHdr;
+			g_StudioRenderer.m_pCurrentStudioMDL = m_pCurrentExtraData->pModelData->pCacheModel;
 
 			g_StudioRenderer.StudioSaveUniqueData(m_pCurrentExtraData);
-			m_iNumEntities++;
 		}
 	}
 }
@@ -690,54 +672,74 @@ SetupVBO
 
 ====================
 */
-void CPropManager::SetupVBO( )
+void CPropManager::SetupVBO(void)
 {
-	if(!m_iNumHeaders)
+	if (m_pStaticModelBuffer)
+		delete m_pStaticModelBuffer;
+
+	if (m_pStaticModelVAO)
+		delete m_pStaticModelVAO;
+
+	m_pStaticModelBuffer = nullptr;
+	
+	m_pStaticModelVAO = nullptr;
+
+	if (m_pHeaders.empty())
 		return;
 
 	m_iNumTotalVerts = NULL;
-	for(int i = 0; i < m_iNumHeaders; i++)
-		m_iNumTotalVerts += m_pHeaders[i].pVBOHeader.numverts;
 
 	int iTotalIndexes = 0;
-	for(int i = 0; i < m_iNumHeaders; i++)
-		iTotalIndexes += m_pHeaders[i].pVBOHeader.numindexes;
+
+	for (auto &header_ : m_pHeaders)
+	{
+		modeldata_t* header = header_.get();
+		m_iNumTotalVerts += header->pVBOHeader.numverts;
+		iTotalIndexes += header->pVBOHeader.numindexes;
+	}
 
 	m_pVertexData = new brushvertex_t[m_iNumTotalVerts];
-	memset(m_pVertexData, 0, sizeof(brushvertex_t)*m_iNumTotalVerts);
+	memset(m_pVertexData, 0, sizeof(brushvertex_t) * m_iNumTotalVerts);
 
 	m_pIndexBuffer = new unsigned int[iTotalIndexes];
-	memset(m_pIndexBuffer, 0, sizeof(unsigned int)*iTotalIndexes);
+	memset(m_pIndexBuffer, 0, sizeof(unsigned int) * iTotalIndexes);
 
 	int iVertexOffset = 0;
 	int iIndexOffset = 0;
-	for(int i = 0; i < m_iNumHeaders; i++)
+	for (auto &header_ : m_pHeaders)
 	{
-		memcpy(&m_pVertexData[iVertexOffset], m_pHeaders[i].pVBOHeader.pBufferData, 
-			sizeof(brushvertex_t)*m_pHeaders[i].pVBOHeader.numverts);
+		modeldata_t* header = header_.get();
 
-		for(int j = 0; j < m_pHeaders[i].pVBOHeader.numindexes; j++)
-			m_pHeaders[i].pVBOHeader.indexes[j] += iVertexOffset;
+		memcpy(&m_pVertexData[iVertexOffset], header->pVBOHeader.pBufferData,
+			sizeof(brushvertex_t) * header->pVBOHeader.numverts);
 
-		memcpy(&m_pIndexBuffer[iIndexOffset], m_pHeaders[i].pVBOHeader.indexes,
-			sizeof(unsigned int)*m_pHeaders[i].pVBOHeader.numindexes);
+		for (int j = 0; j < header->pVBOHeader.numindexes; j++)
+			header->pVBOHeader.indexes[j] += iVertexOffset;
 
-		for(int j = 0; j < m_pHeaders[i].pVBOHeader.numsubmodels; j++)
+		memcpy(&m_pIndexBuffer[iIndexOffset], header->pVBOHeader.indexes,
+			sizeof(unsigned int) * header->pVBOHeader.numindexes);
+
+		for (int j = 0; j < header->pVBOHeader.numsubmodels; j++)
 		{
-			for(int k = 0; k < m_pHeaders[i].pVBOHeader.submodels[j].nummeshes; k++)
+			for (int k = 0; k < header->pVBOHeader.submodels[j].nummeshes; k++)
 			{
-				m_pHeaders[i].pVBOHeader.submodels[j].meshes[k].start_vertex += iIndexOffset;
+				header->pVBOHeader.submodels[j].meshes[k].start_vertex += iIndexOffset;
 			}
 		}
 
-		iVertexOffset += m_pHeaders[i].pVBOHeader.numverts;
-		iIndexOffset += m_pHeaders[i].pVBOHeader.numindexes;
+		iVertexOffset += header->pVBOHeader.numverts;
+		iIndexOffset += header->pVBOHeader.numindexes;
 	}
 
-	gBSPRenderer.glGenBuffersARB(1, &m_uiIndexBuffer);
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, m_uiIndexBuffer);
-	gBSPRenderer.glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, iTotalIndexes*sizeof(unsigned int), m_pIndexBuffer, GL_STATIC_DRAW_ARB);
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+	m_pStaticModelVAO = new GL_VertexArrayObject();
+
+	m_pStaticModelBuffer = new GL_BufferHandler();
+	m_pStaticModelBuffer->Bind(GL_BufferHandler::ElementArrayBuffer);
+	m_pStaticModelBuffer->BufferData(GL_BufferHandler::ElementArrayBuffer, iTotalIndexes * sizeof(unsigned int), m_pIndexBuffer, GL_BufferHandler::StaticDraw);
+
+	//we set up m_pStaticModelVAO in CBSPRenderer::GenerateVertexArray() since we need m_pMainBuffer
+
+	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
 }
 
 /*
@@ -746,176 +748,58 @@ RenderModels
 
 ====================
 */
-void CPropManager::RenderProps( bool isWater )
+void CPropManager::RenderProps(bool bSkybox)
 {
-	if(m_pCvarDrawClientEntities->value < 1)
+	if (m_pCvarDrawClientEntities->value < 1)
 		return;
 
-	if (g_StudioRenderer.m_pCvarDrawModels->value < 1)
+	if (g_StudioRenderer.m_pCvarDrawStudioModels->value < 1)
 		return;
 
-	if(g_StudioRenderer.m_pCvarDrawEntities->value < 1)
+	if (g_StudioRenderer.m_pCvarDrawEntities->value < 1)
 		return;
 
-	if(m_pCvarDrawClientEntities->value == 2)
-		glDisable(GL_DEPTH_TEST);
+	if (m_pCvarDrawClientEntities->value == 2)
+		g_GlobalGLState.SetDepthTest(false);
 
-	gBSPRenderer.glBindBufferARB(GL_ARRAY_BUFFER_ARB, gBSPRenderer.m_uiBufferIndex);
+	if (m_pStaticModelVAO)
+		m_pStaticModelVAO->BindVAO();
+	else
+		return;
 
-	// Set pointers up at start of frame
-	glVertexPointer(3, GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, pos));
-	glNormalPointer(GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, normal));
+	g_StudioRenderer.m_ModelShader->Bind();
 
-	gBSPRenderer.glClientActiveTextureARB(GL_TEXTURE0_ARB);
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, m_uiIndexBuffer);
-	glTexCoordPointer( 2, GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, texcoord) );
+	g_StudioRenderer.m_bExternalEntity = true;
 
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	cl_entity_t* ents = m_pEntities.data();
 
-	int FoliageCount = 0;
-	
-	for ( int i = 0; i < m_iNumEntities; i++ )
+	for (int i = 0; i < m_pEntities.size(); i++, ents++)
 	{
-		if(m_pEntities[i].curstate.renderfx == 70)
-			continue;
 
-		entextradata_t *pExtraData = ((entextrainfo_t *)m_pEntities[i].topnode)->pExtraData;
+		entextrainfo_t* pExtraInfo = ((entextrainfo_t*)ents->topnode);
+		entextradata_t* pExtraData = pExtraInfo->pExtraData;
 
-		if(!pExtraData)
+
+		if (!pExtraData)
 			return;
 
 		int j = 0;
 		for (; j < pExtraData->num_leafs; j++)
-			if (gBSPRenderer.m_pPVS[pExtraData->leafnums[j] >> 3] & (1 << (pExtraData->leafnums[j]&7) ))
+			if (gBSPRenderer.IsInPotentiallyVisibleSet(pExtraData->leafnums[j]))
 				break;
-			
+
 		if (j == pExtraData->num_leafs)
 			continue;
 
-		// bacontsu - interactive grass
-#define GRASS_SWAY_RADIUS 500.0f
-#define GRASS_RADIUS 40.0f
-#define GRASS_ANGLE 15.0f
-
-		if (m_pEntities[i].curstate.iuser3 == 1)
-		{
-			if(isWater)
-				continue;
-
-			// run thru all entites
-			Vector closestEntVec;
-			for (int j = 1; j < 512; j++)
-			{
-				if ((gEngfuncs.GetEntityByIndex(j)->curstate.origin - m_pEntities[i].curstate.origin).Length2D() < (closestEntVec - m_pEntities[i].curstate.origin).Length2D())
-					closestEntVec = gEngfuncs.GetEntityByIndex(j)->curstate.origin;
-			}
-
-			// get base params
-			Vector clientOrg = closestEntVec;
-			Vector grassOrg = m_pEntities[i].curstate.origin;
-
-			// calculate distance of x and y axis from player
-			Vector dist = grassOrg - clientOrg;
-
-			// actually apply logic when we're close enough 
-			if (dist.Length2D() < GRASS_RADIUS)
-			{
-				// clamps
-				float distX = std::clamp(dist.x, -GRASS_RADIUS, GRASS_RADIUS);
-				float distY = std::clamp(dist.y, -GRASS_RADIUS, GRASS_RADIUS);
-
-				if (distX > 0)
-				{
-					distX = GRASS_RADIUS - distX;
-				}
-				else if (distX < 0)
-				{
-					distX = -GRASS_RADIUS - distX;
-				}
-
-				if (distY > 0)
-				{
-					distY = GRASS_RADIUS - distY;
-				}
-				else if (distY < 0)
-				{
-					distY = -GRASS_RADIUS - distY;
-				}
-
-				m_pEntities[i].curstate.angles.x = m_pEntities[i].baseline.angles.x - (distX * GRASS_ANGLE / GRASS_RADIUS);
-				m_pEntities[i].curstate.angles.z = m_pEntities[i].baseline.angles.z - (distY * GRASS_ANGLE / GRASS_RADIUS);
-				m_pEntities[i].curstate.angles.y = 0;
-
-			}
-			else if (dist.Length2D() < GRASS_SWAY_RADIUS)
-			{
-				m_pEntities[i].curstate.angles.x = m_pEntities[i].baseline.angles.x = lerp(m_pEntities[i].curstate.angles.x, sin(gEngfuncs.GetAbsoluteTime() + m_pEntities[i].curstate.fuser3) * 4.0f, gHUD.m_flTimeDelta * 10.0f);
-				m_pEntities[i].curstate.angles.z = m_pEntities[i].baseline.angles.z = lerp(m_pEntities[i].curstate.angles.x, cos(gEngfuncs.GetAbsoluteTime() + m_pEntities[i].curstate.fuser4) * 4.0f, gHUD.m_flTimeDelta * 10.0f);;
-				m_pEntities[i].curstate.angles.y = 0;
-			}
-			else
-			{
-				m_pEntities[i].curstate.angles.x = m_pEntities[i].baseline.angles.x = 0;// = lerp(m_pEntities[i].curstate.angles.x, sin(gEngfuncs.GetAbsoluteTime() + m_pEntities[i].curstate.fuser3) * 2.5f, gHUD.m_flTimeDelta * 10.0f);
-				m_pEntities[i].curstate.angles.z = m_pEntities[i].baseline.angles.z = 0; // lerp(m_pEntities[i].curstate.angles.x, cos(gEngfuncs.GetAbsoluteTime() + m_pEntities[i].curstate.fuser4) * 2.5f, gHUD.m_flTimeDelta * 10.0f);;
-				m_pEntities[i].curstate.angles.y = 0;
-			}
-
-			for (int j = 0; j < 3; j++)
-			{
-				m_pEntities[i].angles[j] = lerp(m_pEntities[i].angles[j], m_pEntities[i].curstate.angles[j], gHUD.m_flTimeDelta * 5);
-			}
-
-			FoliageCount++;
-		}
-
-
-		g_StudioRenderer.StudioDrawExternalEntity( &m_pEntities[i] );
+		g_StudioRenderer.StudioDrawExternalEntity(ents, bSkybox);
 	}
 
-	// update
-	gBSPRenderer.m_iTotalFoliage = FoliageCount;
+	if (m_pCvarDrawClientEntities->value == 2)
+		g_GlobalGLState.SetDepthTest(true);
 
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-	gBSPRenderer.glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+	g_StudioRenderer.m_bExternalEntity = true;
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-	if(m_pCvarDrawClientEntities->value == 2)
-		glEnable(GL_DEPTH_TEST);
-}
-
-/*
-====================
-PostLoadModel
-
-====================
-*/
-bool CPropManager::PostLoadModel( char *modelname, studiohdr_t *hdr, cl_entity_t *pEntity )
-{
-	// preload textures
-	if (hdr->numtextures == 0)
-	{
-		char texturename[256];
-
-		strcpy( texturename, modelname );
-		strcpy( &texturename[strlen(texturename) - 4], "T.mdl" );
-
-		model_t *pModel = g_StudioRenderer.Mod_LoadModel(texturename);
-
-		if(!pModel)
-			return false;
-
-		m_pHeaders[m_iNumHeaders].pTexHdr = (studiohdr_t *)pModel->cache.data;
-	}
-	else
-	{
-		m_pHeaders[m_iNumHeaders].pTexHdr = m_pHeaders[m_iNumHeaders].pHdr;
-	}
-	return true;
+	GL_VertexArrayObject::ResetVAOBinding();
 }
 
 /*
@@ -924,81 +808,153 @@ LoadMDL
 
 ====================
 */
-bool CPropManager::LoadMDL( char *name, cl_entity_t *pEntity, entity_t *pBSPEntity )
+bool CPropManager::LoadMDL(const char* name, cl_entity_t* pEntity, entity_t* pBSPEntity)
 {
-	if( (m_pCurrentExtraData->pModelData = GetHeader( name )))
+	if (m_pCurrentExtraData->pModelData = GetHeader(name))
 		return true;
 
-	if ( m_iNumHeaders == MAXRENDERENTS )
+	if (m_pHeaders.size() == MAXRENDERENTS)
 	{
 		gEngfuncs.Con_Printf("BSP Loader: The client side limit of 4096 models has been reached!\n Not caching.\n");
 		return false;
 	}
 
-	model_t *pModel = g_StudioRenderer.Mod_LoadModel(name);
+	model_t* pModel = IEngineStudio.Mod_ForName(name, false);
 
-	if(!pModel)
+	if (!pModel)
 		return false;
-	
-	m_pHeaders[m_iNumHeaders].pHdr = (studiohdr_t *)pModel->cache.data;
-	strcpy(m_pHeaders[m_iNumHeaders].name, name);
 
-	if ( m_iNumHeaders == MAXRENDERENTS )
+	modeldata_t* modelheader = AllocModelHeader();
+
+	modelheader->pHdr = (studiohdr_t*)pModel->cache.data;
+	if (!pModel->entities)
+	{
+		pModel->entities = (char*)(new StudioMDL_Model(pModel));
+	}
+
+	modelheader->pCacheModel = (StudioMDL_Model*)pModel->entities;
+
+	strcpy(modelheader->name, name);
+
+	if (m_pHeaders.size() == MAXRENDERENTS)
 	{
 		gEngfuncs.Con_Printf("BSP Loader: The client side limit of 4096 models has been reached!\n Not caching.\n");
 		return false;
 	}
-
-	if ( !PostLoadModel( name, m_pHeaders[m_iNumHeaders].pHdr, pEntity ) )
-		return false;
 
 	// not very nice, but we don't support animations anyway
-	cl_entity_t *pTempEnt = new cl_entity_t;
+	cl_entity_t* pTempEnt = new cl_entity_t;
 	memset(pTempEnt, 0, sizeof(cl_entity_t));
-	model_t *pTempModel = new model_t;
+	model_t* pTempModel = new model_t;
 	memset(pTempModel, 0, sizeof(model_t));
 	strcpy(pTempModel->name, name);
 
 	g_StudioRenderer.m_bExternalEntity = true;
 	g_StudioRenderer.m_pCurrentEntity = pTempEnt;
-	g_StudioRenderer.m_pStudioHeader = m_pHeaders[m_iNumHeaders].pHdr;
-	g_StudioRenderer.m_pTextureHeader = m_pHeaders[m_iNumHeaders].pTexHdr;
+	g_StudioRenderer.m_pStudioHeader = modelheader->pHdr;
+	g_StudioRenderer.m_pCurrentStudioMDL = (StudioMDL_Model*)pModel->entities;
 	g_StudioRenderer.m_pRenderModel = pTempModel;
 
 	g_StudioRenderer.StudioSetUpTransform(0);
 	g_StudioRenderer.StudioSetupBones();
 
-	g_StudioRenderer.StudioSaveModelData(&m_pHeaders[m_iNumHeaders]);
+	g_StudioRenderer.StudioSaveModelData(modelheader);
 
-	delete pTempEnt;
-	delete pTempModel;
+	delete[] pTempEnt;
+	delete[] pTempModel;
 
-	m_pCurrentExtraData->pModelData = &m_pHeaders[m_iNumHeaders];
-	m_iNumHeaders++;
+	m_pCurrentExtraData->pModelData = modelheader;
 	return true;
 }
 
-void CPropManager::CalcCable(cabledata_t* cable)
+/*
+====================
+SetupCable
+
+====================
+*/
+bool CPropManager::SetupCable(cabledata_t* cable, entity_t* entity)
 {
+	char sz[64];
 	Vector vdroppoint;
+	Vector vposition1;
+	Vector vposition2;
 	Vector vdirection;
 	Vector vmidpoint;
 	Vector vendpoint;
 
-	cable->vmins = Vector(4096, 4096, 4096);
-	cable->vmaxs = Vector(-4096, -4096, -4096);
+	// Get our origin
+	char* pValue = ValueForKey(entity, "origin");
+
+	if (!pValue)
+		return false;
+
+	sscanf(pValue, "%f %f %f", &vposition1[0], &vposition1[1], &vposition1[2]);
+
+	// Find our target entity
+	pValue = ValueForKey(entity, "target");
+
+	if (!pValue)
+		return false;
+
+	strcpy(sz, pValue);
+
+	for (auto& bspent : m_pBSPEntities)
+	{
+		pValue = ValueForKey(&bspent, "targetname");
+
+		if (!pValue)
+			continue;
+
+		if (!strcmp(pValue, sz))
+		{
+			pValue = ValueForKey(&bspent, "origin");
+
+			if (!pValue)
+				return false;
+
+			// Copy origin over
+			sscanf(pValue, "%f %f %f", &vposition2[0], &vposition2[1], &vposition2[2]);
+		}
+	}
+
+	// Get our falling depth
+	pValue = ValueForKey(entity, "falldepth");
+
+	if (!pValue)
+		return false;
 
 	// Calculate dropping point
-	VectorSubtract(cable->vpos2, cable->vpos1, vdirection);
-	VectorMASSE(cable->vpos1, 0.5, vdirection, vmidpoint);
-	vdroppoint = Vector(vmidpoint[0], vmidpoint[1], vmidpoint[2] - cable->ifall);
+	VectorSubtract(vposition2, vposition1, vdirection);
+	VectorMA(vposition1, 0.5, vdirection, vmidpoint);
+	vdroppoint = Vector(vmidpoint[0], vmidpoint[1], vmidpoint[2] - atoi(pValue));
+
+	// Get sprite width
+	pValue = ValueForKey(entity, "spritewidth");
+
+	if (!pValue)
+		return false;
+
+	cable->iwidth = atoi(pValue);
+
+	// Get segment count
+	pValue = ValueForKey(entity, "segments");
+
+	if (!pValue)
+		return false;
+
+	cable->isegments = atoi(pValue);
+	cable->inumpoints = cable->isegments + 1;
+
+	cable->vmins = Vector(4096, 4096, 4096);
+	cable->vmaxs = Vector(-4096, -4096, -4096);
 
 	for (int i = 0; i < cable->inumpoints; i++)
 	{
 		float f = (float)i / (float)cable->isegments;
-		cable->vpoints[i][0] = cable->vpos1[0] * ((1 - f) * (1 - f)) + vdroppoint[0] * ((1 - f) * f * 2) + cable->vpos2[0] * (f * f);
-		cable->vpoints[i][1] = cable->vpos1[1] * ((1 - f) * (1 - f)) + vdroppoint[1] * ((1 - f) * f * 2) + cable->vpos2[1] * (f * f);
-		cable->vpoints[i][2] = cable->vpos1[2] * ((1 - f) * (1 - f)) + vdroppoint[2] * ((1 - f) * f * 2) + cable->vpos2[2] * (f * f);
+		cable->vpoints[i][0] = vposition1[0] * ((1 - f) * (1 - f)) + vdroppoint[0] * ((1 - f) * f * 2) + vposition2[0] * (f * f);
+		cable->vpoints[i][1] = vposition1[1] * ((1 - f) * (1 - f)) + vdroppoint[1] * ((1 - f) * f * 2) + vposition2[1] * (f * f);
+		cable->vpoints[i][2] = vposition1[2] * ((1 - f) * (1 - f)) + vdroppoint[2] * ((1 - f) * f * 2) + vposition2[2] * (f * f);
 
 		for (int j = 0; j < 3; j++)
 		{
@@ -1021,91 +977,10 @@ void CPropManager::CalcCable(cabledata_t* cable)
 
 	VectorCopy(cable->vmaxs, pdata.absmax);
 	VectorCopy(cable->vmins, pdata.absmin);
-	SV_FindTouchedLeafs(&pdata, gBSPRenderer.m_pWorld->nodes);
+	SV_FindTouchedLeafs(&pdata, engine_cl->worldmodel->nodes);
 
 	memcpy(cable->leafnums, pdata.leafnums, sizeof(short) * MAX_ENT_LEAFS);
 	cable->num_leafs = pdata.num_leafs;
-}
-
-/*
-====================
-SetupCable
-
-====================
-*/
-bool CPropManager::SetupCable ( cabledata_t *cable, entity_t *entity )
-{
-	char sz[64];
-	Vector vposition1;
-	Vector vposition2;
-
-	// Get our origin
-	char *pValue = ValueForKey(entity, "origin");
-
-	if(!pValue)
-		return false;
-
-	sscanf(pValue, "%f %f %f", &vposition1[0], &vposition1[1], &vposition1[2]);
-	cable->vpos1 = Vector(vposition1[0], vposition1[1], vposition1[2]);
-
-	// Find our target entity
-	pValue = ValueForKey(entity, "target");
-
-	if(!pValue)
-		return false;
-
-	strcpy(sz, pValue);
-
-	for(int i = 0; i < m_iNumBSPEntities; i++)
-	{
-		pValue = ValueForKey(&m_pBSPEntities[i], "targetname");
-
-		if(!pValue)
-			continue;
-
-		if(!strcmp(pValue, sz))
-		{
-			pValue = ValueForKey(&m_pBSPEntities[i], "origin");
-
-			if (!pValue)
-				return false;
-
-			// Copy origin over
-			sscanf(pValue, "%f %f %f", &vposition2[0], &vposition2[1], &vposition2[2]);
-			cable->vpos2 = Vector(vposition2[0], vposition2[1], vposition2[2]);
-		}
-	}
-
-	// Get our falling depth
-	pValue = ValueForKey(entity, "falldepth");
-
-	if(!pValue)
-		return false;
-
-	cable->iTargetFall = cable->iBaseFall = cable->ifall = atoi(pValue);
-
-	// Get sprite width
-	pValue = ValueForKey(entity, "spritewidth");
-
-	if(!pValue)
-		return false;
-
-	cable->iwidth = atoi(pValue);
-
-	// Get segment count
-	pValue = ValueForKey(entity, "segments");
-
-	if(!pValue)
-		return false;
-
-	cable->isegments = atoi(pValue);
-	cable->inumpoints = cable->isegments+1;
-
-	// Randomize speeds
-	cable->fSinSpeed = gEngfuncs.pfnRandomFloat(1.0f, 2.0f);
-	cable->fCosSpeed = gEngfuncs.pfnRandomFloat(1.0f, 2.0f);
-
-	CalcCable(cable);
 
 	return true;
 }
@@ -1116,90 +991,58 @@ DrawCables
 
 ====================
 */
-void CPropManager::DrawCables( )
+void CPropManager::DrawCables(void)
 {
 	Vector vVertex;
 	Vector vTangent;
 	Vector vDir;
 	Vector vRight;
 
-	if(m_pCvarDrawClientEntities->value < 1)
+	if (!m_pCvarDrawClientEntities->value || m_pCables.empty())
 		return;
 
-	if (m_pCvarDrawCable->value < 1)
-		return;
+	g_GlobalGLState.SetCullFace(false);
 
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_CULL_FACE);
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
-	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);
-	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_PRIMARY_COLOR_ARB);
-
-	bool isDebug = (m_pCvarDrawCableDebug->value != 0.0f);
-	for ( int i = 0; i < m_iNumCables; i++ )
+	for (auto cable : m_pCables)
 	{
-		// bacontsu - animated cables
-		cabledata_t* cable = &m_pCables[i];
-		if (cable)
-		{
-			cable->iTargetFall = cable->iBaseFall + (sin(gEngfuncs.GetAbsoluteTime() * cable->fSinSpeed) * cable->iBaseFall / 10.0f);
-			cable->ifall = lerp(cable->ifall, cable->iTargetFall, gHUD.m_flTimeDelta * 10.0f);
-				
-			CalcCable(cable);
-
-			// debug
-			if (isDebug)
-				DBG_DrawBBox(cable->vmins, cable->vmaxs);
-		}
-
 		int j = 0;
-		for (; j < m_pCables[i].num_leafs; j++)
-			if (gBSPRenderer.m_pPVS[m_pCables[i].leafnums[j] >> 3] & (1 << (m_pCables[i].leafnums[j]&7) ))
+		for (; j < cable.num_leafs; j++)
+			if (gBSPRenderer.IsInPotentiallyVisibleSet(cable.leafnums[j]))
 				break;
-			
-		if (j == m_pCables[i].num_leafs)
+
+		if (j == cable.num_leafs)
 			continue;
 
-		if(gHUD.viewFrustum.CullBox(m_pCables[i].vmins, m_pCables[i].vmaxs))
+		if (gHUD.viewFrustum.CullBox(cable.vmins, cable.vmaxs))
 			continue;
-
-		// find cable's right fector
-		Vector forward = cable->vpos2 - cable->vpos1;
-		forward.z = 0;
-		forward = forward.Normalize();
-
-		Vector right, angles;
-		VectorAngles(forward, angles);
-		AngleVectors(angles, nullptr, right, nullptr);
 
 		glBegin(GL_TRIANGLE_STRIP);
-		for(int j = 0; j < m_pCables[i].inumpoints; j++)
+		for (int j = 0; j < cable.inumpoints; j++)
 		{
-			if(j == 0){VectorSubtract(m_pCables[i].vpoints[0], m_pCables[i].vpoints[1], vTangent);}
-			else {VectorSubtract(m_pCables[i].vpoints[0], m_pCables[i].vpoints[j], vTangent);}
-			
-			VectorSubtract(m_pCables[i].vpoints[j], gBSPRenderer.m_vRenderOrigin, vDir);
-			vRight = CrossProduct(vTangent, -vDir); VectorNormalizeFast(vRight);
+			if (j == 0)
+			{
+				VectorSubtract(cable.vpoints[0], cable.vpoints[1], vTangent);
+			}
+			else
+			{
+				VectorSubtract(cable.vpoints[0], cable.vpoints[j], vTangent);
+			}
+
+			VectorSubtract(cable.vpoints[j], gBSPRenderer.m_vRenderOrigin, vDir);
+			CrossProduct(vTangent, -vDir, vRight);
+			vRight = vRight.Normalize();
 
 			glColor3f(GL_ZERO, GL_ZERO, GL_ZERO);
-			VectorMASSE(m_pCables[i].vpoints[j], m_pCables[i].iwidth, vRight, vVertex);
-			if(j != 0 && j != m_pCables[i].inumpoints - 1) // bacontsu - dont animate last and first vertex
-				vVertex = vVertex + (right * 1.5f * cos(gEngfuncs.GetAbsoluteTime() * m_pCables[i].fCosSpeed + j * 0.2f));
+			VectorMA(cable.vpoints[j], cable.iwidth, vRight, vVertex);
 			glVertex3fv(vVertex);
 
-			VectorMASSE(m_pCables[i].vpoints[j], -m_pCables[i].iwidth, vRight, vVertex);
-			if (j != 0 && j != m_pCables[i].inumpoints - 1) // bacontsu - dont animate last and first vertex
-				vVertex = vVertex + (right * 1.5f * cos(gEngfuncs.GetAbsoluteTime() * m_pCables[i].fCosSpeed + j * 0.2f));
+			VectorMA(cable.vpoints[j], -cable.iwidth, vRight, vVertex);
 			glVertex3fv(vVertex);
 		}
 		glEnd();
 	}
-	
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_TEXTURE_2D);
-	glColor3f(GL_ONE, GL_ONE, GL_ONE);
 
-	gBSPRenderer.m_iCable = m_iNumCables;
+	g_GlobalGLState.SetCullFace(true);
 }
 
 /*
@@ -1208,122 +1051,72 @@ RenderPropsSolid
 
 ====================
 */
-void CPropManager::RenderPropsSolid( )
+void CPropManager::RenderPropsSolid(void)
 {
-	if(m_pCvarDrawClientEntities->value < 1)
+	if (m_pCvarDrawClientEntities->value < 1)
 		return;
 
-	if (g_StudioRenderer.m_pCvarDrawModels->value < 1)
+	if (g_StudioRenderer.m_pCvarDrawStudioModels->value < 1)
 		return;
 
-	if(g_StudioRenderer.m_pCvarDrawEntities->value < 1)
+	if (g_StudioRenderer.m_pCvarDrawEntities->value < 1)
 		return;
 
-	gBSPRenderer.glBindBufferARB(GL_ARRAY_BUFFER_ARB, gBSPRenderer.m_uiBufferIndex);
+	if (m_pStaticModelVAO)
+		m_pStaticModelVAO->BindVAO();
+	else
+		return;
 
-	// Set pointers up at start of frame
-	glVertexPointer(3, GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, pos));
-	glNormalPointer(GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, normal));
+	g_StudioRenderer.m_ModelSolidShader->Bind();
 
-	gBSPRenderer.glClientActiveTextureARB(GL_TEXTURE0_ARB);
-	gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, m_uiIndexBuffer);
-	glTexCoordPointer( 2, GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, texcoord) );
+	g_StudioRenderer.m_dSolidModelData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
 
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	
-	for ( int i = 0; i < m_iNumEntities; i++ )
+	auto dynl = gBSPRenderer.m_pCurrentDynLight;
+	g_StudioRenderer.m_dSolidModelData.light_pos = glm::vec4(dynl->origin.x, dynl->origin.y, dynl->origin.z, dynl->radius);
+	g_StudioRenderer.m_dSolidModelData.int_values.x = 1;
+
+	g_StudioRenderer.m_ModelSolid_Buffer->Bind(GL_BufferHandler::UniformBuffer);
+
+	g_StudioRenderer.m_bExternalEntity = true;
+
+
+	if (gBSPRenderer.m_bSunShadowMapPass)
 	{
-		if(m_pEntities[i].curstate.renderfx == 70)
-			continue;
+		// flip
+		g_StudioRenderer.m_ModelSolidShader->Uniform1i(g_StudioRenderer.m_ModelShaderSolidLocs[CStudioModelRenderer::mdlshadersolid_sunshadow], 1);
+		glCullFace(GL_BACK);
+	}
 
-		entextradata_t *pExtraData = ((entextrainfo_t *)m_pEntities[i].topnode)->pExtraData;
+	cl_entity_t* ents = m_pEntities.data();
 
-		if(!pExtraData)
+	for (int i = 0; i < m_pEntities.size(); i++, ents++)
+	{
+
+		entextradata_t* pExtraData = ((entextrainfo_t*)ents->topnode)->pExtraData;
+
+		if (!pExtraData)
 			return;
 
 		int j = 0;
 		for (; j < pExtraData->num_leafs; j++)
-			if (gBSPRenderer.m_pPVS[pExtraData->leafnums[j] >> 3] & (1 << (pExtraData->leafnums[j]&7) ))
+			if (gBSPRenderer.IsInPotentiallyVisibleSet(pExtraData->leafnums[j]))
 				break;
-			
+
 		if (j == pExtraData->num_leafs)
 			continue;
 
-		g_StudioRenderer.StudioDrawExternalEntitySolid( &m_pEntities[i] );
+		g_StudioRenderer.StudioDrawExternalEntitySolid(ents);
 	}
 
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-	gBSPRenderer.glBindBufferARB(GL_ARRAY_BUFFER_ARB, NULL);
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
-
-/*
-====================
-RenderSkyProps
-
-====================
-*/
-void CPropManager::RenderSkyProps( )
-{
-	if(m_pCvarDrawClientEntities->value < 1)
-		return;
-
-	if (g_StudioRenderer.m_pCvarDrawModels->value < 1)
-		return;
-
-	if(g_StudioRenderer.m_pCvarDrawEntities->value < 1)
-		return;
-
-	gBSPRenderer.glBindBufferARB(GL_ARRAY_BUFFER_ARB, gBSPRenderer.m_uiBufferIndex);
-
-	// Set pointers up at start of frame
-	glVertexPointer(3, GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, pos));
-	glNormalPointer(GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, normal));
-
-	gBSPRenderer.glClientActiveTextureARB(GL_TEXTURE0_ARB);
-	gBSPRenderer.glActiveTextureARB(GL_TEXTURE0_ARB);
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, m_uiIndexBuffer);
-	glTexCoordPointer( 2, GL_FLOAT, sizeof(brushvertex_t), OFFSET_TRINITY(brushvertex_t, texcoord) );
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	
-	for ( int i = 0; i < m_iNumEntities; i++ )
+	if (gBSPRenderer.m_bSunShadowMapPass)
 	{
-		if(m_pEntities[i].curstate.renderfx != 70)
-			continue;
-
-		// bacontsu - its a blimp
-		float mult = 0;
-
-		if (m_pEntities[m_iNumEntities].curstate.fuser4 > 0)
-			mult = m_pEntities[m_iNumEntities].curstate.fuser4;
-		else
-			mult = 1.7;
-
-		if (m_pEntities[i].curstate.iuser1 == 1)
-		{
-			m_pEntities[i].angles.y = gEngfuncs.GetAbsoluteTime() * mult;
-		}
-		else if (m_pEntities[i].curstate.iuser1 == 2)
-		{
-			m_pEntities[i].angles.y = -gEngfuncs.GetAbsoluteTime() * mult;
-		}
-
-		g_StudioRenderer.StudioDrawExternalEntity( &m_pEntities[i] );
+		// flip
+		g_StudioRenderer.m_ModelSolidShader->Uniform1i(g_StudioRenderer.m_ModelShaderSolidLocs[CStudioModelRenderer::mdlshadersolid_sunshadow], 0);
+		glCullFace(GL_FRONT);
 	}
 
-	gBSPRenderer.glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-	gBSPRenderer.glBindBufferARB(GL_ARRAY_BUFFER_ARB, NULL);
+	g_StudioRenderer.m_dSolidModelData.int_values.x = 0;
+	g_StudioRenderer.m_bExternalEntity = false;
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	GL_VertexArrayObject::ResetVAOBinding();
 }

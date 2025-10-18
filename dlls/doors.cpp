@@ -365,37 +365,31 @@ void CBaseDoor::SendInitMessage(CBasePlayer* player)
 	if (m_bDisableWaterShader || !FClassnameIs(pev, "func_water"))
 		return;
 
-	//order:
-	// entindex
-	// waterfog_color
-	// waterfog_start
-	// waterfog_end
-	// watertex_scale
-	// normal_scale
-	// fresnel
+	// order:
+	//  entindex (2 bytes = 16 bits)
+	//  waterfog_color (9 bytes = 72 bits)
+	//  waterfog_start (2 bytes = 16 bits)
+	//  waterfog_end (2 bytes = 16 bits)
+	//  watertex_scale (4 bytes = 32 bits)
+	//	refraction_scale (4 bytes = 32 bits)
+	//	reflection_scale  (4 bytes = 32 bits)
+	//  normal_scale (4 bytes = 32 bits)
+	//  fresnel (4 bytes = 32 bits)
+	//
+	//	total = 35 bytes per water entity (or 280 bits)
 
-	//if (player)
-	//	MESSAGE_BEGIN(MSG_ONE, gmsgWaterData, nullptr, player->pev);
-	//else
 	MESSAGE_BEGIN(MSG_ALL, gmsgWaterInfo, nullptr);
-
-	WRITE_LONG(entindex());
-	WRITE_FLOAT(pev->rendercolor.x);
-	WRITE_FLOAT(pev->rendercolor.y);
-	WRITE_FLOAT(pev->rendercolor.z);
-	WRITE_LONG(waterfog_start);
-	WRITE_LONG(waterfog_end);
-	char dummy[128];
-	sprintf_s(dummy, "%f", watertex_scale);
-	WRITE_STRING(dummy);
-	sprintf_s(dummy, "%f", refraction_scale);
-	WRITE_STRING(dummy);
-	sprintf_s(dummy, "%f", reflection_scale);
-	WRITE_STRING(dummy);
-	sprintf_s(dummy, "%f", normal_scale);
-	WRITE_STRING(dummy);
-	sprintf_s(dummy, "%f", fresnel);
-	WRITE_STRING(dummy);
+	WRITE_SHORT(entindex());
+	WRITE_BYTE(pev->rendercolor.x);
+	WRITE_BYTE(pev->rendercolor.y);
+	WRITE_BYTE(pev->rendercolor.z);
+	WRITE_SHORT(waterfog_start);
+	WRITE_SHORT(waterfog_end);
+	WRITE_FLOAT(watertex_scale);
+	WRITE_FLOAT(refraction_scale);
+	WRITE_FLOAT(reflection_scale);
+	WRITE_FLOAT(normal_scale);
+	WRITE_FLOAT(fresnel);
 	MESSAGE_END();
 }
 

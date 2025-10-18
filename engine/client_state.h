@@ -8,6 +8,8 @@
 #include "screenfade.h"
 #include "usercmd.h"
 
+#include "net.h"
+
 typedef void* FileHandleEngine_t;
 
 typedef enum cactive_t : int
@@ -23,7 +25,11 @@ typedef enum cactive_t : int
 struct packet_entities_t
 {
 	int num_entities;
-	unsigned char flags[32]; //SALSA: was 128 in half-life post 25th anniversary
+#ifdef HL25_UPDATE
+	unsigned char flags[128];
+#else
+	unsigned char flags[32]; // SALSATOBIAS: was 128 in half-life post 25th anniversary
+#endif
 	entity_state_t* entities;
 };
 
@@ -68,17 +74,6 @@ struct event_s
 	char* pszScript;
 };
 
-struct consistency_s
-{
-	char* filename;
-	int issound;
-	int orig_index;
-	int value;
-	int check_type;
-	float mins[3];
-	float maxs[3];
-};
-
 struct sfx_s
 {
 	char name[64];
@@ -117,21 +112,12 @@ struct incomingtransfer_t
 	qboolean custom;
 };
 
-struct sizebuf_t
-{
-	char* buffername;
-	unsigned short flags;
-	byte* data;
-	int maxsize;
-	int cursize;
-};
-
 struct client_static_s
 {
 	cactive_t state;
-	uint8_t netchan[13236];
+	netchan_t netchan;
 	sizebuf_t datagram; // must be at 13240B
-	byte datagram_buf[6000];
+	byte datagram_buf[MAX_DATAGRAM];
 	double connect_time;
 	int connect_retry;
 	int challenge;
@@ -179,8 +165,8 @@ struct client_static_s
 	qboolean isVAC2Secure;
 
 	// Splitted as 2 vars because of 8byte alignemnt required for uint64_t
-    uint32_t GameServerSteamID_1;
-    uint32_t GameServerSteamID_2;
+	uint32_t GameServerSteamID_1;
+	uint32_t GameServerSteamID_2;
 
 	int build_num;
 };
@@ -221,7 +207,7 @@ struct client_state_s
 	int pushmsec;
 	int light_level;
 	int intermission;
-	//int __padding_for_mtime;
+	int __padding_for_mtime;
 	double mtime[2];
 	double time;
 	double oldtime;
@@ -263,3 +249,4 @@ struct client_state_s
 };
 
 extern client_state_s* engine_cl;
+extern client_static_s* engine_cls;

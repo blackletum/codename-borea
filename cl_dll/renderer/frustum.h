@@ -1,13 +1,12 @@
-//==============================================================================//
-//			Copyright (c) 2010 - 2011, Richard Roháè, All rights reserved.		//
+ï»¿//==============================================================================//
+//			Copyright (c) 2010 - 2011, Richard Rohï¿½ï¿½, All rights reserved.		//
 //==============================================================================//
 
 #pragma once
 #ifndef FRUSTUM_H
 #define FRUSTUM_H
 
-#include "windows.h"
-#include "gl/gl.h"
+#include "PlatformHeaders.h"
 #include "pm_defs.h"
 #include "cl_entity.h"
 #include "com_model.h"
@@ -16,23 +15,23 @@
 #include "parsemsg.h"
 #include "cvardef.h"
 
-#define PITCH				0
-#define YAW					1
-#define ROLL				2
+#define PITCH 0
+#define YAW 1
+#define ROLL 2
 
-#define FARCLIP_OFF			0
-#define	FARCLIP_DEPTH		1
-#define FARCLIP_RADIAL		2
+#define FARCLIP_OFF 0
+#define FARCLIP_DEPTH 1
+#define FARCLIP_RADIAL 2
 
 typedef float Q_Vector[3];
 
 typedef struct Q_mplane_s
 {
-    Q_Vector	vNormal;
-    float		flDist; 
-    byte		type;
-    byte		signbits;
-    byte		pad[2];
+	Q_Vector vNormal;
+	float flDist;
+	byte type;
+	byte signbits;
+	byte pad[2];
 } Q_mplane_t;
 
 /*
@@ -44,30 +43,28 @@ CFrustum
 class FrustumCheck
 {
 public:
-	void SetFrustum( Q_Vector vAngles, Q_Vector vOrigin, float flFOV, float flFarDist = 0, bool bView = false );
-	bool CullBox( Q_Vector vMins, Q_Vector vMaxs );
-	bool RadialCullBox( Q_Vector vMins, Q_Vector vMaxs );
-	bool ExtraCullBox( Q_Vector vMins, Q_Vector vMaxs );
+	void SetFrustum(Vector vAngles, Vector vOrigin, float flFOV, float flFarDist = 0, bool bView = false);
+	bool CullBox(Vector vMins, Vector vMaxs);
+	bool RadialCullBox(Vector vMins, Vector vMaxs);
+	bool ExtraCullBox(Vector vMins, Vector vMaxs);
 
-	void SetExtraCullBox( Q_Vector vMins, Q_Vector vMaxs );
-	void DisableExtraCullBox( );
-	
-	float CalcFov( float flFovX, float flWidth, float flHeight );
-	void Q_AngleVectors( Q_Vector vAngles, Q_Vector vForward, Q_Vector vRight, Q_Vector vUp );
-	int  Q_BoxOnPlaneSide( Q_Vector emins, Q_Vector emaxs, Q_mplane_t *p );
-	int	 Q_SignbitsForPlane( Q_mplane_t *pOut );
-	void Q_RotatePointAroundVector( Q_Vector vDest, const Q_Vector vDir, Q_Vector vPoint, float flDegrees );
-	void Q_CrossProduct( Q_Vector v1, Q_Vector v2, Q_Vector cross );
+	void SetExtraCullBox(Vector vMins, Vector vMaxs);
+	void DisableExtraCullBox(void);
+
+	float CalcFov(float flFovX, float flWidth, float flHeight);
+	void V_AdjustFov(float& fov_x, float& fov_y, float width, float height, bool lock_x);
+	int Q_SignbitsForPlane(mplane_t* pOut);
+	void Q_RotatePointAroundVector(Vector& vDest, const Vector vDir, Vector& vPoint, float flDegrees);
 
 private:
-	Q_mplane_t	m_sFrustum[5];
-	int		m_iFarClip;
+	mplane_t m_sFrustum[5];
+	int m_iFarClip;
 
-	Q_Vector	m_vCullBoxMins;
-	Q_Vector	m_vCullBoxMaxs;
+	Vector m_vCullBoxMins;
+	Vector m_vCullBoxMaxs;
 
-	bool		m_bExtraCull;
-	Q_Vector	m_vExtraCullMins;
-	Q_Vector	m_vExtraCullMaxs;	
+	bool m_bExtraCull;
+	Vector m_vExtraCullMins;
+	Vector m_vExtraCullMaxs;
 };
 #endif

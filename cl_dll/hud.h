@@ -20,6 +20,8 @@
 // CHud handles the message, calculation, and drawing the HUD
 //
 
+#pragma once
+
 #define FOG_LIMIT 30000
 
 //Removed in OP4 of Solokiller, but include anyway
@@ -32,7 +34,6 @@
 #endif
 
 #include <string>
-#include "wrect.h"
 #include "cl_dll.h"
 #include "ammo.h"
 #include "triangleapi.h"
@@ -43,8 +44,8 @@
 #include <SDL2/SDL.h>
 
 //RENDERERS START
-#include "frustum.h"
-#include "particle_engine.h"
+#include "renderer/frustum.h"
+#include "renderer/particle_engine.h"
 
 struct fog_settings_t
 {
@@ -263,6 +264,8 @@ private:
 		float Sundisty;
 };
 
+class GL_TextureHandler;
+
 class CBloom
 {
 public:
@@ -274,8 +277,8 @@ public:
 private:
 
 	// TEXTURES
-	unsigned int g_uiScreenTex = 0;
-	unsigned int g_uiGlowTex = 0;
+	GL_TextureHandler *g_pScreenTex = nullptr;
+	GL_TextureHandler *g_pGlowTex = nullptr;
 };
 
 
@@ -291,7 +294,7 @@ public:
 	int MsgFunc_Train(const char *pszName, int iSize, void *pbuf);
 
 private:
-	HL_HSPRITE m_hSprite;
+	HSPRITE_GOLDSRC m_hSprite;
 	int m_iPos;
 
 };
@@ -429,10 +432,10 @@ public:
 	int	  m_iBat;
 	
 private:
-	HL_HSPRITE m_hSprite1;
-	HL_HSPRITE m_hSprite2;
-	wrect_t *m_prc1;
-	wrect_t *m_prc2;	
+	HSPRITE_GOLDSRC m_hSprite1;
+	HSPRITE_GOLDSRC m_hSprite2;
+	Rect *m_prc1;
+	Rect *m_prc2;	
 	int	  m_iBatMax;
 	float m_fFade;
 	int	  m_iHeight;		// width of the battery innards
@@ -451,20 +454,18 @@ public:
 	void Reset() override;
 	int MsgFunc_Flashlight(const char *pszName,  int iSize, void *pbuf );
 	int MsgFunc_FlashBat(const char *pszName,  int iSize, void *pbuf );
-	
-	void drawNightVision();
 
 	//battery is public just for health.cpp
 	float m_flBat;
 
 private:
-	HL_HSPRITE m_hSprite1;
-	HL_HSPRITE m_hSprite2;
-	HL_HSPRITE m_hBeam;
-	HL_HSPRITE m_nvSprite;
-	wrect_t *m_prc1;
-	wrect_t *m_prc2;
-	wrect_t *m_prcBeam;
+	HSPRITE_GOLDSRC m_hSprite1;
+	HSPRITE_GOLDSRC m_hSprite2;
+	HSPRITE_GOLDSRC m_hBeam;
+	HSPRITE_GOLDSRC m_nvSprite;
+	Rect *m_prc1;
+	Rect *m_prc2;
+	Rect *m_prcBeam;
 	int	  m_iBat;	
 	int	  m_fOn;
 	float m_fFade;
@@ -571,7 +572,7 @@ public:
 	void EnableIcon( const char *pszIconName, unsigned char red, unsigned char green, unsigned char blue );
 	void DisableIcon( const char *pszIconName );
 
-	void EnableCustomIcon(int nIndex, char* pszIconName, unsigned char red, unsigned char green, unsigned char blue, const wrect_t& aRect);
+	void EnableCustomIcon(int nIndex, char* pszIconName, unsigned char red, unsigned char green, unsigned char blue, const Rect& aRect);
 	void DisableCustomIcon(int nIndex);
 
 private:
@@ -579,8 +580,8 @@ private:
 	typedef struct
 	{
 		char szSpriteName[MAX_ICONSPRITENAME_LENGTH];
-		HL_HSPRITE spr;
-		wrect_t rc;
+		HSPRITE_GOLDSRC spr;
+		Rect rc;
 		unsigned char r, g, b;
 		int teamnumber; //Not actually used
 	} icon_sprite_t;
@@ -655,7 +656,7 @@ class CShinySurface
 	float m_fMinX, m_fMinY, m_fMaxX, m_fMaxY, m_fZ;
 	char m_fScale;
 	float m_fAlpha; // texture scale and brighness
-	HL_HSPRITE m_hsprSprite;
+	HSPRITE_GOLDSRC m_hsprSprite;
 	char m_szSprite[128];
 
 public:
@@ -751,8 +752,8 @@ private:
 	struct flag_sprite_t
 	{
 		char szSpriteName[MAX_FLAGSPRITENAME_LENGTH];
-		HL_HSPRITE spr;
-		wrect_t rc;
+		HSPRITE_GOLDSRC spr;
+		Rect rc;
 		unsigned char r;
 		unsigned char g;
 		unsigned char b;
@@ -787,8 +788,8 @@ private:
 	struct powerup_sprite_t
 	{
 		char szSpriteName[MAX_POWERUPSPRITENAME_LENGTH];
-		HL_HSPRITE spr;
-		wrect_t rc;
+		HSPRITE_GOLDSRC spr;
+		Rect rc;
 		int r;
 		int g;
 		int b;
@@ -867,7 +868,7 @@ class CHud
 {
 private:
 	HUDLIST						*m_pHudList;
-	HL_HSPRITE						m_hsprLogo;
+	HSPRITE_GOLDSRC						m_hsprLogo;
 	int							m_iLogo;
 	client_sprite_t				*m_pSpriteList;
 	int							m_iSpriteCount;
@@ -875,11 +876,9 @@ private:
 	float						m_flMouseSensitivity;
 	int							m_iConcussionEffect; 
 
-	bool mNightVisionState;
-
 public:
 
-	HL_HSPRITE						m_hsprCursor;
+	HSPRITE_GOLDSRC						m_hsprCursor;
 	float m_flTime;	   // the current client time
 	float m_fOldTime;  // the time at which the HUD was last redrawn
 	double m_flTimeDelta; // the difference between flTime and fOldTime
@@ -944,18 +943,18 @@ public:
 private:
 	// the memory for these arrays are allocated in the first call to CHud::VidInit(), when the hud.txt and associated sprites are loaded.
 	// freed in ~CHud()
-	HL_HSPRITE *m_rghSprites;	/*[HUD_SPRITE_COUNT]*/			// the sprites loaded from hud.txt
-	wrect_t *m_rgrcRects;	/*[HUD_SPRITE_COUNT]*/
+	HSPRITE_GOLDSRC *m_rghSprites;	/*[HUD_SPRITE_COUNT]*/			// the sprites loaded from hud.txt
+	Rect *m_rgrcRects;	/*[HUD_SPRITE_COUNT]*/
 	char *m_rgszSpriteNames; /*[HUD_SPRITE_COUNT][MAX_SPRITE_NAME_LENGTH]*/
 
 	struct cvar_s *default_fov;
 public:
-	HL_HSPRITE GetSprite( int index ) 
+	HSPRITE_GOLDSRC GetSprite( int index ) 
 	{
 		return (index < 0) ? 0 : m_rghSprites[index];
 	}
 
-	wrect_t& GetSpriteRect( int index )
+	Rect& GetSpriteRect( int index )
 	{
 		return m_rgrcRects[index];
 	}
@@ -1059,17 +1058,6 @@ public:
 
 	// Aynekko
 	int  _cdecl MsgFunc_KickPunch( const char *pszName, int iSize, void *pbuf );
-
-	bool isNightVisionOn() { return mNightVisionState; }
-
-	void setNightVisionState( bool state );
-
-	void getNightVisionHudItemColor( int& r, int& g, int& b )
-	{
-		r = 255;
-		g = 255;
-		b = 255;
-	}
 
 	// viewmodel
 	entity_state_t m_prevstate;

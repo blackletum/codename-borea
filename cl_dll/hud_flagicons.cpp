@@ -69,8 +69,8 @@ int CHudFlagIcons::Draw(float flTime)
             {
                 y += flag.rc.top - flag.rc.bottom - 5;
 
-                gEngfuncs.pfnSPR_Set(flag.spr, flag.r, flag.g, flag.b);
-                gEngfuncs.pfnSPR_DrawAdditive(0, 5, y, &flag.rc);
+               SPR_Set(flag.spr, flag.r, flag.g, flag.b);
+               SPR_DrawAdditive(0, 5, y, &flag.rc);
                 gHUD.DrawHudNumber(
                     flag.rc.right - flag.rc.left + 10,
                     y + ((flag.rc.bottom - flag.rc.top) / 2) - 5,

@@ -50,6 +50,7 @@ extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player in
 #include "watershader.h"
 #include "mirrormanager.h"
 #include "postprocess.h"
+#include "goldsrc_spriterenderer.h"
 #include "r_efx.h"
 
 #include "studio.h"
@@ -262,7 +263,7 @@ int __MsgFunc_SendAnim(const char* pszName, int iSize, void* pbuf)
 {
 	BEGIN_READ(pbuf, iSize);
 
-	auto p = gEngfuncs.GetViewModel();
+	auto p = &engine_cl->viewent;
 	int iAnim = READ_SHORT();
 	int iBody = READ_SHORT();
 	int iBlend = READ_BYTE();
@@ -688,24 +689,7 @@ void CHud :: Init()
 	HOOK_MESSAGE(SendAnim);
 	HOOK_MESSAGE(PlayVideo);
 
-	for (int i = 0; i < gpTempEnts.size(); i++)
-	{
-		delete gpTempEnts.at(i);
-	}
-	gpTempEnts.clear();
-
-	gPropManager.Init();
-	gTextureLoader.Init();
-	gBSPRenderer.Init();
-	gParticleEngine.Init();
-	gWaterShader.Init();
-	gMirrorManager.Init();
-	gPostProcess.Init();
-	gBlur.InitScreen();
-	gLensflare.Init();
-	gBloomRenderer.Init();
-	gVideoEngine.Init();
-	//RENDERERS END
+	//R_Init(); do this right after getting ienginestudio
 
 	gSoundSystem.Init();
 
@@ -728,7 +712,6 @@ void CHud :: Init()
 	m_iLogo = 0;
 	m_iFOV = 0;
 	numMirrors = 0;
-	setNightVisionState(false);
 
 	CVAR_CREATE( "zoom_sensitivity_ratio", "1.2", 0 );
 	CVAR_CREATE("cl_autowepswitch", "1", FCVAR_ARCHIVE | FCVAR_USERINFO);
@@ -809,9 +792,6 @@ void CHud :: Init()
 	// from bordered and not bordered makes window smaller. so
 	// no special sdl code for now
 
-	int mainfbo;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &mainfbo);
-	gBSPRenderer.m_uiMainGLFBO = mainfbo;
 
 }
 
@@ -840,11 +820,7 @@ CHud :: ~CHud()
 	}
 
 	//RENDERERS START
-	gTextureLoader.Shutdown();
-	gBSPRenderer.Shutdown();
-	gPropManager.Shutdown();
-	gWaterShader.Shutdown();
-	gParticleEngine.Shutdown();
+	R_Shutdown();
 	//RENDERERS END
 }
 
@@ -908,8 +884,8 @@ void CHud :: VidInit()
 			}
 
 			// allocated memory for sprite handle arrays
- 			m_rghSprites = new HL_HSPRITE[m_iSpriteCount];
-			m_rgrcRects = new wrect_t[m_iSpriteCount];
+ 			m_rghSprites = new HSPRITE_GOLDSRC[m_iSpriteCount];
+			m_rgrcRects = new Rect[m_iSpriteCount];
 			m_rgszSpriteNames = new char[m_iSpriteCount * MAX_SPRITE_NAME_LENGTH];
 
 			p = m_pSpriteList;
@@ -976,23 +952,8 @@ void CHud :: VidInit()
 	m_PlayerBrowse.VidInit();
 	GetClientVoiceMgr()->VidInit();
 
-	for (int i = 0; i < gpTempEnts.size(); i++)
-	{
-		delete gpTempEnts.at(i);
-	}
-	gpTempEnts.clear();
+	R_VidInit();
 
-	//RENDERERS START
-	gTextureLoader.VidInit();
-	gWaterShader.VidInit();
-	gBSPRenderer.VidInit();
-	gParticleEngine.VidInit();
-	gMirrorManager.VidInit();
-	g_StudioRenderer.VidInit();
-	gLensflare.VidInit();
-	gPropManager.VidInit();
-	gBlur.VidInit();
-	//RENDERERS_END
 	g_ImGUIManager.VidInit();
 	g_DiscordRPC.VidInit();
 
@@ -1193,19 +1154,18 @@ float CHud::GetSensitivity()
 	return m_flMouseSensitivity;
 }
 
-void CHud::setNightVisionState( bool state )
-{
-	mNightVisionState = state;
-}
-
 void CHud::DrawBackground(float xmin, float ymin, float xmax, float ymax, char* sprite, Vector color, int mode)
 {
 	//setup
 	gEngfuncs.pTriAPI->RenderMode(mode);
 	gEngfuncs.pTriAPI->Brightness(1.0f);
-	gEngfuncs.pTriAPI->Color4ub(color.x, color.y, color.z, 255);
+	glColor4ub(color.x, color.y, color.z, 255);
 	gEngfuncs.pTriAPI->CullFace(TRI_NONE);
+	model_t* model = (model_t*)GetSpritePointer(SPR_Load(sprite));
+	mspriteframe_t* frame = g_LegacySpriteRenderer.GetSpriteFrame(model, 1, 0);
 	gEngfuncs.pTriAPI->SpriteTexture((struct model_s*)GetSpritePointer(SPR_Load(sprite)), 0);
+	//gEngfuncs.pfnDrawString seems to fuck this up so we need to bind texture manually
+	glBindTexture(GL_TEXTURE_2D, frame->gl_texturenum);
 
 	//start drawing
 	gEngfuncs.pTriAPI->Begin(TRI_QUADS);

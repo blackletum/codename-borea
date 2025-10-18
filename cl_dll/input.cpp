@@ -25,7 +25,7 @@ extern "C"
 #include "vgui_TeamFortressViewport.h"
 
 
-extern int g_iAlive;
+extern bool g_iAlive;
 
 extern int g_weaponselect;
 extern cl_enginefunc_t gEngfuncs;
@@ -298,7 +298,7 @@ KeyDown
 void KeyDown (kbutton_t *b)
 {
 	int		k;
-	char	*c;
+	const char	*c;
 
 	c = gEngfuncs.Cmd_Argv(1);
 	if (c[0])
@@ -332,7 +332,7 @@ KeyUp
 void KeyUp (kbutton_t *b)
 {
 	int		k;
-	char	*c;
+	const char	*c;
 	
 	c = gEngfuncs.Cmd_Argv(1);
 	if (c[0])
@@ -746,13 +746,13 @@ void DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int activ
 	{
 		//memset( viewangles, 0, sizeof( Vector ) );
 		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
-		gEngfuncs.GetViewAngles( (float *)viewangles );
+		viewangles = engine_cl->viewangles;
 
 		CL_AdjustAngles ( frametime, viewangles );
 
 		memset (cmd, 0, sizeof(*cmd));
 		
-		gEngfuncs.SetViewAngles( (float *)viewangles );
+		engine_cl->viewangles = viewangles ;
 
 		if ( in_strafe.state & 1 )
 		{
@@ -783,7 +783,7 @@ void DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int activ
 		*/
 
 		// clip to maxspeed
-		spd = gEngfuncs.GetClientMaxspeed();
+		spd = engine_cl->maxspeed;
 		// Aynekko - FIXME!!! "fix" of increased movement speed when moving diagonally
 		spd = (cl_forwardspeed->value + cl_backspeed->value + cl_sidespeed->value) / 3;
 		if ( spd != 0.0 )
@@ -834,7 +834,7 @@ void DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int activ
 		}
 	}
 
-	gEngfuncs.GetViewAngles( (float *)viewangles );
+	viewangles = engine_cl->viewangles;
 	// Set current view angles.
 
 	if ( g_iAlive )

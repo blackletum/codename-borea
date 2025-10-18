@@ -178,7 +178,7 @@ private:
 	std::map<std::string, textureType_s> textureTypeMap;
 
 public:
-	FORCEINLINE textureType_s& operator[](std::string str)
+	__forceinline textureType_s& operator[](std::string str)
 	{
 		size_t foundIndex;
 
@@ -192,9 +192,9 @@ public:
 		return textureType_s(0, "ERR");
 	}
 
-	FORCEINLINE auto insert(std::pair<std::string, textureType_s>&& val);
+	__forceinline auto insert(std::pair<std::string, textureType_s>&& val);
 
-	FORCEINLINE int findInMap(std::string name);
+	__forceinline int findInMap(std::string name);
 
 	/*
 	_NODISCARD auto find(const std::string& key)

@@ -1,10 +1,9 @@
 /*
 Trinity Rendering Engine - Copyright Andrew Lucas 2009-2012
-Spirinity Rendering Engine - Copyright FranticDreamer 2020-2021
 
 The Trinity Engine is free software, distributed in the hope th-
-at it will be useful, but WITHOUT ANY WARRANTY; without even the 
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+at it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE. See the GNU Lesser General Public License for more det-
 ails.
 
@@ -12,14 +11,13 @@ Texture loader interface
 Written by Andrew Lucas
 */
 
-#if !defined ( TGALOADER_H )
+#if !defined(TGALOADER_H)
 #define TGALOADER_H
-#if defined( _WIN32 )
+#if defined(_WIN32)
 #pragma once
 #endif
 
-#include "windows.h"
-#include "gl/gl.h"
+#include "PlatformHeaders.h"
 #include "pm_defs.h"
 #include "cl_entity.h"
 #include "ref_params.h"
@@ -28,61 +26,62 @@ Written by Andrew Lucas
 #include "cvardef.h"
 #include "rendererdefs.h"
 
-#define	MAX_WADFILES 12
+#define MAX_WADFILES 32
 
 #define DDS_MAGIC 0x20534444
 
-#define DDSD_CAPS                   0x00000001
-#define DDSD_PIXELFORMAT            0x00001000
-#define DDPF_FOURCC                 0x00000004
+#define DDSD_CAPS 0x00000001
+#define DDSD_PIXELFORMAT 0x00001000
+#define DDPF_FOURCC 0x00000004
 
-#define D3DFMT_DXT1     '1TXD'    //  DXT1 compression texture format 
-#define D3DFMT_DXT5     '5TXD'    //  DXT5 compression texture format 
+#define D3DFMT_DXT1 '1TXD' //  DXT1 compression texture format
+#define D3DFMT_DXT5 '5TXD' //  DXT5 compression texture format
 
 typedef struct
 {
-    char            identification[4];                     // should be WAD2/WAD3
-    int             numlumps;
-    int             infotableofs;
+	char identification[4]; // should be WAD2/WAD3
+	int numlumps;
+	int infotableofs;
 } wadinfo_t;
 
 typedef struct
 {
-    int             filepos;
-    int             disksize;
-    int             size;
-    char            type;
-    char            compression;
-    char            pad1, pad2;
-    char            name[16];
+	int filepos;
+	int disksize;
+	int size;
+	char type;
+	char compression;
+	char pad1, pad2;
+	char name[16];
 } lumpinfo_t;
 
 struct wadfile_t
 {
-	byte *wadfile;
-	wadinfo_t *info;
+	char wadname[64];
+	byte* wadfile;
+	wadinfo_t* info;
 
-	lumpinfo_t *lumps;
+	lumpinfo_t* lumps;
 	int numlumps;
 };
 
 struct tga_header_t
 {
-	byte	idlength;
-	byte	colourmaptype;
-	byte	datatypecode;
-	byte	colourmaporigin[2]; //how come you have short ints there?
-	byte	colourmaplength[2];
-	byte	colourmapdepth;
-	byte	x_origin[2];
-	byte	y_origin[2];
-	byte	width[2];
-	byte	height[2];
-	byte	bitsperpixel;
-	byte	imagedescriptor;
+	byte idlength;
+	byte colourmaptype;
+	byte datatypecode;
+	byte colourmaporigin[2]; // how come you have short ints there?
+	byte colourmaplength[2];
+	byte colourmapdepth;
+	byte x_origin[2];
+	byte y_origin[2];
+	byte width[2];
+	byte height[2];
+	byte bitsperpixel;
+	byte imagedescriptor;
 };
 
-struct dds_header_t 
+struct dds_header_t
 {
 	byte bMagic[4];
 	byte bSize[4];
@@ -98,6 +97,12 @@ struct dds_header_t
 	byte bPFFourCC[4];
 };
 
+struct waddecals_t
+{
+	char name[16];
+	decalgroupentry_t* texinfo;
+};
+
 /*
 =======================
 CTextureLoader
@@ -107,37 +112,45 @@ CTextureLoader
 class CTextureLoader
 {
 public:
-	void			Init ( );
-	void			VidInit( );
-	void			Shutdown( );
-	
-	bool			IsPowerOfTwo( int iWidth, int iHeight );
-	void			WriteTGA( byte *pixels, int bpp, int width, int height, char *szpath );
+	void Init(void);
+	void VidInit(void);
+	void Shutdown(void);
 
-	void			LoadWADFiles( );
-	void			FreeWADFiles( );
+	bool IsPowerOfTwo(int iWidth, int iHeight);
+	void WriteTGA(byte* pixels, int bpp, int width, int height, char* szpath);
 
-	cl_texture_t	*LoadTexture( char* szFile, int iAltIndex = 0, bool bPrompt = false, bool bNoMip = false, bool bBorder = false );
-	cl_texture_t	*LoadWADTexture( char *szTexture, int iAltIndex = 0 );
-	cl_texture_t	*HasTexture( char *szFile );
+	void LoadWADFiles(void);
+	void FreeWADFiles(void);
 
-	bool			LoadTGAFile( byte *pFile, cl_texture_t *pTexture, bool bNoMip, bool bBorder );
-	bool			LoadDDSFile( byte *pFile, cl_texture_t *pTexture, bool bNoMip );
-	void			LoadPallettedTexture( byte *data, byte *pal, cl_texture_t *pTexture );
+	cl_texture_t* LoadTexture(const char* szFile, bool bPrompt = false, bool bNoMip = false, bool bBorder = false);
+	cl_texture_t* LoadCubemapTexture(std::vector<std::string>& szFiles, bool bPrompt = false, bool bNoMip = false, bool bBorder = false);
+	cl_texture_t* LoadWADTexture(char* szTexture);
+	cl_texture_t* LoadSprite(const char* szFile, int iFrame);
+	cl_texture_t* GenDummyTexture(int texIndex);
+	cl_texture_t* HasTexture(const char* szFile);
 
-	void			LoadTextureScript( );
-	bool			TextureHasFlag( char *szModel, char *szTexture, int iFlag );
+	bool LoadTGAFile(byte* pFile, cl_texture_t* pTexture, bool bNoMip, bool bBorder);
+	bool LoadDDSFile(byte* pFile, cl_texture_t* pTexture, bool bNoMip);
+	void LoadPallettedTexture(byte* data, byte* pal, cl_texture_t* pTexture, bool isdecal = false);
+
+	byte* LoadTGAFileRaw(const char* filename, int& width, int& height, int& bitsperpixel, bool bBorder); // WARNING !!! YOU MUST DELETE THE RETURN OF THIS FUNCTION WITH delete[] ONCE YOURE DONE WITH IT;
+
+	void LoadTextureScript(void);
+	bool TextureHasFlag(const char* szModel, char* szTexture, int iFlag);
+
 public:
-	PFNGLCOMPRESSEDTEXIMAGE2DARBPROC	glCompressedTexImage2DARB;
 
-	cl_texture_t						m_pTextures[MAX_TGA_LOADER_TEXTURES];
-	int									m_iNumTextures;
+	std::vector<cl_texture_t*> m_pTextures;
 
-	texentry_t							m_pTextureEntries[MAX_CACHE_MODELS*64];
-	int									m_iNumTextureEntries;
+	std::vector<cl_texture_t*> m_pEngineTextures; //should not be deleted
 
-	wadfile_t							m_pWADFiles[MAX_WADFILES];
-	int									m_iNumWADFiles;
+	std::vector<texentry_t*> m_pTextureEntries;
+
+	wadfile_t m_pWADFiles[MAX_WADFILES];
+	int m_iNumWADFiles;
+
+	waddecals_t m_pWAD_Decals[512];
+	int m_iNumWADDecals;
 };
 extern CTextureLoader gTextureLoader;
 #endif

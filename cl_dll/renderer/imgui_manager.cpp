@@ -32,6 +32,8 @@
 SDL_Window* mainWindow;
 SDL_GLContext mainContext;
 
+CImguiManager g_ImGUIManager;
+
 
 ImFont* customfont;
 
@@ -446,11 +448,13 @@ int __MsgFunc_AddSubtitle(const char* pszName, int iSize, void* pbuf)
 	return 1;
 }
 
+extern SDL_Window* hlWindow;
+
 bool CImguiManager::Init()
 {
 	HOOK_COMMAND("imgui_chapter", OpenChapter);
 	HOOK_MESSAGE(AddSubtitle);
-	mainWindow = SDL_GetWindowFromID(1);
+	mainWindow = hlWindow;
 	// mainContext = SDL_GL_CreateContext(mainWindow);
 
 	// Setup Dear ImGui context
@@ -985,7 +989,7 @@ void CImguiManager::DrawSpeeds()
 	if(gBSPRenderer.m_pCvarSpeeds->value == 1.0f)
 	{
 		static float flLastTime;
-		float flCurTime = gEngfuncs.GetClientTime();
+		float flCurTime = engine_cl->time;
 		float flFrameTime = flCurTime - flLastTime;
 		flLastTime = flCurTime;
 
@@ -1002,12 +1006,12 @@ void CImguiManager::DrawSpeeds()
 		ImGui::SetWindowFontScale(1.2f);
 		ImGui::Text("Polygons:");
 		ImGui::SetWindowFontScale(1.0f);
-		ImGui::Text((std::string("Wpolys: ") + std::to_string(gBSPRenderer.m_iWorldPolyCounter)).c_str());
+		//ImGui::Text((std::string("Wpolys: ") + std::to_string(gBSPRenderer.m_iWorldPolyCounter)).c_str());
 		ImGui::Text((std::string("Epolys: ") + std::to_string(gBSPRenderer.m_iBrushPolyCounter)).c_str());
 		ImGui::Text((std::string("Studio polys: ") + std::to_string(gBSPRenderer.m_iStudioPolyCounter)).c_str());
 		ImGui::Text((std::string("Particles: ") + std::to_string(gParticleEngine.m_iNumParticles)).c_str());
-		ImGui::Text((std::string("Foliages: ") + std::to_string(gBSPRenderer.m_iTotalFoliage)).c_str());
-		ImGui::Text((std::string("Cables: ") + std::to_string(gBSPRenderer.m_iCable)).c_str());
+		//ImGui::Text((std::string("Foliages: ") + std::to_string(gBSPRenderer.m_iTotalFoliage)).c_str());
+		//ImGui::Text((std::string("Cables: ") + std::to_string(gBSPRenderer.m_iCable)).c_str());
 		ImGui::Text((std::string("FPS: ") + std::to_string(iFPS)).c_str());
 	}
 
@@ -1032,8 +1036,8 @@ void CImguiManager::DrawSpeeds()
 
 void CImguiManager::SubtitleLifeLogic()
 {
-	float curtime = gEngfuncs.GetClientTime();
-	float lasttime = gEngfuncs.hudGetClientOldTime();
+	float curtime = engine_cl->time;
+	float lasttime = engine_cl->oldtime;
 	float deltatime = curtime - lasttime;
 	for (int i = 0; i < m_iNumTexts;)
 	{
@@ -1168,7 +1172,7 @@ void CImguiManager::AddSubtitle(const char subtitle[256], float staytime)
 		return;
 
 	m_sTexts[m_iNumTexts].text = subtitle;
-	m_sTexts[m_iNumTexts].time_to_die = gEngfuncs.GetClientTime() + staytime;
+	m_sTexts[m_iNumTexts].time_to_die = engine_cl->time + staytime;
 	m_sTexts[m_iNumTexts].fade = 0;
 	m_iNumTexts++;
 }

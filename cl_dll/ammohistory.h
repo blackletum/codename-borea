@@ -89,7 +89,7 @@ public:
 
 	int CountAmmo( int iId );
 
-	HL_HSPRITE* GetAmmoPicFromWeapon( int iAmmoId, wrect_t& rect );
+	HSPRITE_GOLDSRC* GetAmmoPicFromWeapon( int iAmmoId, Rect& rect );
 };
 
 extern WeaponsResource gWR;

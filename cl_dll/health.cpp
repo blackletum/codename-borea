@@ -467,7 +467,7 @@ void CHudHealth::CalcDamageDirection(Vector vecFrom)
 	float flDistToTarget = vecFrom.Length();
 
 	vecFrom = vecFrom.Normalize();
-	AngleVectors (vecAngles, forward, right, up);
+	AngleVectors (vecAngles, &forward, &right, &up);
 
 	front = DotProduct (vecFrom, right);
 	side = DotProduct (vecFrom, forward);

@@ -173,7 +173,7 @@ void CMP5::RifleFireBullet( void )
 
 	// add aim "bloom" system (from Diffusion)
 	float Cone = m_pPlayer->pev->velocity.Length() * 0.0002;
-	Cone = clamp( Cone, 0.01, 0.06 );
+	Cone = std::clamp( Cone, 0.01f, 0.06f );
 
 	if( Cone < 0.02 )
 	{

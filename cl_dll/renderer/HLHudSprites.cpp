@@ -13,6 +13,7 @@
 #include "client_state.h"
 
 #include "bsprenderer.h"
+#include "goldsrc_spriterenderer.h"
 
 
 extern engine_studio_api_t IEngineStudio;
@@ -28,7 +29,7 @@ spritelist_s* gSpriteList;
 
 #define MAX_HUD_SPRITES 256
 
-HL_HSPRITE ghCrosshair;
+HSPRITE_GOLDSRC ghCrosshair;
 
 int gSpriteCount = 0;
 msprite_t* gpSprite;
@@ -39,9 +40,6 @@ int scissor_x, scissor_y, scissor_width, scissor_height;
 void Draw_SpriteFrameHoles(mspriteframe_t* pFrame, int x, int y, const Rect* prcSubRect);
 void Draw_SpriteFrameAdditive(mspriteframe_t* pFrame, int x, int y, const Rect* prcSubRect);
 void Draw_SpriteFrame(mspriteframe_t* pFrame, int ix, int iy, const Rect* prcSubrect);
-
-mspriteframe_t* R_GetSpriteFrame(const model_t* pModel, int frame, float yaw);
-void R_GetSpriteFrames(const model_t* pModel, int& framecount);
 
 void SPR_Init()
 {
@@ -59,7 +57,7 @@ void SPR_ShutDown()
 	//whatevs
 }
 
-HL_HSPRITE SPR_Load(const char* szPicName)
+HSPRITE_GOLDSRC SPR_Load(const char* szPicName)
 {
 	if (!szPicName)
 		return 0;
@@ -95,10 +93,10 @@ HL_HSPRITE SPR_Load(const char* szPicName)
 		return 0;
 
 
-	R_GetSpriteFrames(gSpriteList[i].pSprite, gSpriteList[i].frameCount);
+	g_LegacySpriteRenderer.GetSpriteFrames(gSpriteList[i].pSprite, gSpriteList[i].frameCount);
 	return i + 1;
 }
-int SPR_Frames(HL_HSPRITE hPic)
+int SPR_Frames(HSPRITE_GOLDSRC hPic)
 {
 	int enIndex = hPic - 1;
 	if (enIndex >= 0 && enIndex < gSpriteCount)
@@ -109,7 +107,7 @@ int SPR_Frames(HL_HSPRITE hPic)
 	}
 	return 0;
 }
-int SPR_Height(HL_HSPRITE hPic, int frame)
+int SPR_Height(HSPRITE_GOLDSRC hPic, int frame)
 {
 	int enIndex = hPic - 1;
 	if (enIndex < 0 || enIndex >= gSpriteCount)
@@ -119,13 +117,13 @@ int SPR_Height(HL_HSPRITE hPic, int frame)
 	if (!entry)
 		return 0;
 
-	mspriteframe_t* spriteframe = R_GetSpriteFrame(entry->pSprite, frame, 0);
+	mspriteframe_t* spriteframe = g_LegacySpriteRenderer.GetSpriteFrame(entry->pSprite, frame, 0);
 	if (!spriteframe)
 		return 0;
 
 	return spriteframe->height;
 }
-int SPR_Width(HL_HSPRITE hPic, int frame)
+int SPR_Width(HSPRITE_GOLDSRC hPic, int frame)
 {
 	int enIndex = hPic - 1;
 	if (enIndex < 0 || enIndex >= gSpriteCount)
@@ -135,13 +133,13 @@ int SPR_Width(HL_HSPRITE hPic, int frame)
 	if (!entry)
 		return 0;
 
-	mspriteframe_t* spriteframe = R_GetSpriteFrame(entry->pSprite, frame, 0);
+	mspriteframe_t* spriteframe = g_LegacySpriteRenderer.GetSpriteFrame(entry->pSprite, frame, 0);
 	if (!spriteframe)
 		return 0;
 
 	return spriteframe->width;
 }
-void SPR_Set(HL_HSPRITE hPic, int r, int g, int b)
+void SPR_Set(HSPRITE_GOLDSRC hPic, int r, int g, int b)
 {
 	int enIndex = hPic - 1;
 	if (enIndex < 0 || enIndex >= gSpriteCount)
@@ -167,7 +165,7 @@ void SPR_Draw(int frame, int x, int y, const Rect* prc)
 	dummy.cache.data = gpSprite;
 	dummy.type = mod_sprite;
 
-	mspriteframe_t* spriteframe = R_GetSpriteFrame(&dummy, frame, 0);
+	mspriteframe_t* spriteframe = g_LegacySpriteRenderer.GetSpriteFrame(&dummy, frame, 0);
 	if (!spriteframe)
 	{
 		gEngfuncs.Con_Printf("Client.dll SPR_Draw error:  invalid frame\n");
@@ -186,7 +184,7 @@ void SPR_DrawHoles(int frame, int x, int y, const Rect* prc)
 	dummy.cache.data = gpSprite;
 	dummy.type = mod_sprite;
 
-	mspriteframe_t* spriteframe = R_GetSpriteFrame(&dummy, frame, 0);
+	mspriteframe_t* spriteframe = g_LegacySpriteRenderer.GetSpriteFrame(&dummy, frame, 0);
 	if (spriteframe)
 		Draw_SpriteFrameHoles(spriteframe, x, y, prc);
 	else
@@ -203,7 +201,7 @@ void SPR_DrawAdditive(int frame, int x, int y, const Rect* prc)
 	dummy.cache.data = gpSprite;
 	dummy.type = mod_sprite;
 
-	mspriteframe_t* spriteframe = R_GetSpriteFrame(&dummy, frame, 0);
+	mspriteframe_t* spriteframe = g_LegacySpriteRenderer.GetSpriteFrame(&dummy, frame, 0);
 	if (spriteframe)
 		Draw_SpriteFrameAdditive(spriteframe, x, y, prc);
 	else
@@ -224,7 +222,7 @@ void SPR_DisableScissor(void)
 	giScissorTest = 0;
 }
 
-model_t* GetSpritePointer(HL_HSPRITE hSprite)
+model_t* GetSpritePointer(HSPRITE_GOLDSRC hSprite)
 {
 	int enIndex = hSprite - 1;
 	if (enIndex >= 0 && enIndex < gSpriteCount)
@@ -279,19 +277,19 @@ void Draw_SpriteFrame(mspriteframe_t* pFrame, int ix, int iy, const Rect* prcSub
 		fBottom = (prcSubrect->bottom - 0.5) * 1.0 / pFrame->height;
 	}
 
-	glDepthMask(GL_NONE);
+	glDepthMask(GL_FALSE);
 
 	glBindTexture(GL_TEXTURE_2D, pFrame->gl_texturenum);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	float texcoords[4][2]{
+	const float texcoords[4][2]{
 		{fLeft, fTop},
 		{fRight, fTop},
 		{fRight, fBottom},
 		{fLeft, fBottom}
 	};
 
-	float verts[4][2]{
+	const float verts[4][2]{
 		{x, y},
 		{width + x, y},
 		{width + x, height + y},
@@ -348,7 +346,7 @@ int gCrosshairB;
 
 
 
-void SetCrosshair(HL_HSPRITE hspr, Rect rc, int r, int g, int b)
+void SetCrosshair(HSPRITE_GOLDSRC hspr, Rect rc, int r, int g, int b)
 {
 	ghCrosshair = hspr;
 	gCrosshairRc = rc;
@@ -357,8 +355,6 @@ void SetCrosshair(HL_HSPRITE hspr, Rect rc, int r, int g, int b)
 	gCrosshairB = b;
 }
 
-extern client_state_s* engine_cl;
-
 void DrawCrosshair()
 {
 	Vector angles;
@@ -366,9 +362,9 @@ void DrawCrosshair()
 	Vector forward;
 	Vector point, screen(0, 0, 0);
 
-	const auto& global_refdef = gBSPRenderer.m_RefDef;
+	const auto& global_refdef = gBSPRenderer.m_RefParams;
 	angles = global_refdef.viewangles + (engine_cl->crosshairangle * Vector(1.0, 1.0, 1.0) );
-	AngleVectors(angles, forward, nullptr, nullptr);
+	AngleVectors(angles, &forward, nullptr, nullptr);
 	point = global_refdef.vieworg + forward * 50;
 
 	screen = gBSPRenderer.TriWorldToScreen(point);
@@ -420,7 +416,7 @@ void DrawCrosshair()
 	dummy.type = mod_sprite;
 	dummy.cache.data = gpSprite;
 
-	mspriteframe_t* spriteframe = R_GetSpriteFrame(&dummy, 0, 0);
+	mspriteframe_t* spriteframe = g_LegacySpriteRenderer.GetSpriteFrame(&dummy, 0, 0);
 	if (spriteframe)
 		Draw_SpriteFrameHoles(spriteframe, center[0], center[1], &gCrosshairRc);
 	else
@@ -436,12 +432,12 @@ void FillRGBA(float x, float y, float w, float h, int r, int g, int b, int a)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	glColor4f(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
 
-		glBegin(GL_QUADS);
+	glBegin(GL_QUADS);
 		glVertex2f(x, y);
 		glVertex2f(x + w, y);
 		glVertex2f(x + w, y + h);
 		glVertex2f(x, y + h);
-		glEnd();
+	glEnd();
 
 	glColor3f(1.0, 1.0, 1.0);
 

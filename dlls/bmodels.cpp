@@ -342,7 +342,7 @@ void CFuncIllusionaryFading::Think()
 	{
 		Vector realOrigin = pev->origin + (pev->maxs + pev->mins) / 2;
 		float dist = Vector(pPlayer->pev->origin - realOrigin).Length2D();
-		dist = clamp(dist, 0, m_flRadius);
+		dist = std::clamp(dist, 0.0f, m_flRadius);
 		pev->renderamt = m_flOriginalRenderAmt * dist / m_flRadius;
 
 		ALERT(at_console, "dist %f renderamt %f radius %f cur renderamt %f \n", dist, m_flOriginalRenderAmt, m_flRadius, pev->renderamt);

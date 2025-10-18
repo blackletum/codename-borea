@@ -42,7 +42,7 @@ void UpdateBeams ()
 	// Determine our last predicted origin
 	HUD_GetLastOrg( (float *)&origin );
 
-	AngleVectors( angles, forward, right, up );
+	AngleVectors( angles, &forward, &right, &up );
 
 	VectorCopy( origin, vecSrc );
 	
@@ -51,15 +51,15 @@ void UpdateBeams ()
 	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );	
 						
 	// Store off the old count
-	gEngfuncs.pEventAPI->EV_PushPMStates();
+	EV_PushPMStates();
 					
 	// Now add in all of the players.
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
 
-	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+	EV_SetTraceHull( 2 );
 	gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_STUDIO_BOX, -1, &tr );
 
-	gEngfuncs.pEventAPI->EV_PopPMStates();
+	EV_PopPMStates();
 
 	/*
 	if ( pBeam )

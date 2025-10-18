@@ -10,35 +10,38 @@
 #include "r_efx.h"
 #include "event_api.h"
 #include "pm_defs.h"
-#include "pmtrace.h"	
+#include "pmtrace.h"
 #include "pm_shared.h"
-#include "pm_movevars.h"
-#include "bench.h"
 #include "Exports.h"
 
-//RENDERERS START
-#include "bsprenderer.h"
-#include "particle_engine.h"
-#include "mirrormanager.h"
+// RENDERERS START
+#include "../renderer/bsprenderer.h"
+#include "../renderer/particle_engine.h"
+#include "../renderer/mirrormanager.h"
 
-#include "StudioModelRenderer.h"
+#include "../renderer/goldsrc_beamrenderer.h"
+#include "studio.h"
+#include "../renderer/StudioModelRenderer.h"
 
-extern CStudioModelRenderer g_StudioRenderer;
+#include "../renderer/goldsrc_spriterenderer.h"
+
 int g_iFlashLight = 0;
-//RENDERERS END
+// RENDERERS END
 
-extern playermove_t* pmove;
 
-int cl_numvisedicts = 0;
-cl_entity_s* cl_visedicts[512];
-
-extern std::vector<TEMPENTITY*> gpTempEnts;
+#include "pm_movevars.h"
 
 void Game_AddObjects();
 
 extern Vector v_origin;
 
-int g_iAlive = 1;
+bool g_iAlive = true;
+
+extern std::vector<std::unique_ptr<TEMPENTITY>> gpTempEnts;
+extern playermove_t* pmove;
+
+int cl_numvisedicts = 0;
+cl_entity_s* cl_visedicts[512];
 
 /*
 ========================
@@ -46,17 +49,21 @@ HUD_AddEntity
 	Return 0 to filter entity from visible list for rendering
 ========================
 */
-int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *modelname )
+int DLLEXPORT HUD_AddEntity(int type, struct cl_entity_s* ent, const char* modelname)
 {
-//	RecClAddEntity(type, ent, modelname);
+	//	RecClAddEntity(type, ent, modelname);
 
-	switch ( type )
+	switch (type)
 	{
 	case ET_NORMAL:
-		Bench_CheckEntity( type, ent, modelname );
 		break;
 	case ET_PLAYER:
+		break;  //dont add player as a beam you stupid
 	case ET_BEAM:
+	{
+		g_BeamRenderer.AddBeamEnt(ent);
+		return 0;
+	}
 	case ET_TEMPENTITY:
 	case ET_FRAGMENTED:
 	default:
@@ -64,21 +71,14 @@ int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *mode
 	}
 	// each frame every entity passes this function, so the overview hooks it to filter the overview entities
 	// in spectator mode:
-	// each frame every entity passes this function, so the overview hooks 
-	// it to filter the overview entities
 
-	//RENDERERS START
-	if (!gBSPRenderer.FilterEntities(type, ent, modelname))
-		return 0;
-	//RENDERERS END
-	if ( g_iUser1 )
+	if (0 != g_iUser1)
 	{
-		gHUD.m_Spectator.AddOverviewEntity( type, ent, modelname );
+		gHUD.m_Spectator.AddOverviewEntity(type, ent, modelname);
 
-		if ( (	g_iUser1 == OBS_IN_EYE || gHUD.m_Spectator.m_pip->value == INSET_IN_EYE ) &&
-				ent->index == g_iUser2 )
-			return 0;	// don't draw the player we are following in eye
-
+		if ((g_iUser1 == OBS_IN_EYE || gHUD.m_Spectator.m_pip->value == INSET_IN_EYE) &&
+			ent->index == g_iUser2)
+			return 0; // don't draw the player we are following in eye
 	}
 
 	return 1;
@@ -93,11 +93,11 @@ playerstate update in entity_state_t.  In order for these overrides to eventuall
 structure, we need to copy them into the state structure at this point.
 =========================
 */
-void DLLEXPORT HUD_TxferLocalOverrides( struct entity_state_s *state, const struct clientdata_s *client )
+void DLLEXPORT HUD_TxferLocalOverrides(struct entity_state_s* state, const struct clientdata_s* client)
 {
-//	RecClTxferLocalOverrides(state, client);
+	//	RecClTxferLocalOverrides(state, client);
 
-	VectorCopy( client->origin, state->origin );
+	VectorCopy(client->origin, state->origin);
 
 	// Spectator
 	state->iuser1 = client->iuser1;
@@ -118,65 +118,61 @@ We have received entity_state_t for this player over the network.  We need to co
 playerstate structure
 =========================
 */
-void DLLEXPORT HUD_ProcessPlayerState( struct entity_state_s *dst, const struct entity_state_s *src )
+void DLLEXPORT HUD_ProcessPlayerState(struct entity_state_s* dst, const struct entity_state_s* src)
 {
-//	RecClProcessPlayerState(dst, src);
+	//	RecClProcessPlayerState(dst, src);
 
 	// Copy in network data
-	VectorCopy( src->origin, dst->origin );
-	VectorCopy( src->angles, dst->angles );
+	VectorCopy(src->origin, dst->origin);
+	VectorCopy(src->angles, dst->angles);
 
-	VectorCopy( src->velocity, dst->velocity );
+	VectorCopy(src->velocity, dst->velocity);
 
-	dst->frame					= src->frame;
-	dst->modelindex				= src->modelindex;
-	dst->skin					= src->skin;
-	dst->effects				= src->effects;
-	dst->weaponmodel			= src->weaponmodel;
-	dst->movetype				= src->movetype;
-	dst->sequence				= src->sequence;
-	dst->animtime				= src->animtime;
-	
-	dst->solid					= src->solid;
-	
-	dst->rendermode				= src->rendermode;
-	dst->renderamt				= src->renderamt;	
-	dst->rendercolor.r			= src->rendercolor.r;
-	dst->rendercolor.g			= src->rendercolor.g;
-	dst->rendercolor.b			= src->rendercolor.b;
-	dst->renderfx				= src->renderfx;
+	dst->frame = src->frame;
+	dst->modelindex = src->modelindex;
+	dst->skin = src->skin;
+	dst->effects = src->effects;
+	dst->weaponmodel = src->weaponmodel;
+	dst->movetype = src->movetype;
+	dst->sequence = src->sequence;
+	dst->animtime = src->animtime;
 
-	dst->framerate				= src->framerate;
-	dst->body					= src->body;
+	dst->solid = src->solid;
 
-	memcpy( &dst->controller[0], &src->controller[0], 4 * sizeof( byte ) );
-	memcpy( &dst->blending[0], &src->blending[0], 2 * sizeof( byte ) );
+	dst->rendermode = src->rendermode;
+	dst->renderamt = src->renderamt;
+	dst->rendercolor.r = src->rendercolor.r;
+	dst->rendercolor.g = src->rendercolor.g;
+	dst->rendercolor.b = src->rendercolor.b;
+	dst->renderfx = src->renderfx;
 
-	VectorCopy( src->basevelocity, dst->basevelocity );
+	dst->framerate = src->framerate;
+	dst->body = src->body;
 
-	dst->friction				= src->friction;
-	dst->gravity				= src->gravity;
-	dst->gaitsequence			= src->gaitsequence;
-	dst->spectator				= src->spectator;
-	dst->usehull				= src->usehull;
-	dst->playerclass			= src->playerclass;
-	dst->team					= src->team;
-	dst->colormap				= src->colormap;
+	memcpy(&dst->controller[0], &src->controller[0], 4 * sizeof(byte));
+	memcpy(&dst->blending[0], &src->blending[0], 2 * sizeof(byte));
 
-#if defined( _TFC )
-	dst->fuser1					= src->fuser1;
-#endif
+	VectorCopy(src->basevelocity, dst->basevelocity);
 
-//RENDERERS START
-	if(src->effects & EF_DIMLIGHT)
+	dst->friction = src->friction;
+	dst->gravity = src->gravity;
+	dst->gaitsequence = src->gaitsequence;
+	dst->spectator = src->spectator;
+	dst->usehull = src->usehull;
+	dst->playerclass = src->playerclass;
+	dst->team = src->team;
+	dst->colormap = src->colormap;
+
+	//RENDERERS START
+	if (src->effects & EF_DIMLIGHT)
 		g_iFlashLight = 1;
 	else
 		g_iFlashLight = 0;
-//RENDERERS END
+	//RENDERERS END
 
 	// Save off some data so other areas of the Client DLL can get to it
-	cl_entity_t *player = gEngfuncs.GetLocalPlayer();	// Get the local player's index
-	if ( dst->number == player->index )
+	cl_entity_t* player = gEngfuncs.GetLocalPlayer(); // Get the local player's index
+	if (dst->number == player->index)
 	{
 		g_iPlayerClass = dst->playerclass;
 		g_iTeamNumber = dst->team;
@@ -197,44 +193,44 @@ Because we can predict an arbitrary number of frames before the server responds 
  update is occupying.
 =========================
 */
-void DLLEXPORT HUD_TxferPredictionData ( struct entity_state_s *ps, const struct entity_state_s *pps, struct clientdata_s *pcd, const struct clientdata_s *ppcd, struct weapon_data_s *wd, const struct weapon_data_s *pwd )
+void DLLEXPORT HUD_TxferPredictionData(struct entity_state_s* ps, const struct entity_state_s* pps, struct clientdata_s* pcd, const struct clientdata_s* ppcd, struct weapon_data_s* wd, const struct weapon_data_s* pwd)
 {
-//	RecClTxferPredictionData(ps, pps, pcd, ppcd, wd, pwd);
+	//	RecClTxferPredictionData(ps, pps, pcd, ppcd, wd, pwd);
 
-	ps->oldbuttons				= pps->oldbuttons;
-	ps->flFallVelocity			= pps->flFallVelocity;
-	ps->iStepLeft				= pps->iStepLeft;
-	ps->playerclass				= pps->playerclass;
+	ps->oldbuttons = pps->oldbuttons;
+	ps->flFallVelocity = pps->flFallVelocity;
+	ps->iStepLeft = pps->iStepLeft;
+	ps->playerclass = pps->playerclass;
 
-	pcd->viewmodel				= ppcd->viewmodel;
-	pcd->m_iId					= ppcd->m_iId;
-	pcd->ammo_shells			= ppcd->ammo_shells;
-	pcd->ammo_nails				= ppcd->ammo_nails;
-	pcd->ammo_cells				= ppcd->ammo_cells;
-	pcd->ammo_rockets			= ppcd->ammo_rockets;
-	pcd->m_flNextAttack			= ppcd->m_flNextAttack;
-	pcd->fov					= ppcd->fov;
-	pcd->weaponanim				= ppcd->weaponanim;
-	pcd->tfstate				= ppcd->tfstate;
-	pcd->maxspeed				= ppcd->maxspeed;
+	pcd->viewmodel = ppcd->viewmodel;
+	pcd->m_iId = ppcd->m_iId;
+	pcd->ammo_shells = ppcd->ammo_shells;
+	pcd->ammo_nails = ppcd->ammo_nails;
+	pcd->ammo_cells = ppcd->ammo_cells;
+	pcd->ammo_rockets = ppcd->ammo_rockets;
+	pcd->m_flNextAttack = ppcd->m_flNextAttack;
+	pcd->fov = ppcd->fov;
+	pcd->weaponanim = ppcd->weaponanim;
+	pcd->tfstate = ppcd->tfstate;
+	pcd->maxspeed = ppcd->maxspeed;
 
-	pcd->deadflag				= ppcd->deadflag;
+	pcd->deadflag = ppcd->deadflag;
 
 	// Spectating or not dead == get control over view angles.
-	g_iAlive = ( ppcd->iuser1 || ( pcd->deadflag == DEAD_NO ) ) ? 1 : 0;
+	g_iAlive = (0 != ppcd->iuser1 || (pcd->deadflag == DEAD_NO));
 
 	// Spectator
-	pcd->iuser1					= ppcd->iuser1;
-	pcd->iuser2					= ppcd->iuser2;
+	pcd->iuser1 = ppcd->iuser1;
+	pcd->iuser2 = ppcd->iuser2;
 
 	// Duck prevention
 	pcd->iuser3 = ppcd->iuser3;
 
-	if ( gEngfuncs.IsSpectateOnly() )
+	if (0 != gEngfuncs.IsSpectateOnly())
 	{
 		// in specator mode we tell the engine who we want to spectate and how
 		// iuser3 is not used for duck prevention (since the spectator can't duck at all)
-		pcd->iuser1 = g_iUser1;	// observer mode
+		pcd->iuser1 = g_iUser1; // observer mode
 		pcd->iuser2 = g_iUser2; // first target
 		pcd->iuser3 = g_iUser3; // second target
 	}
@@ -242,45 +238,45 @@ void DLLEXPORT HUD_TxferPredictionData ( struct entity_state_s *ps, const struct
 	// Fire prevention
 	pcd->iuser4 = ppcd->iuser4;
 
-	pcd->fuser2					= ppcd->fuser2;
-	pcd->fuser3					= ppcd->fuser3;
+	pcd->fuser2 = ppcd->fuser2;
+	pcd->fuser3 = ppcd->fuser3;
 
-	VectorCopy( ppcd->vuser1, pcd->vuser1 );
-	VectorCopy( ppcd->vuser2, pcd->vuser2 );
-	VectorCopy( ppcd->vuser3, pcd->vuser3 );
-	VectorCopy( ppcd->vuser4, pcd->vuser4 );
+	VectorCopy(ppcd->vuser1, pcd->vuser1);
+	VectorCopy(ppcd->vuser2, pcd->vuser2);
+	VectorCopy(ppcd->vuser3, pcd->vuser3);
+	VectorCopy(ppcd->vuser4, pcd->vuser4);
 
-	memcpy( wd, pwd, 32 * sizeof( weapon_data_t ) );
+	memcpy(wd, pwd, MAX_WEAPONS * sizeof(weapon_data_t));
 }
 
-#if defined( BEAM_TEST )
+#if defined(BEAM_TEST)
 // Note can't index beam[ 0 ] in Beam callback, so don't use that index
 // Room for 1 beam ( 0 can't be used )
-static cl_entity_t beams[ 2 ];
+static cl_entity_t beams[2];
 
 void BeamEndModel()
 {
-	cl_entity_t *player, *model;
+	cl_entity_t* player, * model;
 	int modelindex;
-	struct model_s *mod;
+	struct model_s* mod;
 
 	// Load it up with some bogus data
 	player = gEngfuncs.GetLocalPlayer();
-	if ( !player )
+	if (!player)
 		return;
 
-	mod = gEngfuncs.CL_LoadModel( "models/sentry3.mdl", &modelindex );
-	if ( !mod )
+	mod = gEngfuncs.CL_LoadModel("models/sentry3.mdl", &modelindex);
+	if (!mod)
 		return;
 
 	// Slot 1
-	model = &beams[ 1 ];
+	model = &beams[1];
 
 	*model = *player;
 	model->player = 0;
 	model->model = mod;
 	model->curstate.modelindex = modelindex;
-		
+
 	// Move it out a bit
 	model->origin[0] = player->origin[0] - 100;
 	model->origin[1] = player->origin[1];
@@ -290,45 +286,86 @@ void BeamEndModel()
 	model->attachment[2] = model->origin;
 	model->attachment[3] = model->origin;
 
-	gEngfuncs.CL_CreateVisibleEntity( ET_NORMAL, model );
+	gEngfuncs.CL_CreateVisibleEntity(ET_NORMAL, model);
 }
 
 void Beams()
 {
 	static float lasttime;
 	float curtime;
-	struct model_s *mod;
+	struct model_s* mod;
 	int index;
 
 	BeamEndModel();
-	
-	curtime = gEngfuncs.GetClientTime();
-	float end[ 3 ];
 
-	if ( ( curtime - lasttime ) < 10.0 )
+	curtime = engine_cl->time;
+	float end[3];
+
+	if ((curtime - lasttime) < 10.0)
 		return;
 
-	mod = gEngfuncs.CL_LoadModel( "sprites/laserbeam.spr", &index );
-	if ( !mod )
+	mod = gEngfuncs.CL_LoadModel("sprites/laserbeam.spr", &index);
+	if (!mod)
 		return;
 
 	lasttime = curtime;
 
-	end [ 0 ] = v_origin.x + 100;
-	end [ 1 ] = v_origin.y + 100;
-	end [ 2 ] = v_origin.z;
+	end[0] = v_origin.x + 100;
+	end[1] = v_origin.y + 100;
+	end[2] = v_origin.z;
 
-	BEAM *p1;
-	p1 = gEngfuncs.pEfxAPI->R_BeamEntPoint( -1, end, index,
-		10.0, 2.0, 0.3, 1.0, 5.0, 0.0, 1.0, 1.0, 1.0, 1.0 );
+	BEAM* p1;
+	p1 = gEngfuncs.pEfxAPI->R_BeamEntPoint(-1, end, index,
+		10.0, 2.0, 0.3, 1.0, 5.0, 0.0, 1.0, 1.0, 1.0, 1.0);
 }
 #endif
 
+void BodyTestCallback(struct tempent_s* ent, float frametime, float currenttime)
+{
+
+	if (engine_cl->maxclients == 1) // ONLY IN SP
+	{
+		Vector forward;
+		cl_entity_t* player = gEngfuncs.GetLocalPlayer();
+		ent->entity = *player;
+		ent->entity.curstate.weaponmodel = NULL;
+		player->curstate.weaponmodel = NULL;
+		AngleVectors(player->angles, &forward, NULL, NULL);
+		ent->entity.origin = ent->entity.origin - forward * 20;
+		ent->die = engine_cl->time;
+	}
+}
+
+// Get the local player (uses body.mdl), animation and framerates. Finally create a new entity at the center.
+// I use null model to keep framerates and stop the draw in some cases.
+
+void BodyTest(void)
+{
+	TEMPENTITY* p = nullptr;
+	struct model_s* mod;
+	Vector origin;
+	int index;
+	cl_entity_t* player;
+
+	// Load it up with some bogus data
+	player = gEngfuncs.GetLocalPlayer();
+	if (!player)
+		return;
+
+	origin = player->origin;
+	mod = gEngfuncs.CL_LoadModel("models/p_nullmodel.mdl", &index);
+
+	if (gHUD.m_flTimeDelta > 0)
+		p = gEngfuncs.pEfxAPI->CL_TentEntAllocCustom((float*)&origin, mod, 0, BodyTestCallback);
+
+	if (!p)
+		return;
+}
 
 void HUD_TempEntUpdate_(
-	double frametime,			  // Simulation time
-	double client_time,			  // Absolute time on client
-	double cl_gravity,			  // True gravity on client
+	double frametime,	// Simulation time
+	double client_time, // Absolute time on client
+	double cl_gravity,	// True gravity on client
 	int (*Callback_AddVisibleEntity)(cl_entity_t* pEntity),
 	void (*Callback_TempEntPlaySound)(TEMPENTITY* pTemp, float damp));
 
@@ -343,7 +380,6 @@ int CL_Internal_AddEntity(int type, cl_entity_t* ent)
 		cl_numvisedicts++;
 		return 1;
 	}
-
 }
 
 int CL_AddVisibleEntity(cl_entity_t* pEntity)
@@ -361,113 +397,101 @@ int CL_AddVisibleEntity(cl_entity_t* pEntity)
 	CL_Internal_AddEntity(2, pEntity);
 }
 
+void (*CL_TempEntPlaySound)(TEMPENTITY* pTemp, float damp) = nullptr;
+
 void CL_TempEntUpdate()
 {
-	float time = gEngfuncs.GetClientTime();
 	if (engine_cl->worldmodel)
-		HUD_TempEntUpdate_(engine_cl->time - engine_cl->oldtime, engine_cl->time, pmove->movevars->gravity, CL_AddVisibleEntity, nullptr);
+		HUD_TempEntUpdate_(engine_cl->time - engine_cl->oldtime, engine_cl->time, pmove->movevars->gravity, CL_AddVisibleEntity, CL_TempEntPlaySound);
+
+	//  Get bsp renderer list
+	gBSPRenderer.GetRenderEnts();
 }
 
 /*
 =========================
 HUD_CreateEntities
-	
+
 Gives us a chance to add additional entities to the render this frame
 =========================
 */
 void DLLEXPORT HUD_CreateEntities()
 {
-//	RecClCreateEntities();
+	// CLIENTSIDE PLAYER MODEL
+	cl_entity_t* player = gEngfuncs.GetLocalPlayer();
 
-#if defined( BEAM_TEST )
+	//	RecClCreateEntities();
+
+#if defined(BEAM_TEST)
 	Beams();
 #endif
-
-	Bench_AddObjects();
 
 	// Add in any game specific objects
 	Game_AddObjects();
 
 	GetClientVoiceMgr()->CreateEntities();
-	
-	//RENDERES START
-	// Animate lights here
+
+	// RENDERERS START
+	//  Animate lights here
 	gBSPRenderer.AnimateLight();
 
 	// Do this here, not in refdef
 	gBSPRenderer.SetupRenderer();
 
-
-	cl_entity_t* pView = gEngfuncs.GetViewModel();
-
-	if (pView)
-		SetupFlashlight(pView->origin + Vector(0, 0, 8), Vector(-pView->angles[0], pView->angles[1], pView->angles[2]), gEngfuncs.GetClientTime(), gHUD.m_flTimeDelta, false);
-
-	gEngfuncs.pfnClientCmd( "gl_texturemode GL_NEAREST" ); // can you work?
-
 	CL_TempEntUpdate();
-
-	//RENDERERS END
 }
 
-#if defined( _TFC )
-extern int g_bACSpinning[33];
-#endif 
+// nice muzzleflash effect
 
 
-void ProjectMuzzleflash(const struct cl_entity_s* entity)
+
+void MuzzleFlash(int index, const cl_entity_s* entity)
 {
-	if (entity != gEngfuncs.GetViewModel()) return;
 
-	if( entity && entity->curstate.body == 1 )
-		return; // Aynekko: silenced pistol has no light
+	cl_dlight_t* dl = gBSPRenderer.CL_AllocDLight(entity->index);
 
-	Vector forward;
-	AngleVectors(gHUD.pparams->viewangles, forward, null, null);
+	Vector viewheight = Vector(0, 0, 0);
 
-	pmtrace_t tr = { 0 };
-	Vector VecSrc = entity->attachment[0] - forward * 5;
-	Vector VecEnd = Vector(gHUD.pparams->vieworg) + forward * 8192;
-
-	gEngfuncs.pEventAPI->EV_PushPMStates();
-
-	gEngfuncs.pEventAPI->EV_SetTraceHull(2);
-	gEngfuncs.pEventAPI->EV_PlayerTrace(VecSrc, VecEnd, PM_NORMAL | PM_GLASS_IGNORE, 1, & tr);
-
-	gEngfuncs.pEventAPI->EV_PopPMStates();
-
-	Vector angles;
-	if (&tr)
+	if (entity->player)
 	{
-		Vector dist = tr.endpos - VecSrc;
-		dist.z = 0;
-		dist.Normalize();
-		VectorAngles(dist, angles);
+		if (entity->curstate.usehull)
+			viewheight[2] = 12;
+		else
+			viewheight[2] = 28;
 	}
 
-	// projected light/textures
-	cl_dlight_t* dlight = gBSPRenderer.CL_AllocDLight(gEngfuncs.GetLocalPlayer()->index);
-	dlight->color.x = (float)255 / 255;
-	dlight->color.y = (float)255 / 255;
-	dlight->color.z = (float)160 / 255;
-	dlight->radius = 200;
-	dlight->origin = VecSrc;
-	dlight->cone_size = 120;
-	dlight->angles = Vector(gHUD.pparams->viewangles[PITCH], angles.y, angles.z);
-	dlight->die = gEngfuncs.GetClientTime() + 0.05f;
-	dlight->textureindex = gBSPRenderer.m_pFlashlightTextures[0]->iIndex;
-	dlight->noshadow = 0;
+	if (dl)
+	{
+		if (entity->player)
+			dl->origin = entity->origin + viewheight;
+		else
+			dl->origin = entity->attachment[index];
 
-	dlight->frustum.SetFrustum(dlight->angles, dlight->origin, dlight->cone_size * 1.2, dlight->radius);
+		dl->color.x = (231.f / 255.f);
+		dl->color.y = (219.f / 255.f);
+		dl->color.z = (14 / 255.f);
+		dl->die = engine_cl->time + 0.05f;
+		dl->radius = gEngfuncs.pfnRandomFloat(245.0f, 256.0f);
+		dl->decay = 512.0f;
+		dl->flags |= LIGHT_CASTSHADOWS;
+	}
 
-	// small dlight
-	cl_dlight_t* dlight2 = gBSPRenderer.CL_AllocDLight(0);
-	dlight2->color.x = (float)255 / 255;
-	dlight2->color.y = (float)255 / 255;
-	dlight2->color.z = (float)160 / 255;
-	dlight2->radius = 5;
-	dlight2->origin = VecSrc;
-	dlight2->die = gEngfuncs.GetClientTime() + 0.05f;
+	dlight_t* el = gEngfuncs.pEfxAPI->CL_AllocElight(entity->index);
+
+	if (el)
+	{
+		if (entity->player)
+			el->origin = entity->origin + viewheight;
+		else
+			el->origin = entity->attachment[index];
+
+		el->color.r = 231;
+		el->color.g = 219;
+		el->color.b = 14;
+		el->die = engine_cl->time + 0.075f;
+		el->radius = gEngfuncs.pfnRandomFloat(245.0f, 256.0f);
+		el->decay = 512.0f;
+	}
 }
 
 /*
@@ -478,56 +502,52 @@ The entity's studio model description indicated an event was
 fired during this frame, handle the event by it's tag ( e.g., muzzleflash, sound )
 =========================
 */
-void DLLEXPORT HUD_StudioEvent( const struct mstudioevent_s *event, const struct cl_entity_s *entity )
+void DLLEXPORT HUD_StudioEvent(const struct mstudioevent_s* event, const struct cl_entity_s* entity)
 {
-//	RecClStudioEvent(event, entity);
+	//	RecClStudioEvent(event, entity);
 
-	int iMuzzleFlash = 1;
-	if (entity && entity->curstate.body == 1)
-		iMuzzleFlash = 0;
-
-#if defined( _TFC )
-
-	if ( g_bACSpinning[ entity->index - 1 ] )
-		iMuzzleFlash = 0;
-
-#endif 
-
-	switch( event->event )
+	switch (event->event)
 	{
 	case 5001:
-		if (iMuzzleFlash)
-			gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[0], atoi(event->options));
-		ProjectMuzzleflash(entity);
+
+		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[0], atoi(event->options));
+		MuzzleFlash(0, entity);
+
 		break;
 	case 5011:
-		if ( iMuzzleFlash )
-			gEngfuncs.pEfxAPI->R_MuzzleFlash( (float *)&entity->attachment[1], atoi( event->options) );
-		ProjectMuzzleflash(entity);
+
+		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[1], atoi(event->options));
+		MuzzleFlash(1, entity);
+
 		break;
 	case 5021:
-		if ( iMuzzleFlash )
-			gEngfuncs.pEfxAPI->R_MuzzleFlash( (float *)&entity->attachment[2], atoi( event->options) );
-		ProjectMuzzleflash(entity);
+
+		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[2], atoi(event->options));
+		MuzzleFlash(2, entity);
+
 		break;
 	case 5031:
-		if ( iMuzzleFlash )
-			gEngfuncs.pEfxAPI->R_MuzzleFlash( (float *)&entity->attachment[3], atoi( event->options) );
-		ProjectMuzzleflash(entity);
+
+		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[3], atoi(event->options));
+		MuzzleFlash(3, entity);
+
 		break;
 	case 5002:
-		gEngfuncs.pEfxAPI->R_SparkEffect( (float *)&entity->attachment[0], atoi( event->options), -100, 100 );
+
+		gEngfuncs.pEfxAPI->R_SparkEffect((float*)&entity->attachment[0], atoi(event->options), -100, 100);
+
 		break;
-	// Client side sound
-	case 5004:		
-		gEngfuncs.pfnPlaySoundByNameAtLocation( (char *)event->options, 1.0, (float *)&entity->attachment[0] );
+
+		// Client side sound
+	case 5004:
+
+		gEngfuncs.pfnPlaySoundByNameAtLocation((char*)event->options, 1.0, (float*)&entity->attachment[0]);
+
 		break;
 	default:
 		break;
 	}
 }
-
-void (*Callback_TempEntPlaySound_)(TEMPENTITY* pTemp, float damp) = nullptr;
 
 void DLLEXPORT HUD_TempEntUpdate(
 	double frametime,			  // Simulation time
@@ -538,8 +558,10 @@ void DLLEXPORT HUD_TempEntUpdate(
 	int (*Callback_AddVisibleEntity)(cl_entity_t* pEntity),
 	void (*Callback_TempEntPlaySound)(TEMPENTITY* pTemp, float damp))
 {
-	if(!Callback_TempEntPlaySound_)
-		Callback_TempEntPlaySound_ = Callback_TempEntPlaySound;
+	if (!CL_TempEntPlaySound)
+		CL_TempEntPlaySound = Callback_TempEntPlaySound;
+
+	//nothing else just a dummy function now
 }
 
 /*
@@ -550,22 +572,18 @@ Simulation and cleanup of temporary entities
 =================
 */
 void HUD_TempEntUpdate_(
-	double frametime,			  // Simulation time
-	double client_time,			  // Absolute time on client
-	double cl_gravity,			  // True gravity on client
+	double frametime,	// Simulation time
+	double client_time, // Absolute time on client
+	double cl_gravity,	// True gravity on client
 	int (*Callback_AddVisibleEntity)(cl_entity_t* pEntity),
 	void (*Callback_TempEntPlaySound)(TEMPENTITY* pTemp, float damp))
 {
 	//	RecClTempEntUpdate(frametime, client_time, cl_gravity, ppTempEntFree, ppTempEntActive, Callback_AddVisibleEntity, Callback_TempEntPlaySound);
 
 	static int gTempEntFrame = 0;
-	int i;
 	float freq, gravity, gravitySlow, life, fastFreq;
 
 	Vector vAngles;
-
-	//  Get bsp renderer list
-	gBSPRenderer.GetRenderEnts();
 
 	if (frametime > 0)
 	{
@@ -576,7 +594,7 @@ void HUD_TempEntUpdate_(
 		gBSPRenderer.DecayLights();
 	}
 
-	gEngfuncs.GetViewAngles((float*)vAngles);
+	vAngles = engine_cl->viewangles;
 
 	// Nothing to simulate
 	if (gpTempEnts.empty())
@@ -589,7 +607,7 @@ void HUD_TempEntUpdate_(
 	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction(0, 1);
 
 	// Store off the old count
-	gEngfuncs.pEventAPI->EV_PushPMStates();
+	EV_PushPMStates();
 
 	// Now add in all of the players.
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers(-1);
@@ -600,7 +618,7 @@ void HUD_TempEntUpdate_(
 	// !!! Don't simulate while paused....  This is sort of a hack, revisit.
 	if (frametime <= 0)
 	{
-		for (auto pTemp : gpTempEnts)
+		for (auto& pTemp : gpTempEnts)
 		{
 			if ((pTemp->flags & FTENT_NOMODEL) == 0)
 			{
@@ -618,10 +636,9 @@ void HUD_TempEntUpdate_(
 	gravity = -frametime * cl_gravity;
 	gravitySlow = gravity * 0.5;
 
-	for (auto pTemp_ = gpTempEnts.begin(); pTemp_ != gpTempEnts.end();)
+	for (int i = gpTempEnts.size() - 1; i >= 0; i--)
 	{
-		TEMPENTITY* pTemp = *pTemp_;
-
+		TEMPENTITY* pTemp = gpTempEnts[i].get();
 		bool active;
 
 		active = true;
@@ -642,12 +659,14 @@ void HUD_TempEntUpdate_(
 		}
 		if (!active) // Kill it
 		{
-			delete* pTemp_;
-			pTemp_ = gpTempEnts.erase(pTemp_);
+
+			g_StudioRenderer.m_pCurrentEntity = &pTemp->entity;
+			g_StudioRenderer.StudioFreeEntity();
+			g_StudioRenderer.m_pCurrentEntity = nullptr;
+
+			gpTempEnts.erase(gpTempEnts.begin() + i);
 			continue;
 		}
-		else
-			pTemp_++;
 
 		VectorCopy(pTemp->entity.origin, pTemp->entity.prevstate.origin);
 
@@ -707,8 +726,8 @@ void HUD_TempEntUpdate_(
 
 		else
 		{
-			for (i = 0; i < 3; i++)
-				pTemp->entity.origin[i] += pTemp->entity.baseline.origin[i] * frametime;
+			for (int j = 0; j < 3; j++)
+				pTemp->entity.origin[j] += pTemp->entity.baseline.origin[j] * frametime;
 		}
 
 		if ((pTemp->flags & FTENT_SPRANIMATE) != 0)
@@ -759,14 +778,14 @@ void HUD_TempEntUpdate_(
 				pmtrace_t pmtrace;
 				physent_t* pe;
 
-				gEngfuncs.pEventAPI->EV_SetTraceHull(2);
+				EV_SetTraceHull(2);
 
 				gEngfuncs.pEventAPI->EV_PlayerTrace(pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX, -1, &pmtrace);
 
 
 				if (pmtrace.fraction != 1)
 				{
-					pe = gEngfuncs.pEventAPI->EV_GetPhysent(pmtrace.ent);
+					pe = EV_GetPhysent(pmtrace.ent);
 
 					if (0 == pmtrace.ent || (pe->info != pTemp->clientIndex))
 					{
@@ -784,7 +803,7 @@ void HUD_TempEntUpdate_(
 			{
 				pmtrace_t pmtrace;
 
-				gEngfuncs.pEventAPI->EV_SetTraceHull(2);
+				EV_SetTraceHull(2);
 
 				gEngfuncs.pEventAPI->EV_PlayerTrace(pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX | PM_WORLD_ONLY, -1, &pmtrace);
 
@@ -835,9 +854,9 @@ void HUD_TempEntUpdate_(
 					}
 				}
 
-				if ((pTemp->hitSound) != 0 && Callback_TempEntPlaySound_)
+				if ((pTemp->hitSound) != 0)
 				{
-					Callback_TempEntPlaySound_(pTemp, damp);
+					CL_TempEntPlaySound(pTemp, damp);
 				}
 
 				if ((pTemp->flags & FTENT_COLLIDEKILL) != 0)
@@ -882,7 +901,7 @@ void HUD_TempEntUpdate_(
 
 		if ((pTemp->flags & FTENT_SMOKETRAIL) != 0)
 		{
-			gEngfuncs.pEfxAPI->R_RocketTrail(pTemp->entity.prevstate.origin, pTemp->entity.origin, 1);
+			//gEngfuncs.pEfxAPI->R_RocketTrail(pTemp->entity.prevstate.origin, pTemp->entity.origin, 1);
 		}
 
 		if ((pTemp->flags & FTENT_GRAVITY) != 0)
@@ -914,12 +933,11 @@ void HUD_TempEntUpdate_(
 				gBSPRenderer.AddEntity(&pTemp->entity);
 			}
 		}
-
 	}
 
 finish:
 	// Restore state info
-	gEngfuncs.pEventAPI->EV_PopPMStates();
+	EV_PopPMStates();
 }
 
 /*
@@ -927,29 +945,28 @@ finish:
 HUD_GetUserEntity
 
 If you specify negative numbers for beam start and end point entities, then
-  the engine will call back into this function requesting a pointer to a cl_entity_t 
+  the engine will call back into this function requesting a pointer to a cl_entity_t
   object that describes the entity to attach the beam onto.
 
 Indices must start at 1, not zero.
 =================
 */
-cl_entity_t DLLEXPORT *HUD_GetUserEntity( int index )
+cl_entity_t DLLEXPORT* HUD_GetUserEntity(int index)
 {
-//	RecClGetUserEntity(index);
+	//	RecClGetUserEntity(index);
 
-#if defined( BEAM_TEST )
+#if defined(BEAM_TEST)
 	// None by default, you would return a valic pointer if you create a client side
 	//  beam and attach it to a client side entity.
-	if ( index > 0 && index <= 1 )
+	if (index > 0 && index <= 1)
 	{
-		return &beams[ index ];
+		return &beams[index];
 	}
 	else
 	{
 		return NULL;
 	}
 #else
-	return nullptr;
+	return NULL;
 #endif
 }
-
