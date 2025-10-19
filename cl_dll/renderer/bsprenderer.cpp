@@ -220,11 +220,11 @@ void CBSPRenderer::Init(void)
 	m_pCvarDetailTextures = gEngfuncs.pfnGetCvarPointer("r_detailtextures");
 	m_pCvarWireFrame = CVAR_CREATE("r_wireframe", "0", 0);
 	m_pCvarDynamic = CVAR_CREATE("r_dynlights", "1", 0);
-	// if off, then use blobby shadows. (for now theres no blobby shadows, but its off by default)
-	m_pCvarShadows = CVAR_CREATE("r_shadowrendertotexture", "0", FCVAR_ARCHIVE);
+	// if off, then use blobby shadows. (for now theres no blobby shadows)
+	m_pCvarShadows = CVAR_CREATE("r_shadowrendertotexture", "1", FCVAR_ARCHIVE);
 	m_pCvarFlashLightDepthRes = CVAR_CREATE("r_flashlightdepthres", "512", FCVAR_ARCHIVE);
 	m_pCvarLightmapDebug = CVAR_CREATE("r_lightmap_debug", "0", 0);
-	m_pCvar3DSkybox = CVAR_CREATE("r_3dsky", "0", 0);
+	m_pCvar3DSkybox = CVAR_CREATE("r_3dsky", "1", 0);
 	m_pCvarSunShadowsQuality = CVAR_CREATE("r_sunshadows_quality", "1", FCVAR_ARCHIVE); //brushes have some problems with sun shadows currently so make them disableable (yes it seems like thats a real word)
 	m_pCvarBlurShadows = CVAR_CREATE("r_blur_shadows", "1", FCVAR_ARCHIVE);
 
@@ -273,6 +273,7 @@ void CBSPRenderer::Init(void)
 
 	m_WorldShader_locs[world_renderorigin] = m_WorldShader->GetUniformLoc("renderorigin");
 	//m_WorldShader_locs[world_renderforward] = m_WorldShader->GetUniformLoc("renderforward");
+	m_WorldShader_locs[world_renderright] = m_WorldShader->GetUniformLoc("renderright");
 
 	m_WorldShader_locs[world_fog_active] = m_WorldShader->GetUniformLoc("fog_active");
 	m_WorldShader_locs[world_fogcolor] = m_WorldShader->GetUniformLoc("fogcolor");
@@ -286,6 +287,7 @@ void CBSPRenderer::Init(void)
 
 	m_WorldShader_locs[world_waterpolys] = m_WorldShader->GetUniformLoc("waterpolys");
 	m_WorldShader_locs[world_scrollingpolys] = m_WorldShader->GetUniformLoc("scrollingpolys");
+	m_WorldShader_locs[world_specular] = m_WorldShader->GetUniformLoc("specular");
 	m_WorldShader_locs[world_fltime] = m_WorldShader->GetUniformLoc("fltime");
 	m_WorldShader_locs[world_detailtexture] = m_WorldShader->GetUniformLoc("detailtexture");
 	m_WorldShader_locs[world_dt_opacity] = m_WorldShader->GetUniformLoc("dt_opacity");
@@ -527,6 +529,7 @@ void CBSPRenderer::VidInit(void)
 	m_iNumTextures = NULL;
 	m_bMirroring = false;
 	m_iNumFlashlightTextures = NULL;
+	m_bGotStaticLights = false;
 
 	r_oldviewleaf = nullptr;
 
@@ -869,9 +872,6 @@ void CBSPRenderer::GetAdditionalLights(void)
 	if (m_bGotAdditional)
 		return;
 
-	// Got them all
-	m_bGotAdditional = true;
-
 	for (auto mdl_light : gPropManager.m_pModelLights)
 	{
 		if (IsInPotentiallyVisibleSet(mdl_light.visframe))
@@ -894,7 +894,32 @@ void CBSPRenderer::GetAdditionalLights(void)
 			mlight->flashlight = false;
 			mlight->spotcos = 0;
 		}
+
+		if (!m_bGotStaticLights)
+		{
+			cl_dlight_t* dlight = CL_AllocDLight(m_iNumModelLights + m_pDynLights.size());
+
+			dlight->color.x = (float)mdl_light.curstate.rendercolor.r / 255;
+			dlight->color.y = (float)mdl_light.curstate.rendercolor.g / 255;
+			dlight->color.z = (float)mdl_light.curstate.rendercolor.b / 255;
+			dlight->radius = mdl_light.curstate.renderamt * 9.5;
+			dlight->origin = mdl_light.curstate.origin;
+			dlight->die = engine_cl->time + std::numeric_limits<double>::max();
+
+			mleaf_t* pLeaf = Mod_PointInLeaf(dlight->origin, engine_cl->worldmodel);
+
+			if (pLeaf)
+			{
+				dlight->visframe = pLeaf - engine_cl->worldmodel->leafs - 1;
+			}
+
+			dlight->flags |= LIGHT_STUDIOMDL_SHADOW | LIGHT_ONLYSHADOWS;
+		}
 	}
+
+	// Got them all
+	m_bGotAdditional = true;
+	m_bGotStaticLights = true;
 }
 
 /*
@@ -1410,6 +1435,148 @@ void CBSPRenderer::GenerateVertexArray(void)
 		iCurFace++;
 	}
 
+	//now check for special textures
+
+	iNumVerts = gPropManager.m_iNumTotalVerts;
+	iCurVert = gPropManager.m_iNumTotalVerts;
+	iNumFaces = 0;
+	iCurFace = 0;
+	pointerIndex = 0;
+
+	for (int i = 0; i < engine_cl->worldmodel->numsurfaces; i++)
+	{
+		if (surfaces[i].flags & SURF_DRAWSKY)
+			continue;
+
+		if (!(surfaces[i].flags & SURF_DRAWTURB) && surfaces[i].polys->next)
+			continue; // lets be sure
+
+		for (glpoly_t* bp = surfaces[i].polys; bp; bp = bp->next)
+			iNumVerts += 3 + (bp->numverts - 3) * 3;
+
+		iNumFaces++;
+	}
+
+	for (int i = 0; i < engine_cl->worldmodel->numsurfaces; i++, pointerIndex++)
+	{
+		if (surfaces[i].flags & SURF_DRAWSKY)
+			continue;
+
+		glpoly_t* poly = surfaces[i].polys;
+
+		if (poly->numverts < 3)
+			continue;
+
+		if (!(surfaces[i].flags & SURF_DRAWTURB) && poly->next)
+			continue; // lets be sure
+
+		brushface_t* ext = &m_pFacesExtraData[iCurFace];
+
+		auto texname = surfaces[i].texinfo->texture->name;
+
+		auto specular = stristr(texname, "spec") || stristr(texname, "reflect") || stristr(texname, "chrome");
+
+		for (glpoly_t* bp = surfaces[i].polys; bp; bp = bp->next)
+		{
+			brushvertex_t pVertexes[3];
+			float* v = bp->verts[0];
+
+			float bigx = 0, bigy = 0;
+
+			for (int j = 0; j < 3; j++, v += VERTEXSIZE)
+			{
+				float scale_speed[2];
+
+				if (specular)
+				{
+					brushvertex_t* pEndVert = &m_pBufferData[ext->start_vertex];
+
+					for (int verti = 1; verti < ext->num_vertexes; verti++)
+					{
+						// check for all vert
+						if ((m_pBufferData[ext->start_vertex + verti].pos - m_pBufferData[ext->start_vertex].pos).Length() > (pEndVert->pos - m_pBufferData[ext->start_vertex].pos).Length())
+						{
+							pEndVert = &m_pBufferData[ext->start_vertex + verti];
+						}
+					}
+
+					scale_speed[0] = fabs((pEndVert->texcoord[0]) - (pVertexes[j].texcoord[0])) / (pEndVert->pos - pVertexes[j].pos).Length();
+					scale_speed[1] = fabs((pEndVert->texcoord[1]) - (pVertexes[j].texcoord[1])) / (pEndVert->pos - pVertexes[j].pos).Length();
+
+					auto fa = &surfaces[i];
+
+					bigx = scale_speed[0];
+					bigy = scale_speed[1];
+
+				}
+
+
+				pVertexes[j].pos[0] = v[0];
+				pVertexes[j].pos[1] = v[1];
+				pVertexes[j].pos[2] = v[2];
+				pVertexes[j].texcoord[0] = bigx;
+				pVertexes[j].texcoord[1] = bigy;
+
+				pVertexes[j].normal[0] = ext->normal[0];
+				pVertexes[j].normal[1] = ext->normal[1];
+				pVertexes[j].normal[2] = ext->normal[2];
+
+				pVertexes[j].detailtexcoord[0] = v[3];
+				pVertexes[j].detailtexcoord[1] = v[4];
+			}
+
+			if(specular)
+			{
+				memcpy(&m_pBufferData[iCurVert], &pVertexes[0], sizeof(brushvertex_t));
+				iCurVert++;
+				memcpy(&m_pBufferData[iCurVert], &pVertexes[1], sizeof(brushvertex_t));
+				iCurVert++;
+				memcpy(&m_pBufferData[iCurVert], &pVertexes[2], sizeof(brushvertex_t));
+				iCurVert++;
+			}
+			else
+			{
+				iCurVert += 3;
+			}
+
+			for (int j = 0; j < (bp->numverts - 3); j++, v += VERTEXSIZE)
+			{
+				memcpy(&pVertexes[1], &pVertexes[2], sizeof(brushvertex_t));
+
+				pVertexes[2].pos[0] = v[0];
+				pVertexes[2].pos[1] = v[1];
+				pVertexes[2].pos[2] = v[2];
+
+				pVertexes[2].texcoord[0] = bigx;
+				pVertexes[2].texcoord[1] = bigy;
+
+				pVertexes[2].normal[0] = ext->normal[0];
+				pVertexes[2].normal[1] = ext->normal[1];
+				pVertexes[2].normal[2] = ext->normal[2];
+
+				pVertexes[2].detailtexcoord[0] = v[3];
+				pVertexes[2].detailtexcoord[1] = v[4];
+
+				if (specular)
+				{
+					memcpy(&m_pBufferData[iCurVert], &pVertexes[0], sizeof(brushvertex_t));
+					iCurVert++;
+					memcpy(&m_pBufferData[iCurVert], &pVertexes[1], sizeof(brushvertex_t));
+					iCurVert++;
+					memcpy(&m_pBufferData[iCurVert], &pVertexes[2], sizeof(brushvertex_t));
+					iCurVert++;
+				}
+				else
+				{
+					iCurVert += 3;
+				}
+			}
+		}
+		ext->num_vertexes = iCurVert - ext->start_vertex;
+		iCurFace++;
+	}
+
+
 	if (m_pBSP_VAO)
 		delete m_pBSP_VAO;
 
@@ -1683,15 +1850,27 @@ void CBSPRenderer::DrawNormalTriangles_Cheap()
 
 			g_GlobalGLState.SetBlend(false);
 
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 1);
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_texture_pass], 0);
-			glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
+			if(!r_fullbright->value)
 
-			g_GlobalGLState.SetBlend(true);
+			{
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 1);
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_texture_pass], 0);
+				glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
 
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 0);
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_texture_pass], 1);
-			glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
+				g_GlobalGLState.SetBlend(true);
+
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 0);
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_texture_pass], 1);
+				glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
+			}
+			else
+			{
+				g_GlobalGLState.SetBlend(false);
+
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 0);
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_texture_pass], 1);
+				glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
+			}
 
 			if (m_pCvarWireFrame->value)
 			{
@@ -1705,6 +1884,8 @@ void CBSPRenderer::DrawNormalTriangles_Cheap()
 		}
 
 	}
+
+	DrawDynamicLightsForWorld();
 
 	GL_ShaderProgram::ResetShaderBind();
 	GL_VertexArrayObject::ResetVAOBinding();
@@ -1775,6 +1956,7 @@ void CBSPRenderer::DrawWorld(bool m_bSkyBox)
 	m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
 	
 	m_WorldShader->Uniform3fv(m_WorldShader_locs[world_renderorigin], 1, m_vRenderOrigin);
+	m_WorldShader->Uniform3fv(m_WorldShader_locs[world_renderright], 1, m_RefParams.right);
 	//m_WorldShader->Uniform3fv(m_WorldShader_locs[world_renderforward], 1, m_RefParams.forward);
 	m_WorldShader->Uniform3fv(m_WorldShader_locs[world_fogcolor], 1, gHUD.m_pFogSettings.color);
 	m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], 255, 255, 255);
@@ -1862,10 +2044,10 @@ RenderFirstPass
 */
 void CBSPRenderer::RenderFirstPass()
 {
-	msurface_t* psurfbase = nullptr;
-
-	if(IsEntityTransparent(m_pCurrentEntity))
+	if (r_fullbright->value)
 		return;
+
+	msurface_t* psurfbase = nullptr;
 
 	BindGLTexture(LIGHTMAP_TEXUNIT, m_iEngineLightmapIndex);
 	psurfbase = engine_cl->worldmodel->surfaces;
@@ -1879,6 +2061,12 @@ void CBSPRenderer::RenderFirstPass()
 	{
 		texture_t* pTexture = TextureAnimation(&m_pNormalTextureList[i], m_pCurrentEntity->curstate.frame);
 		msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+
+		// bacontsu - fake specular
+		auto specular = stristr(pTexture->name, "spec") || stristr(pTexture->name, "reflect") || stristr(pTexture->name, "chrome");
+
+		if (specular || !psurface)
+			continue;
 
 		// Nothing to draw
 		if (!psurface)
@@ -1963,7 +2151,7 @@ void CBSPRenderer::RenderFinalPasses()
 		return;
 	}
 	
-	if(!r_fullbright->value && !IsEntityTransparent(m_pCurrentEntity))
+	if(!r_fullbright->value)
 	{
 		g_GlobalGLState.SetBlend(true);
 	}
@@ -1986,9 +2174,18 @@ void CBSPRenderer::RenderFinalPasses()
 
 		auto scrollingpoly = stristr(pTexture->name, "scroll");
 
+		// bacontsu - fake specular
+		auto specular = stristr(pTexture->name, "spec") || stristr(pTexture->name, "reflect") || stristr(pTexture->name, "chrome");
+
 		if (scrollingpoly)
 		{
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_scrollingpolys], 1);
+		}
+		else if (specular)
+		{
+			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 1);
+
 		}
 
 		while (psurface)
@@ -2023,9 +2220,14 @@ void CBSPRenderer::RenderFinalPasses()
 		{
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_scrollingpolys], 0);
 		}
+		else if (specular)
+		{
+			g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+			m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 0);
+		}
 	}
 
-	if (!r_fullbright->value && !IsEntityTransparent(m_pCurrentEntity))
+	if (!r_fullbright->value)
 	{
 		g_GlobalGLState.SetBlend(false);
 	}
@@ -2251,29 +2453,6 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 		m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
 
 		ClearSurfaceDrawChain();
-
-
-		if (m_pCurrentEntity->curstate.rendermode == kRenderTransAdd)
-		{
-			g_GlobalGLState.SetDepthWrite(false);
-			g_GlobalGLState.SetBlend(true);
-			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		}
-		else if (m_pCurrentEntity->curstate.rendermode == kRenderTransTexture)
-		{
-			g_GlobalGLState.SetDepthWrite(false);
-			g_GlobalGLState.SetBlend(true);
-			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		}
-		else if (m_pCurrentEntity->curstate.rendermode == kRenderTransColor)
-		{
-			g_GlobalGLState.SetBlend(true);
-			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		}
-		else
-		{
-			g_GlobalGLState.SetBlend(false);
-		}
 	}
 
 	int alpha = (float)m_pCurrentEntity->curstate.renderamt;
@@ -2289,7 +2468,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 		b = b ? b : 255;
 	}
 
-	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], alpha);
+	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], alpha / 2);
 	m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], r, g, b);
 
 	psurf = &engine_cl->worldmodel->surfaces[pModel->firstmodelsurface];
@@ -2319,8 +2498,38 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 	//
 	if (!bStatic)
 	{
-		RenderFirstPass();
+		if (m_pCurrentEntity->curstate.rendermode == kRenderTransAdd)
+		{
+			g_GlobalGLState.SetDepthWrite(false);
+			g_GlobalGLState.SetBlend(true);
+			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		}
+		else if (m_pCurrentEntity->curstate.rendermode == kRenderTransTexture)
+		{
+			g_GlobalGLState.SetDepthWrite(false);
+			g_GlobalGLState.SetBlend(true);
+			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		else if (m_pCurrentEntity->curstate.rendermode == kRenderTransColor)
+		{
+			g_GlobalGLState.SetBlend(true);
+			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		else
+		{
+			g_GlobalGLState.SetBlend(false);
+		}
+
+		if( !(m_pCurrentEntity->curstate.rendermode == kRenderTransAdd) )
+		{
+			RenderFirstPass();
+		}
+
+
 		DrawDynamicLightsForEntity(m_pCurrentEntity);
+
+		if (!(m_pCurrentEntity->curstate.rendermode == kRenderTransAdd))
+			g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 
 		RenderFinalPasses();
 
@@ -4357,8 +4566,18 @@ void CBSPRenderer::DrawDynamicLightsForWorld(void)
 		if (dynlight->die < time || !dynlight->radius || ( (dynlight->flags & LIGHT_ONLYSHADOWS) && !m_bMainPass))
 			continue;
 
+		if (dynlight->visframe)
+			if (!IsInPotentiallyVisibleSet(dynlight->visframe))
+				continue;
+
 		m_pCurrentDynLight = dynlight.get();
 		m_vCurDLightOrigin = m_pCurrentDynLight->origin;
+
+		bool onlyshadows = (m_pCurrentDynLight->flags & LIGHT_ONLYSHADOWS);
+
+		if (!m_pCvarShadows->value || !m_bMainPass || !m_pCurrentDynLight->cubedepth)
+			if (onlyshadows)
+				continue;
 		
 		if (dynlight->cone_size)
 		{
@@ -5106,6 +5325,10 @@ void CBSPRenderer::Make_ShadowMaps(void)
 	{
 		if (dynlight->die < time || !dynlight->radius || !(dynlight->flags & LIGHT_CASTSHADOWS))
 			continue;
+
+		if(dynlight->visframe)
+			if (!IsInPotentiallyVisibleSet(dynlight->visframe))
+				continue;
 
 		m_pCurrentDynLight = dynlight.get();
 		if (dynlight->cone_size)

@@ -46,6 +46,8 @@ public:
 	void RenderProps(bool bSkybox = false);
 	void RenderPropsSolid(void);
 
+	void HandleFoliageProp(cl_entity_s* ent, entextradata_t* extradata);
+
 	// Models
 	bool LoadMDL(const char* name, cl_entity_t* pEntity, entity_t* pBSPEntity);
 	modeldata_t* GetHeader(const char* name);

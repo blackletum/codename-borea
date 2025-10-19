@@ -502,8 +502,9 @@ void CPropManager::LoadEntVars(void)
 			strcpy(cachedecal.name, pValue);
 			m_pDecals.emplace_back(cachedecal);
 		}
-		else if (!strcmp(pValue, "item_generic") || !strcmp(pValue, "prop_static"))
+		else if (!strcmp(pValue, "item_generic") || !strcmp(pValue, "prop_static") || !strcmp(pValue, "prop_grass"))
 		{
+			bool isfoliage = !strcmp(pValue, "prop_grass");
 			pValue = ValueForKey(&bspent, "targetname");
 
 			if (pValue)
@@ -540,6 +541,12 @@ void CPropManager::LoadEntVars(void)
 			propentity.visframe = -1;
 
 			pExtraInfo->pExtraData = m_pCurrentExtraData;
+			if (isfoliage)
+			{
+				pExtraInfo->prop_flags |= PROPFLAG_FOLIAGE;
+				propentity.curstate.fuser3 = gEngfuncs.pfnRandomLong(1, 25);
+				propentity.curstate.fuser4 = gEngfuncs.pfnRandomLong(1, 25);
+			}
 
 			pValue = ValueForKey(&bspent, "origin");
 			if (pValue)
@@ -742,6 +749,102 @@ void CPropManager::SetupVBO(void)
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
 }
 
+void CPropManager::HandleFoliageProp(cl_entity_s* ent, entextradata_t* extradata)
+{
+	// bacontsu - interactive grass
+	#define GRASS_SWAY_RADIUS 500.0f
+	#define GRASS_RADIUS 40.0f
+	#define GRASS_ANGLE 15.0f
+
+	cl_entity_t* closest_player = nullptr;
+	float closest_distance = 0;
+	Vector dir;
+	for (int i = 0; i < engine_cl->num_entities; i++)
+	{
+		cl_entity_t* _entity = gEngfuncs.GetEntityByIndex(i);
+		if (!_entity)
+			break;
+
+		if (!_entity->player)
+			continue;
+
+		dir = (ent->origin - _entity->origin);
+		float distance = dir.Length2D();
+		if (distance > GRASS_SWAY_RADIUS)
+			continue;
+
+		if (closest_distance < distance)
+		{
+			closest_distance = distance;
+		}
+		else
+		{
+			continue;
+		}
+
+		closest_player = _entity;
+	}
+
+	if (!closest_player)
+	{
+		ent->curstate.angles.x = ent->baseline.angles.x = 0;// = lerp(m_pEntities[i].curstate.angles.x, sin(gEngfuncs.GetAbsoluteTime() + m_pEntities[i].curstate.fuser3) * 2.5f, gHUD.m_flTimeDelta * 10.0f);
+		ent->curstate.angles.z = ent->baseline.angles.z = 0; // lerp(m_pEntities[i].curstate.angles.x, cos(gEngfuncs.GetAbsoluteTime() + m_pEntities[i].curstate.fuser4) * 2.5f, gHUD.m_flTimeDelta * 10.0f);;
+		ent->curstate.angles.y = 0;
+	}
+	else if(closest_distance < GRASS_RADIUS)
+	{
+
+		// clamps
+		float distX = std::clamp(dir.x, -GRASS_RADIUS, GRASS_RADIUS);
+		float distY = std::clamp(dir.y, -GRASS_RADIUS, GRASS_RADIUS);
+
+		if (distX > 0)
+		{
+			distX = GRASS_RADIUS - distX;
+		}
+		else if (distX < 0)
+		{
+			distX = -GRASS_RADIUS - distX;
+		}
+
+		if (distY > 0)
+		{
+			distY = GRASS_RADIUS - distY;
+		}
+		else if (distY < 0)
+		{
+			distY = -GRASS_RADIUS - distY;
+		}
+
+		ent->curstate.angles.x = ent->baseline.angles.x - (distX * GRASS_ANGLE / GRASS_RADIUS);
+		ent->curstate.angles.z = ent->baseline.angles.z - (distY * GRASS_ANGLE / GRASS_RADIUS);
+		ent->curstate.angles.y = 0;
+	}
+	else if (closest_distance < GRASS_SWAY_RADIUS)
+	{
+		ent->curstate.angles.x = ent->baseline.angles.x = lerp(ent->curstate.angles.x, sin(engine_cl->time + ent->curstate.fuser3) * 4.0f, gHUD.m_flTimeDelta * 10.0f);
+		ent->curstate.angles.z = ent->baseline.angles.z = lerp(ent->curstate.angles.x, cos(engine_cl->time + ent->curstate.fuser4) * 4.0f, gHUD.m_flTimeDelta * 10.0f);;
+		ent->curstate.angles.y = 0;
+	}
+
+	for (int j = 0; j < 3; j++)
+	{
+		ent->angles[j] = lerp(ent->angles[j], ent->curstate.angles[j], gHUD.m_flTimeDelta * 5);
+	}
+
+	glm::vec3 entityangles = glm::vec3(-ent->angles.x, ent->angles.y, ent->angles.z);
+
+	float scale = ent->curstate.scale ? ent->curstate.scale : 1;
+
+	glm::mat4 modelview = glm::translate(glm::mat4(1.0f), glm::vec3(ent->origin.x, ent->origin.y, ent->origin.z));
+	modelview = glm::rotate(modelview, glm::radians(entityangles.y), glm::vec3(0.0f, 0.0f, 1.0f));
+	modelview = glm::rotate(modelview, glm::radians(entityangles.x), glm::vec3(0.0f, 1.0f, 0.0f));
+	modelview = glm::rotate(modelview, glm::radians(entityangles.z), glm::vec3(1.0f, 0.0f, 0.0f));
+	modelview = glm::scale(modelview, glm::vec3(scale));
+
+	extradata->modelmatrix = modelview;
+}
+
 /*
 ====================
 RenderModels
@@ -790,6 +893,9 @@ void CPropManager::RenderProps(bool bSkybox)
 
 		if (j == pExtraData->num_leafs)
 			continue;
+
+		if (pExtraInfo->prop_flags & PROPFLAG_FOLIAGE)
+			HandleFoliageProp(ents, pExtraData);
 
 		g_StudioRenderer.StudioDrawExternalEntity(ents, bSkybox);
 	}

@@ -105,7 +105,7 @@ public:
 	static float StudioEstimateFrame(mstudioseqdesc_t* pseqdesc);
 
 	// Apply special effects to transform matrix
-	static void StudioFxTransform(cl_entity_t* ent, matrix3x4_t transform);
+	static void StudioFxTransform(cl_entity_t* ent, matrix3x4_t &transform);
 
 	// Spherical interpolation of bones
 	static void StudioSlerpBones(vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s);

@@ -504,6 +504,8 @@ struct cl_dlight_t
 	GL_ShadowMap* depth;
 	GL_ShadowMap* cubedepth; //cubemap shadowmap (for pointlights), probably should be made a separate entity.
 
+	int visframe;
+
 	// spotlight specific:
 	float cone_size;
 	FrustumCheck frustum;
@@ -764,9 +766,12 @@ struct entextradata_t
 	glm::mat4 modelmatrix;
 };
 
+#define PROPFLAG_FOLIAGE (1 << 0)
+
 struct entextrainfo_t
 {
 	int surfindex;
+	int prop_flags;
 	int lightstyles[4];
 	Vector prevpos;
 

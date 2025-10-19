@@ -622,7 +622,7 @@ void R_CalcRefDef(ref_params_t* pparams)
 	pparams->onlyClientDraw = 1;
 	r_refdef = pparams;
 
-	SetupFlashlight(pparams->vieworg, pparams->viewangles, engine_cl->time, gHUD.m_flTimeDelta);
+	SetupFlashlight(engine_cl->viewent.origin + Vector(0, 0, 8), engine_cl->viewent.angles * Vector(-1, 1, 1), engine_cl->time, gHUD.m_flTimeDelta);
 
 
 	// Set up pre-frame stuff

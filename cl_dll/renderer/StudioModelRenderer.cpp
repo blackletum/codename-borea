@@ -1238,8 +1238,23 @@ Studio_FxTransform
 
 ====================
 */
-void CStudioModelRenderer::StudioFxTransform(cl_entity_t* ent, matrix3x4_t transform)
+void CStudioModelRenderer::StudioFxTransform(cl_entity_t* ent, matrix3x4_t &transform)
 {
+	if (ent->curstate.renderfx != kRenderFxExplode && ent->curstate.scale > 0)
+	{
+		transform[0][0] *= ent->curstate.scale;
+		transform[1][0] *= ent->curstate.scale;
+		transform[2][0] *= ent->curstate.scale;
+
+		transform[0][1] *= ent->curstate.scale;
+		transform[1][1] *= ent->curstate.scale;
+		transform[2][1] *= ent->curstate.scale;
+
+		transform[0][2] *= ent->curstate.scale;
+		transform[1][2] *= ent->curstate.scale;
+		transform[2][2] *= ent->curstate.scale;
+	}
+
 	switch (ent->curstate.renderfx)
 	{
 	case kRenderFxDistort:

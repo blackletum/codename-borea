@@ -256,6 +256,7 @@ public:
 
 	bool m_bReloaded;
 	bool m_bGotAdditional;
+	bool m_bGotStaticLights;
 
 	bool m_bFullBright;
 
@@ -362,6 +363,7 @@ public:
 		
 		world_waterpolys,
 		world_scrollingpolys,
+		world_specular,
 		world_fltime,
 
 		world_detailtexture,
@@ -375,6 +377,7 @@ public:
 		world_light_radius,
 		world_renderorigin,
 		world_renderforward,
+		world_renderright,
 
 		world_lightmap_pass,
 		world_texture_pass,

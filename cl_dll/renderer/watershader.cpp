@@ -249,14 +249,14 @@ bool CWaterShader::ShouldReflect(int index)
 		return true;
 
 	// Optimization: Try and find a water entity on the same z coord
-	 for (int i = 0; i < index; i++)
-	{
-		 if (m_pWaterEntities[i].draw && m_pWaterEntities[i].rendered)
-		{
-			if (GetWaterOrigin(&m_pWaterEntities[i]).z == GetWaterOrigin().z)
-				return false;
-		}
-	}
+	//for (int i = 0; i < index; i++)
+	//{
+	//	 if (m_pWaterEntities[i].draw && m_pWaterEntities[i].rendered)
+	//	{
+	//		if (GetWaterOrigin(&m_pWaterEntities[i]).z == GetWaterOrigin().z)
+	//			return false;
+	//	}
+	//}
 	return true;
 }
 
@@ -850,25 +850,25 @@ void CWaterShader::DrawWater(void)
 		gBSPRenderer.BindGLTexture(GL_TEXTURE3, m_pCurWater->surfaces[0]->texinfo->texture->gl_texturenum);
 
 		// Optimization: Try and find a water entity on the same z coord
-		int j = 0;
-		for (; j < i; j++)
-		{
-			if (m_pWaterEntities[j].draw && m_pWaterEntities[j].rendered)
-			{
-				if (GetWaterOrigin(&m_pWaterEntities[j]).z == GetWaterOrigin().z)
-				{
-					gBSPRenderer.BindGLTexture(GL_TEXTURE1, m_pWaterEntities[j].refract->GetTextureID());
-					gBSPRenderer.BindGLTexture(GL_TEXTURE2, m_pWaterEntities[j].reflect->GetTextureID());
-					break;
-				}
-			}
-		}
-		
-		if (j == i)
-		{
+		//int j = 0;
+		//for (; j < i; j++)
+		//{
+		//	if (m_pWaterEntities[j].draw && m_pWaterEntities[j].rendered)
+		//	{
+		//		if (GetWaterOrigin(&m_pWaterEntities[j]).z == GetWaterOrigin().z)
+		//		{
+		//			gBSPRenderer.BindGLTexture(GL_TEXTURE1, m_pWaterEntities[j].refract->GetTextureID());
+		//			gBSPRenderer.BindGLTexture(GL_TEXTURE2, m_pWaterEntities[j].reflect->GetTextureID());
+		//			break;
+		//		}
+		//	}
+		//}
+		//
+		//if (j == i)
+		//{
 			gBSPRenderer.BindGLTexture(GL_TEXTURE2, m_pCurWater->reflect->GetTextureID());
 			gBSPRenderer.BindGLTexture(GL_TEXTURE1, m_pCurWater->refract->GetTextureID());
-		}
+		//}
 
 		for (int j = 0; j < m_pCurWater->numsurfaces; j++)
 		{

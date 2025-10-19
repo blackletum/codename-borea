@@ -22,7 +22,7 @@ const char* water_depth_vertex =
 
 		gl_Position = vertpos;
 
-		texcoord0.xy = aTexCoord / 64;
+		texcoord0.xy = aTexCoord / 128;
 
 		//todo: use surface texture scale or func_water keyvalue
 		//water_texcoord = texcoord0.xy * texture3_scale;
@@ -75,10 +75,10 @@ const char* water_fragment_water_regular =
 
 	void main()
 	{
-		vec2 normal_offset1 = texcoord0.xy + flTime * 0.2;
-		vec2 normal_offset2 = texcoord0.xy + vec2(flTime, -flTime) * 0.2;
-		vec2 normal_offset3 = texcoord0.xy + vec2(flTime, flTime) * 0.2;
-		vec2 normal_offset4 = texcoord0.xy + vec2(flTime, flTime) * 0.2;
+		vec2 normal_offset1 = texcoord0.xy + flTime * vec2(0.2, 0.15);
+		vec2 normal_offset2 = texcoord0.xy + vec2(0.11 * flTime, 0.13 * -flTime);
+		vec2 normal_offset3 = texcoord0.xy + vec2(0.17 * flTime, 0.14 * flTime);
+		vec2 normal_offset4 = texcoord0.xy + vec2(-0.16 * flTime, 0.14 * flTime);
 		
 		vec3 normalpixel1 = texture2D(texture0, normal_offset1).xyz;
 		vec3 normalpixel2 = texture2D(texture0, normal_offset2).xyz;
@@ -92,6 +92,8 @@ const char* water_fragment_water_regular =
 		float normalLen = length(combinedNormal);
 		vec2 finalNormal = combinedNormal.xy / normalLen;
 		finalNormal *= normalscale;
+
+		float depthFactor = clamp(-finalNormal.y * 4, 0.0, 1.0);
 
 
 		vec2 refractionCoord = texcoord1.xy / texcoord1.w;
@@ -109,9 +111,13 @@ const char* water_fragment_water_regular =
 
 		vec4 refractionPixel = texture2D(texture1, refractionCoord);
 		vec4 reflectionPixel = texture2D(texture2, reflectionCoord);
+
+		refractionPixel.rgb *= exp(-depthFactor * 4);
+		reflectionPixel.rgb *= exp(-depthFactor * 4);
 		
 		float refractiveFactor = dot( normalize(vectorToCamera), vec3(0.0, 0.0, 1.0) );
 		refractiveFactor = clamp(refractiveFactor * m_flFresnelTerm, 0.0, 1.0);
+
 		if(underwater > 0)
 			refractiveFactor = 1.0; //dont reflect underwater
 
