@@ -314,6 +314,7 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\cl_dll\renderer\bsprenderer.h" />
     <ClInclude Include="..\..\cl_dll\renderer\frustum.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\bsp_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\cable_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\decal_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\gaussianblur_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\mirror_glsl.h" />

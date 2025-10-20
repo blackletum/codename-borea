@@ -23,6 +23,9 @@
 #include "soundent.h"
 #include "gamerules.h"
 #include "UserMessages.h"
+
+#include "screenfade.h"
+#include "shake.h"
 #include <FranUtils.hpp>
 
 LINK_ENTITY_TO_CLASS( weapon_mp54, CMP5 );
@@ -249,11 +252,24 @@ void CMP5::SecondaryAttack()
 		m_pPlayer->targetFov = 0; // 0 means reset to default fov
 		m_flLens_on = gpGlobals->time;
 		m_pPlayer->isScoping = false;
+
+#ifndef CLIENT_DLL
+		UTIL_ScreenFade(m_pPlayer, Vector(0, 0, 0), 0.4, 0.1, 255, FFADE_IN);
+#endif
+
+		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_mp54.mdl");
+
 	}
 	else if( m_pPlayer->targetFov != -70 )
 	{
 		m_pPlayer->targetFov = -70;
 		m_pPlayer->isScoping = true;
+
+#ifndef CLIENT_DLL
+		UTIL_ScreenFade(m_pPlayer, Vector(0, 0, 0), 0.4, 0.1, 255, FFADE_IN);
+#endif
+
+		m_pPlayer->pev->viewmodel = 0;
 	}
 
 	SetNextThink( 0.1 );

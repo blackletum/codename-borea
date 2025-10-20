@@ -45,6 +45,17 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "StudioModelRenderer.h"
 #include "StudioMDL_MeshGen.h"
 
+//===========================================
+// GLSL SHADER START
+//
+//===========================================
+#include "glshaders/cable_glsl.h"
+
+//===========================================
+// GLSL SHADER END
+//
+//===========================================
+
 CPropManager gPropManager;
 
 modeldata_t* AllocModelHeader()
@@ -158,6 +169,10 @@ Init
 void CPropManager::Init(void)
 {
 	m_pCvarDrawClientEntities = CVAR_CREATE("r_drawstudiomdl_staticprops", "1", 0);
+
+	m_CableShader = new GL_ShaderProgram(glsl_cable_vp, glsl_cable_fp);
+	m_CableShader->Bind();
+	m_CableShader->Uniform1i(m_CableShader->GetUniformLoc("wireframe"), 0);
 }
 
 /*
@@ -687,6 +702,12 @@ void CPropManager::SetupVBO(void)
 	if (m_pStaticModelVAO)
 		delete m_pStaticModelVAO;
 
+	if (m_pCableVertsBuffer)
+		delete m_pCableVertsBuffer;
+
+	if (m_pCableVertsVAO)
+		delete m_pCableVertsVAO;
+
 	m_pStaticModelBuffer = nullptr;
 	
 	m_pStaticModelVAO = nullptr;
@@ -738,6 +759,79 @@ void CPropManager::SetupVBO(void)
 		iIndexOffset += header->pVBOHeader.numindexes;
 	}
 
+	typedef struct tempvert_struct_t
+	{
+		Vector pos;
+		Vector tangent;
+		unsigned short width;
+	};
+
+	typedef struct temptri_struct_t
+	{
+		tempvert_struct_t vert[3];
+
+	};
+
+	std::vector<temptri_struct_t> cabletris;
+	m_iNumCableVerts = 0;
+
+	for (auto& cable : m_pCables)
+	{
+		temptri_struct_t tri;
+		tri.vert[0].width = tri.vert[1].width = tri.vert[2].width = cable.iwidth;
+		for (int j = 0; j < cable.inumpoints; j++)
+		{
+			Vector vTangent;
+			Vector vRight;
+
+			if (j == 0)
+			{
+				VectorSubtract(cable.vpoints[0], cable.vpoints[1], vTangent);
+			}
+			else
+			{
+				VectorSubtract(cable.vpoints[0], cable.vpoints[j], vTangent);
+			}
+
+			//CrossProduct(vTangent, -vTangent, vRight);
+
+			//vRight = vRight.Normalize();
+
+			Vector vert1 = cable.vpoints[j];
+			Vector vert2 = cable.vpoints[j];
+			//VectorMA(cable.vpoints[j], cable.iwidth, vRight, vert1);
+			//VectorMA(cable.vpoints[j], -cable.iwidth, vRight, vert2);
+
+
+			if (j == 0)
+			{
+				tri.vert[0].pos = vert1;
+				tri.vert[1].pos = vert2;
+				tri.vert[0].tangent = tri.vert[1].tangent = vTangent;
+			}
+			else
+			{
+				tri.vert[2].pos = vert2;
+				tri.vert[2].tangent = vTangent;
+				cabletris.push_back(tri);
+
+				//move to new triangle
+
+				tri.vert[1].pos = vert1;
+				tri.vert[1].tangent = vTangent;
+				cabletris.push_back(tri);
+
+				tri.vert[1].pos = vert2;
+
+				tri.vert[0].pos = vert1;
+				tri.vert[0].tangent = vTangent;
+
+			}
+		}
+	}
+
+	m_iNumCableVerts = cabletris.size() * 3;
+
 	m_pStaticModelVAO = new GL_VertexArrayObject();
 
 	m_pStaticModelBuffer = new GL_BufferHandler();
@@ -747,6 +841,24 @@ void CPropManager::SetupVBO(void)
 	//we set up m_pStaticModelVAO in CBSPRenderer::GenerateVertexArray() since we need m_pMainBuffer
 
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
+
+	m_pCableVertsVAO = new GL_VertexArrayObject();
+	m_pCableVertsVAO->BindVAO();
+
+	m_pCableVertsBuffer = new GL_BufferHandler;
+	m_pCableVertsBuffer->Bind(GL_BufferHandler::ArrayBuffer);
+	m_pCableVertsBuffer->BufferData(GL_BufferHandler::ArrayBuffer, (cabletris.size() * 3) * sizeof(tempvert_struct_t), cabletris.data(), GL_BufferHandler::StaticDraw);
+
+	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
+	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(tempvert_struct_t), (void*)0);
+	
+	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Normal);
+	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(tempvert_struct_t), (void*)offsetof(tempvert_struct_t, tangent));
+
+	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID);
+	glVertexAttribIPointer(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_SHORT, sizeof(tempvert_struct_t), (void*)offsetof(tempvert_struct_t, width));
+
+	GL_VertexArrayObject::ResetVAOBinding();
 }
 
 void CPropManager::HandleFoliageProp(cl_entity_s* ent, entextradata_t* extradata)
@@ -1031,8 +1143,10 @@ bool CPropManager::SetupCable(cabledata_t* cable, entity_t* entity)
 		return false;
 
 	// Calculate dropping point
-	VectorSubtract(vposition2, vposition1, vdirection);
+	vdirection = vposition2 - vposition1;
+
 	VectorMA(vposition1, 0.5, vdirection, vmidpoint);
+
 	vdroppoint = Vector(vmidpoint[0], vmidpoint[1], vmidpoint[2] - atoi(pValue));
 
 	// Get sprite width
@@ -1058,9 +1172,10 @@ bool CPropManager::SetupCable(cabledata_t* cable, entity_t* entity)
 	for (int i = 0; i < cable->inumpoints; i++)
 	{
 		float f = (float)i / (float)cable->isegments;
-		cable->vpoints[i][0] = vposition1[0] * ((1 - f) * (1 - f)) + vdroppoint[0] * ((1 - f) * f * 2) + vposition2[0] * (f * f);
-		cable->vpoints[i][1] = vposition1[1] * ((1 - f) * (1 - f)) + vdroppoint[1] * ((1 - f) * f * 2) + vposition2[1] * (f * f);
-		cable->vpoints[i][2] = vposition1[2] * ((1 - f) * (1 - f)) + vdroppoint[2] * ((1 - f) * f * 2) + vposition2[2] * (f * f);
+
+		cable->vpoints[i] = vposition1 * ((1 - f) * (1 - f)) + vdroppoint * ((1 - f) * f * 2) + vposition2 * (f * f);
+
+		//calculate bounding box
 
 		for (int j = 0; j < 3; j++)
 		{
@@ -1081,8 +1196,9 @@ bool CPropManager::SetupCable(cabledata_t* cable, entity_t* entity)
 	entextradata_t pdata;
 	memset(&pdata, 0, sizeof(pdata));
 
-	VectorCopy(cable->vmaxs, pdata.absmax);
-	VectorCopy(cable->vmins, pdata.absmin);
+	pdata.absmax = cable->vmaxs;
+	pdata.absmin = cable->vmins;
+
 	SV_FindTouchedLeafs(&pdata, engine_cl->worldmodel->nodes);
 
 	memcpy(cable->leafnums, pdata.leafnums, sizeof(short) * MAX_ENT_LEAFS);
@@ -1099,54 +1215,38 @@ DrawCables
 */
 void CPropManager::DrawCables(void)
 {
-	Vector vVertex;
-	Vector vTangent;
-	Vector vDir;
-	Vector vRight;
-
 	if (!m_pCvarDrawClientEntities->value || m_pCables.empty())
 		return;
 
+	static int projviewmatrix_loc = m_CableShader->GetUniformLoc("projviewmatrix");
+	static int renderorigin_loc = m_CableShader->GetUniformLoc("renderorigin");
+	static int wireframe_loc = m_CableShader->GetUniformLoc("wireframe");
+
 	g_GlobalGLState.SetCullFace(false);
+	g_GlobalGLState.SetBlend(false);
 
-	for (auto cable : m_pCables)
+	auto proj = gBSPRenderer.m_ProjectionMatrix;
+	auto view = gBSPRenderer.m_ViewMatrix;
+
+	m_CableShader->Bind();
+	m_CableShader->UniformMatrix4fv(projviewmatrix_loc, 1, GL_FALSE, glm::value_ptr(proj * view));
+	m_CableShader->Uniform3fv(renderorigin_loc, 1, gBSPRenderer.m_vRenderOrigin);
+
+	m_pCableVertsVAO->BindVAO();
+
+	glDrawArrays(GL_TRIANGLES, 0, m_iNumCableVerts); //beautiful
+	if (gBSPRenderer.m_pCvarWireFrame->value)
 	{
-		int j = 0;
-		for (; j < cable.num_leafs; j++)
-			if (gBSPRenderer.IsInPotentiallyVisibleSet(cable.leafnums[j]))
-				break;
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		if (j == cable.num_leafs)
-			continue;
+		m_CableShader->Uniform1i(wireframe_loc, 1);
+		glDrawArrays(GL_LINES, 0, m_iNumCableVerts);
+		m_CableShader->Uniform1i(wireframe_loc, 0);
 
-		if (gHUD.viewFrustum.CullBox(cable.vmins, cable.vmaxs))
-			continue;
-
-		glBegin(GL_TRIANGLE_STRIP);
-		for (int j = 0; j < cable.inumpoints; j++)
-		{
-			if (j == 0)
-			{
-				VectorSubtract(cable.vpoints[0], cable.vpoints[1], vTangent);
-			}
-			else
-			{
-				VectorSubtract(cable.vpoints[0], cable.vpoints[j], vTangent);
-			}
-
-			VectorSubtract(cable.vpoints[j], gBSPRenderer.m_vRenderOrigin, vDir);
-			CrossProduct(vTangent, -vDir, vRight);
-			vRight = vRight.Normalize();
-
-			glColor3f(GL_ZERO, GL_ZERO, GL_ZERO);
-			VectorMA(cable.vpoints[j], cable.iwidth, vRight, vVertex);
-			glVertex3fv(vVertex);
-
-			VectorMA(cable.vpoints[j], -cable.iwidth, vRight, vVertex);
-			glVertex3fv(vVertex);
-		}
-		glEnd();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+
+	GL_VertexArrayObject::ResetVAOBinding();
 
 	g_GlobalGLState.SetCullFace(true);
 }

@@ -1235,6 +1235,9 @@
     <ClInclude Include="..\..\cl_dll\renderer\mirrormanager.h">
       <Filter>Header Files\cl_dll\renderer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\cable_glsl.h">
+      <Filter>Header Files\cl_dll\renderer\glshaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\lib\public\game_controls.lib" />

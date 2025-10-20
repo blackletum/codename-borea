@@ -513,7 +513,7 @@ void R_MarkLeaves(mleaf_t* pLeaf)
 	{
 		for (int i = 0; i < pWorld->numleafs; i++)
 		{
-			if (gBSPRenderer.m_pPVS[i >> 3] & (1 << (i & 7)))
+			if (CHECKVISBIT(gBSPRenderer.m_pPVS, i))
 			{
 				mnode_t* node = (mnode_t*)&pWorld->leafs[i + 1];
 				do
@@ -991,9 +991,6 @@ void SetupFlashlight(Vector origin, Vector angles, float time, float frametime)
 
 	flashlight->depth = GL_ShadowMap::AllocateShadowMap(GL_ShadowMap::_2DTexture, GL_RG16F, sm_res, sm_res, 0, GL_RG, GL_FLOAT);
 	VectorCopy(angles, flashlight->angles);
-
-	// Shitpickle
-	FixVectorForSpotlight(angles);
 }
 float Q_rsqrt(float number)
 {
@@ -1040,55 +1037,6 @@ int ByteToInt(byte* byte)
 
 	return iValue;
 }
-
-void FixVectorForSpotlight(Vector& vec)
-{
-	if (vec[PITCH] == 0)
-		vec[PITCH] = 1;
-	if (vec[PITCH] == 90)
-		vec[PITCH] = 89;
-	if (vec[PITCH] == 180)
-		vec[PITCH] = 179;
-	if (vec[PITCH] == 270)
-		vec[PITCH] = 269;
-	if (vec[PITCH] == -90)
-		vec[PITCH] = -89;
-	if (vec[PITCH] == -180)
-		vec[PITCH] = -179;
-	if (vec[PITCH] == -270)
-		vec[PITCH] = -269;
-
-	if (vec[YAW] == 0)
-		vec[YAW] = 1;
-	if (vec[YAW] == 90)
-		vec[YAW] = 89;
-	if (vec[YAW] == 180)
-		vec[YAW] = 179;
-	if (vec[YAW] == 270)
-		vec[YAW] = 269;
-	if (vec[YAW] == -90)
-		vec[YAW] = -89;
-	if (vec[YAW] == -180)
-		vec[YAW] = -179;
-	if (vec[YAW] == -270)
-		vec[YAW] = -269;
-
-	if (vec[ROLL] == 0)
-		vec[ROLL] = 1;
-	if (vec[ROLL] == 90)
-		vec[ROLL] = 89;
-	if (vec[ROLL] == 180)
-		vec[ROLL] = 179;
-	if (vec[ROLL] == 270)
-		vec[ROLL] = 269;
-	if (vec[ROLL] == -90)
-		vec[ROLL] = -89;
-	if (vec[ROLL] == -180)
-		vec[ROLL] = -179;
-	if (vec[ROLL] == -270)
-		vec[ROLL] = -269;
-}
-
 
 /*
 =================

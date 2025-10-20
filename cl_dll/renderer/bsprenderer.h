@@ -47,6 +47,10 @@ Extended and/or recoded by Andrew Lucas
 
 #define DEFAULT_SHADOWMAP_RES 256
 
+#define CHECKVISBIT( vis, b )		((b) >= 0 ? (byte)((vis)[(b) >> 3] & (1 << ((b) & 7))) : (byte)false )
+#define SETVISBIT( vis, b )( void )	((b) >= 0 ? (byte)((vis)[(b) >> 3] |= (1 << ((b) & 7))) : (byte)false )
+#define CLEARVISBIT( vis, b )( void )	((b) >= 0 ? (byte)((vis)[(b) >> 3] &= ~(1 << ((b) & 7))) : (byte)false )
+
 
 struct DecalVert_t
 {
@@ -92,7 +96,7 @@ public:
 	void RecursiveWorldNodeSolid(mnode_t* node);
 	void DrawBrushModelSolid(cl_entity_t* pEntity);
 
-	bool IsInPotentiallyVisibleSet(int visframe) { return m_pPVS[visframe >> 3] & (1 << (visframe & 7)); };
+	bool IsInPotentiallyVisibleSet(int visframe) { return CHECKVISBIT(m_pPVS, visframe); };
 
 	Vector TriWorldToScreen(Vector point);
 
@@ -242,7 +246,6 @@ public:
 	int m_iEnvStates[4];
 	int m_iTUSupport;
 
-	int m_iVisFrame;
 	int m_iFrameCount;
 
 	cl_texture_t* m_pFlashlightTextures[MAX_SPOTLIGHT_TEXTURES];

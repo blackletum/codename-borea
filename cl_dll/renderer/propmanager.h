@@ -90,8 +90,17 @@ public:
 	brushvertex_t* m_pVertexData;
 	int m_iNumTotalVerts;
 
+	GL_ShaderProgram* m_CableShader;
+
 	GL_BufferHandler *m_pStaticModelBuffer;
-	GL_VertexArrayObject* m_pStaticModelVAO;
+	GL_VertexArrayObject *m_pStaticModelVAO;
+
+	//may be best to merge this with CBSPRenderer::m_pMainBuffer
+	GL_BufferHandler* m_pCableVertsBuffer; 
+	GL_VertexArrayObject* m_pCableVertsVAO;
+
+	int m_iNumCableVerts;
+
 	unsigned int* m_pIndexBuffer;
 
 	cvar_t* m_pCvarDrawClientEntities;

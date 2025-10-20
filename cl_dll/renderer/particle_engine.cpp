@@ -1080,7 +1080,6 @@ Vector CParticleEngine::LightForParticle(cl_particle_t* pParticle)
 				continue;
 
 			Vector vAngles = pLight->angles;
-			FixVectorForSpotlight(vAngles);
 			AngleVectors(vAngles, &vForward, nullptr, nullptr);
 		}
 		else

@@ -315,6 +315,9 @@ struct cl_particle_t
 #define SURF_UNDERWATER 0x80
 #define SURF_DONTWARP 0x100
 
+#define TEXTURE_SCROLL (1 << 0)
+#define TEXTURE_SPECULAR (1 << 1)
+
 #define BLOCKLIGHTS_SIZE (18 * 18)
 #define BACKFACE_EPSILON 0.01
 
@@ -860,7 +863,6 @@ extern inline void DotProductSub(float* result, Vector* v0, Vector* v1, float* s
 extern void VectorRotate(const Vector& in1, const matrix3x4_t &in2, Vector& out);
 extern void VectorIRotate(const Vector& in1, const matrix3x4_t &in2, Vector& out);
 extern void VectorRotateAbs(const Vector& in1, const matrix3x4_t& in2, Vector& out);
-extern void FixVectorForSpotlight(Vector& vec);
 extern void SV_FindTouchedLeafs(entextradata_t* ent, mnode_t* node);
 
 extern byte* ResizeArray(byte* pOriginal, int iSize, int iCount);

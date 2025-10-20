@@ -80,10 +80,10 @@ const char* water_fragment_water_regular =
 		vec2 normal_offset3 = texcoord0.xy + vec2(0.17 * flTime, 0.14 * flTime);
 		vec2 normal_offset4 = texcoord0.xy + vec2(-0.16 * flTime, 0.14 * flTime);
 		
-		vec3 normalpixel1 = texture2D(texture0, normal_offset1).xyz;
-		vec3 normalpixel2 = texture2D(texture0, normal_offset2).xyz;
-		vec3 normalpixel3 = texture2D(texture0, normal_offset3).xyz;
-		vec3 normalpixel4 = texture2D(texture0, normal_offset4).xyz;
+		vec3 normalpixel1 = texture(texture0, normal_offset1).xyz;
+		vec3 normalpixel2 = texture(texture0, normal_offset2).xyz;
+		vec3 normalpixel3 = texture(texture0, normal_offset3).xyz;
+		vec3 normalpixel4 = texture(texture0, normal_offset4).xyz;
 
 		vec3 combinedNormal = (normalpixel1 + normalpixel2 + normalpixel3 + normalpixel4) * 0.5;
 		combinedNormal -= 1.0;

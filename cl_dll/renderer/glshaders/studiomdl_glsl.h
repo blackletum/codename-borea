@@ -5,6 +5,14 @@ char glsl330_studiomdl_vert[] = R"(
 
 	#define MAX_MODEL_LIGHTS 12 // 2x(up, down, left, right, front, back)
 
+	// lighting options
+	#define STUDIO_NF_FLATSHADE 1
+	#define STUDIO_NF_CHROME 2
+	#define STUDIO_NF_ADDITIVE 32  // buz
+	#define STUDIO_NF_ALPHATEST 64 // buz
+	#define STUDIO_NF_FULLBRIGHT 512
+	#define STUDIO_NF_NOMIPMAP 256
+
 
 	//for gpu skinning
 	layout(std140) uniform BonesUBO // line 38 ?
@@ -46,10 +54,8 @@ char glsl330_studiomdl_vert[] = R"(
 		//modellight_info[i][2] = modellight_forward[i]
 	};
 
-	uniform vec2 texturescale;
-	uniform bool fullbright;
-	uniform bool chrometexture;
-	uniform bool chromeshell;
+	uniform sampler2D texture0;
+	uniform int texture_flags;
 	uniform bool wireframe;
 	uniform bool viewmodel;
 
@@ -122,10 +128,10 @@ char glsl330_studiomdl_vert[] = R"(
 
 	void CalcTexCoords(int normboneid)
 	{
-		if(chrometexture)
+		if ( (texture_flags & STUDIO_NF_CHROME) > 0)
 			texcoord = ChromeTexCoords(aNormal, bonematrixes[normboneid]);
 		else
-			texcoord = aTexCoord.xy / texturescale;
+			texcoord = aTexCoord.xy / textureSize(texture0, 0);
 	}
 
 	vec3 DefaultDiffuseLight(int index)
@@ -158,7 +164,7 @@ char glsl330_studiomdl_vert[] = R"(
 	{
 		float specularStrength = 0.6;
 		float specularFactor = 16;
-		if(chrometexture)
+		if ((texture_flags & STUDIO_NF_CHROME) > 0)
 		{
 			specularStrength = 1.5;
 			specularFactor = 32;
@@ -232,7 +238,7 @@ char glsl330_studiomdl_vert[] = R"(
 			translated_normal = normalize( transpose(inverse(mat3(modelmatrix))) * aNormal );
 		}
 
-		if( fullbright || int_values[_CHROMESHELL_BOOL] != 0 )
+		if( (texture_flags & STUDIO_NF_FULLBRIGHT) > 0 || int_values[_CHROMESHELL_BOOL] != 0 )
 			Vertex_NoLight();
 		else if(!wireframe)
 			NormalVertexLight();
@@ -257,6 +263,14 @@ char glsl330_studiomdl_frag[] = R"(
 	in vec4 vertexspecularcolor;
 
 	#define MAX_MODEL_LIGHTS 12 // 2x(up, down, left, right, front, back)
+
+	// lighting options
+	#define STUDIO_NF_FLATSHADE 1
+	#define STUDIO_NF_CHROME 2
+	#define STUDIO_NF_ADDITIVE 32  // buz
+	#define STUDIO_NF_ALPHATEST 64 // buz
+	#define STUDIO_NF_FULLBRIGHT 512
+	#define STUDIO_NF_NOMIPMAP 256
 
 
 	layout(std140) uniform studiomdl_PerFrame
@@ -294,6 +308,8 @@ char glsl330_studiomdl_frag[] = R"(
 	uniform sampler2D texture0;
 
 	uniform bool wireframe;
+
+	uniform int texture_flags;
 
 	float GetFogFactor()
 	{

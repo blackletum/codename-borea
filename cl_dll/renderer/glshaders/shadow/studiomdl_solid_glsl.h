@@ -3,7 +3,13 @@
 
 char glsl330_studiomdlsolid_vert[] = R"(
 
-	uniform vec2 texturescale;
+	// lighting options
+	#define STUDIO_NF_FLATSHADE 1
+	#define STUDIO_NF_CHROME 2
+	#define STUDIO_NF_ADDITIVE 32  // buz
+	#define STUDIO_NF_ALPHATEST 64 // buz
+	#define STUDIO_NF_FULLBRIGHT 512
+	#define STUDIO_NF_NOMIPMAP 256
 
 	layout(std140) uniform StudioSolidUBO
 	{
@@ -14,6 +20,8 @@ char glsl330_studiomdlsolid_vert[] = R"(
 
 		mat3x4 bonematrixes[128];
 	};
+
+	uniform sampler2D texture0;
 
 	out vec2 texcoord;
 	out vec3 fragPos;
@@ -47,7 +55,7 @@ char glsl330_studiomdlsolid_vert[] = R"(
 		else
 			translated_vertpos = vec4( modelmatrix * vec4(aPosition, 1)).xyz; //static prop
 
-		texcoord = aTexCoord.xy / texturescale;
+		texcoord = aTexCoord.xy / textureSize(texture0, 0);
 
 		gl_Position = projviewmatrix * vec4(translated_vertpos, 1);
 
@@ -60,7 +68,16 @@ char glsl330_studiomdlsolid_vert[] = R"(
 
 char glsl330_studiomdlsolid_frag[] = R"(
 
+	// lighting options
+	#define STUDIO_NF_FLATSHADE 1
+	#define STUDIO_NF_CHROME 2
+	#define STUDIO_NF_ADDITIVE 32  // buz
+	#define STUDIO_NF_ALPHATEST 64 // buz
+	#define STUDIO_NF_FULLBRIGHT 512
+	#define STUDIO_NF_NOMIPMAP 256
+
 	uniform sampler2D texture0;
+	uniform int texture_flags;
 	uniform bool bSunShadowMapPass;
 	uniform bool alphatest;
 
@@ -80,7 +97,7 @@ char glsl330_studiomdlsolid_frag[] = R"(
 
 	void main()
 	{
-		if(alphatest)
+		if ( (texture_flags & STUDIO_NF_ALPHATEST) > 0)
 			if(texture(texture0, texcoord).a < 0.5)
 				discard;
 

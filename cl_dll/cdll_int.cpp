@@ -786,6 +786,9 @@ void pfnFrameRender2(void) //(called in SCR_UpdateScreen in the end before GL_En
 
 	if (restore_numleafs && engine_cl->worldmodel)
 		engine_cl->worldmodel->numleafs = restore_numleafs;
+
+	g_ImGUIManager.Draw();
+	//SDL_GL_SwapWindow(hlWindow); let GL_EndRendering swap the window buffer
 }
 
 

@@ -309,10 +309,6 @@ const char glsl330_world_fp[] = R"(
 	uniform float lightgamma;
 	uniform float texgamma;
 
-	//MOD SPECIFIC
-	uniform bool nightvision;
-	//
-
 	float sampleShadowVariance(sampler2D shadowMap, vec2 projCoord)
 	{
 		
@@ -544,6 +540,44 @@ const char glsl330_world_fp[] = R"(
 		gl_FragColor = vec4(1, 0, 0, 1); //solid red for lines
 	}
 
+	void frag_HandleTextureLightMapPass()
+	{
+		//goldsrc subdivides water surfaces, thus messing up lightmap coords (and texture coords)
+		if(waterpolys)
+		{
+			gl_FragColor = vec4(0.65, 0.65, 0.65, 1);
+			return;
+		}
+
+		vec4 basetex_pixel = texture2D(base_texture, frag_texcoord_texture);
+		if(basetex_pixel.a < 0.5)
+			discard;
+
+		basetex_pixel.a *= float(renderamt) / 255;
+
+		vec4 lightmap_pixel = texture2D(lightmap_texture, frag_texcoord_lightmap);
+
+		//gamma
+		lightmap_pixel.rgb = pow(lightmap_pixel.rgb, vec3( clamp(1.0 / lightgamma, 0.1, 5) ) );
+		basetex_pixel.rgb = pow(basetex_pixel.rgb, vec3( clamp(1.0 / texgamma, 0.1, 5) ) );
+
+		//fog
+		if(fog_active)
+		{
+			lightmap_pixel.rgb = mix( lightmap_pixel.rgb, fogcolor, 1.0 - GetFogFactor() );
+			basetex_pixel.rgb = mix(basetex_pixel.rgb, fogcolor, 1.0 - GetFogFactor() );
+		}
+
+		if(detailtexture)
+		{
+			lightmap_pixel.rgb *= pow(texture(detail_texture, frag_texcoord_detailtexture).rgb, vec3(dt_opacity));
+		}
+
+		gl_FragColor = basetex_pixel * lightmap_pixel;
+		gl_FragColor.a = basetex_pixel.a;
+
+	}
+
 	void frag_HandleTexturePass()
 	{
 		vec4 basetex_pixel = texture2D(base_texture, frag_texcoord_texture); 
@@ -600,10 +634,6 @@ const char glsl330_world_fp[] = R"(
 			lightmap_pixel.rgb = mix( lightmap_pixel.rgb, fogcolor, 1.0 - GetFogFactor() );
 		}
 
-		//MOD SPECIFIC: nightvision
-		if(nightvision)
-			lightmap_pixel = clamp(lightmap_pixel, vec4(0.3, 0.3, 0.3, 1), vec4(0.8, 0.8, 0.8, 1) );
-
 		if(detailtexture)
 		{
 			lightmap_pixel.rgb *= pow(texture(detail_texture, frag_texcoord_detailtexture).rgb, vec3(dt_opacity));
@@ -634,7 +664,7 @@ const char glsl330_world_fp[] = R"(
 		}
 		else if (texture_pass && lightmap_pass)
 		{
-			//not implemented, this result is darker than with opengl pipeline multiplication (glblendfunc(gl_src_color, gl_dst_color);
+			frag_HandleTextureLightMapPass(); //this result is darker than with opengl pipeline multiplication for some reason (glblendfunc(gl_src_color, gl_dst_color);
 		}
 		else if(texture_pass)
 		{

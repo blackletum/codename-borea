@@ -679,7 +679,6 @@ public:
 	bool Init();
 	bool VidInit();
 	void Draw();
-	void DrawChapter();
 	void DrawSpeeds();
 	void DrawSubtitles();
 
@@ -694,11 +693,6 @@ public:
 		float time_to_die;
 		bool fadeout;
 	};
-
-	// chapter selection variables
-	bool isMenuOpen = false;
-	int page;
-	bool skillMode[4];
 
 	int m_iNumTexts;
 	cvar_t* r_subtitles;

@@ -279,14 +279,12 @@ public:
 
 	enum modelshader_uniforms
 	{
-		mdlshader_texturescale,
 		mdlshader_viewmodel,
 
 		mdlshader_texturematrix,
 
-		mdlshader_fullbright,
 		mdlshader_wireframe,
-		mdlshader_chrometexture,
+		mdlshader_texture_flags,
 
 
 
@@ -297,9 +295,8 @@ public:
 
 	enum modelshadersolid_uniforms
 	{
-		mdlshadersolid_texturescale = 0,
 		mdlshadersolid_sunshadow,
-		mdlshadersolid_alphatest,
+		mdlshadersolid_texture_flags,
 
 		_mdlshadersolid_uniformsize //must be last
 	};

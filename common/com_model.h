@@ -196,6 +196,10 @@ typedef struct texture_s
 	struct texture_s *alternate_anims;	// bmodels in frame 1 use these
 	unsigned	offsets[MIPLEVELS];		// four mip maps stored
 	unsigned	paloffset;
+
+	//additional variables (should not cause any compatibility issues)
+
+	int texture_flag;
 } texture_t;
 
 #endif

@@ -314,18 +314,15 @@ void CStudioModelRenderer::Init(void)
 	m_ModelShader = new GL_ShaderProgram(glsl330_studiomdl_vert, glsl330_studiomdl_frag);
 	m_ModelSolidShader = new GL_ShaderProgram(glsl330_studiomdlsolid_vert, glsl330_studiomdlsolid_frag);
 
-	m_ModelShaderLocs[mdlshader_texturescale] = m_ModelShader->GetUniformLoc("texturescale");
 	m_ModelShaderLocs[mdlshader_viewmodel] = m_ModelShader->GetUniformLoc("viewmodel");
 
 	//m_ModelShaderLocs[mdlshader_texturematrix] = m_ModelShader->GetUniformLoc("texturematrix");
 
-	m_ModelShaderLocs[mdlshader_fullbright] = m_ModelShader->GetUniformLoc("fullbright");
 	m_ModelShaderLocs[mdlshader_wireframe] = m_ModelShader->GetUniformLoc("wireframe");
-	m_ModelShaderLocs[mdlshader_chrometexture] = m_ModelShader->GetUniformLoc("chrometexture");
+	m_ModelShaderLocs[mdlshader_texture_flags] = m_ModelShader->GetUniformLoc("texture_flags");
 
-	m_ModelShaderSolidLocs[mdlshadersolid_texturescale] = m_ModelSolidShader->GetUniformLoc("texturescale");
 	m_ModelShaderSolidLocs[mdlshadersolid_sunshadow] = m_ModelSolidShader->GetUniformLoc("bSunShadowMapPass");
-	m_ModelShaderSolidLocs[mdlshadersolid_alphatest] = m_ModelSolidShader->GetUniformLoc("alphatest");
+	m_ModelShaderSolidLocs[mdlshadersolid_texture_flags] = m_ModelSolidShader->GetUniformLoc("texture_flags");
 
 	m_ModelShader->Bind();
 	m_ModelShader->Uniform1i(m_ModelShader->GetUniformLoc("texture0"), 0);
@@ -927,42 +924,40 @@ void CStudioModelRenderer::StudioDrawViewmodel()
 
 	//camera anim stuff
 
-	g_viewinfo.phdr = m_pStudioHeader;
-
-
-	gHUD.m_prevstate.sequence = m_pCurrentEntity->curstate.sequence;
-	cl_entity_s temp = engine_cl->viewent;
-	temp.angles = temp.curstate.angles = temp.origin = temp.curstate.origin = Vector(0, 0, 0);
-	m_pCurrentEntity = &temp;
-	m_pRenderModel = m_pCurrentEntity->model;
-	m_pStudioHeader = (studiohdr_t*)IEngineStudio.Mod_Extradata(m_pRenderModel);
-
-	StudioSetUpTransform(false);
-	StudioSetupBones();
-	for (int i = 0; i < m_pStudioHeader->numbones; i++)
-	{
-		MatrixAngles((*m_pbonetransform)[i], g_viewinfo.boneangles[i], g_viewinfo.bonepos[i]);
-		NormalizeAngles((float*)&g_viewinfo.boneangles[i]);
-	}
-	temp = engine_cl->viewent;
-	temp.angles = temp.curstate.angles = temp.origin = temp.curstate.origin = Vector(0, 0, 0);
-	temp.curstate.sequence = 0;
-	temp.curstate.frame = 0;
-	temp.curstate.animtime = 0;
-	temp.latched.prevframe = 0;
-	m_pCurrentEntity = &temp;
-
-	StudioSetUpTransform(false);
-	StudioSetupBones();
-	for (int i = 0; i < m_pStudioHeader->numbones; i++)
-	{
-		MatrixAngles((*m_pbonetransform)[i], g_viewinfo.prevboneangles[i], g_viewinfo.prevbonepos[i]);
-		NormalizeAngles((float*)&g_viewinfo.prevboneangles[i]);
-	}
+	//g_viewinfo.phdr = m_pStudioHeader;
+	//
+	//
+	//gHUD.m_prevstate.sequence = m_pCurrentEntity->curstate.sequence;
+	//cl_entity_s temp = engine_cl->viewent;
+	//temp.angles = temp.curstate.angles = temp.origin = temp.curstate.origin = Vector(0, 0, 0);
+	//m_pCurrentEntity = &temp;
+	//m_pRenderModel = m_pCurrentEntity->model;
+	//m_pStudioHeader = (studiohdr_t*)IEngineStudio.Mod_Extradata(m_pRenderModel);
+	//
+	//StudioSetUpTransform(false);
+	//StudioSetupBones();
+	//for (int i = 0; i < m_pStudioHeader->numbones; i++)
+	//{
+	//	MatrixAngles((*m_pbonetransform)[i], g_viewinfo.boneangles[i], g_viewinfo.bonepos[i]);
+	//	NormalizeAngles((float*)&g_viewinfo.boneangles[i]);
+	//}
+	//temp = engine_cl->viewent;
+	//temp.angles = temp.curstate.angles = temp.origin = temp.curstate.origin = Vector(0, 0, 0);
+	//temp.curstate.sequence = 0;
+	//temp.curstate.frame = 0;
+	//temp.curstate.animtime = 0;
+	//temp.latched.prevframe = 0;
+	//m_pCurrentEntity = &temp;
+	//
+	//StudioSetUpTransform(false);
+	//StudioSetupBones();
+	//for (int i = 0; i < m_pStudioHeader->numbones; i++)
+	//{
+	//	MatrixAngles((*m_pbonetransform)[i], g_viewinfo.prevboneangles[i], g_viewinfo.prevbonepos[i]);
+	//	NormalizeAngles((float*)&g_viewinfo.prevboneangles[i]);
+	//}
 
 	m_pCurrentEntity = nullptr;
-
-	GL_ShaderProgram::ResetShaderBind();
 }
 
 /*
@@ -1018,8 +1013,6 @@ void CStudioModelRenderer::StudioDrawModelsSolid()
 		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_sunshadow], 0);
 		glCullFace(GL_FRONT);
 	}
-
-	GL_ShaderProgram::ResetShaderBind();
 }
 
 /*
@@ -2858,8 +2851,10 @@ void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 	if (skinnum != 0 && skinnum < m_pCurrentStudioMDL->GetNumSkinFamilies())
 		pskinref += (skinnum * m_pCurrentStudioMDL->GetNumSkinIndexes());
 
+	bool hasadditive = false;
+
 	//
-	// Render meshes
+	// Render normal textures
 	//
 	for (int j = 0; j < submodel->GetMeshNum(); j++)
 	{
@@ -2871,13 +2866,48 @@ void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
+		auto ptexflags = ptex->GetTextureFlags();
 
-		if (ptex->GetTextureFlags() & STUDIO_NF_ADDITIVE)
+		if (ptexflags & STUDIO_NF_ADDITIVE)
+		{
+			hasadditive = true;
+			continue;
+		}
+
+		StudioDrawMesh(pmesh, ptex);
+
+	}
+
+	if (!hasadditive)
+		return;
+
+	//render textures that require blending
+
+	g_GlobalGLState.SetBlend(true);
+	g_GlobalGLState.SetBlendFunc(GL_ONE, GL_ONE);
+	g_GlobalGLState.SetDepthWrite(false);
+
+	for (int j = 0; j < submodel->GetMeshNum(); j++)
+	{
+		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(j);
+
+		int meshskinref = pmesh->GetSkinReference();
+
+		if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
+			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+
+		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
+		auto ptexflags = ptex->GetTextureFlags();
+
+		if (!(ptexflags & STUDIO_NF_ADDITIVE))
 			continue;
 
 		StudioDrawMesh(pmesh, ptex);
 
 	}
+
+	g_GlobalGLState.SetBlend(false);
+	g_GlobalGLState.SetDepthWrite(true);
 }
 
 /*
@@ -2891,11 +2921,7 @@ void CStudioModelRenderer::StudioDrawMesh(StudioMDL_Mesh* pmesh, StudioMDL_Textu
 
 	auto texinfo = ptex->GetTextureInfo();
 
-	m_ModelShader->Uniform2f(m_ModelShaderLocs[mdlshader_texturescale], (float)texinfo.iWidth, (float)texinfo.iHeight);
-
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_fullbright], ptex->GetTextureFlags() & STUDIO_NF_FULLBRIGHT);
-
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_chrometexture], ptex->GetTextureFlags() & STUDIO_NF_CHROME);
+	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_texture_flags], ptex->GetTextureFlags());
 
 	if (!m_bChromeShell)
 	{
@@ -3161,7 +3187,7 @@ void CStudioModelRenderer::StudioSetupLightingEXT(void)
 				break;
 		}
 
-		if (pInfo->prevpos == eorigin && i == MAXLIGHTMAPS)
+		if (i == MAXLIGHTMAPS)
 		{
 			memcpy(&m_pLighting, &pInfo->pLighting, sizeof(lighting_ext));
 			return;
@@ -3503,9 +3529,6 @@ void CStudioModelRenderer::StudioRenderModelEXT(void)
 
 	glm::mat4 oldmdlmatrix = gBSPRenderer.m_ModelMatrix;
 
-	auto m_vViewAngles = gBSPRenderer.m_vViewAngles;
-	auto m_vRenderOrigin = gBSPRenderer.m_vRenderOrigin;
-
 	gBSPRenderer.m_ModelMatrix = m_pCurrentExtraData->modelmatrix;
 
 	StudioSetupRenderer(m_pCurrentEntity->curstate.rendermode);
@@ -3557,6 +3580,8 @@ void CStudioModelRenderer::StudioDrawPointsEXT(void)
 
 	mstudiomesh_t* pmesh = (mstudiomesh_t*)((byte*)m_pStudioHeader + m_pSubModel->meshindex);
 
+	bool hasadditive = false;
+
 	for (int i = 0; i < m_pSubModel->nummesh; i++)
 	{
 		int meshskinref = pmesh[i].skinref;
@@ -3565,13 +3590,48 @@ void CStudioModelRenderer::StudioDrawPointsEXT(void)
 
 		vbomesh_t* pvbomesh = &m_pVBOSubModel->meshes[i];
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
+		auto ptexflags = ptex->GetTextureFlags();
 
-		if ((ptex->GetTextureFlags() & STUDIO_NF_ADDITIVE))
+		if (ptexflags & STUDIO_NF_ADDITIVE)
+		{
+			hasadditive = true;
+			continue;
+		}
+
+		StudioDrawMeshEXT(ptex, pvbomesh);
+		gBSPRenderer.m_iStudioPolyCounter += pmesh[i].numtris;
+
+	}
+
+	if (!hasadditive)
+		return;
+
+	//render textures that require blending
+
+	g_GlobalGLState.SetBlend(true);
+	g_GlobalGLState.SetBlendFunc(GL_ONE, GL_ONE);
+	g_GlobalGLState.SetDepthWrite(false);
+
+	for (int i = 0; i < m_pSubModel->nummesh; i++)
+	{
+		int meshskinref = pmesh[i].skinref;
+		if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
+			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+
+		vbomesh_t* pvbomesh = &m_pVBOSubModel->meshes[i];
+		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
+		auto ptexflags = ptex->GetTextureFlags();
+
+		if (!(ptexflags & STUDIO_NF_ADDITIVE))
 			continue;
 
 		StudioDrawMeshEXT(ptex, pvbomesh);
 		gBSPRenderer.m_iStudioPolyCounter += pmesh[i].numtris;
+
 	}
+
+	g_GlobalGLState.SetBlend(false);
+	g_GlobalGLState.SetDepthWrite(true);
 }
 
 #define BUFFER_OFFSET(i) ((unsigned int*)NULL + (i))
@@ -3586,9 +3646,7 @@ void CStudioModelRenderer::StudioDrawMeshEXT(StudioMDL_Texture *ptex, vbomesh_t*
 {
 	auto texinfo = ptex->GetTextureInfo();
 
-	m_ModelShader->Uniform2f(m_ModelShaderLocs[mdlshader_texturescale], (float)texinfo.iWidth, (float)texinfo.iHeight);
-
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_fullbright], ptex->GetTextureFlags() & STUDIO_NF_FULLBRIGHT);
+	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_texture_flags], ptex->GetTextureFlags());
 
 	gBSPRenderer.BindGLTexture(GL_TEXTURE0, texinfo.iIndex);
 
@@ -4300,16 +4358,16 @@ void CStudioModelRenderer::StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart)
 
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
 		auto ptexinfo = ptex->GetTextureInfo();
+		auto ptexflags = ptex->GetTextureFlags();
 
-		if (ptex->GetTextureFlags() & STUDIO_NF_ALPHATEST)
+		if (ptexflags & STUDIO_NF_ADDITIVE)
+			continue;
+
+		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_texture_flags], ptexflags);
+
+		if (ptexflags & STUDIO_NF_ALPHATEST)
 		{
-			m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_alphatest], 1);
-			m_ModelSolidShader->Uniform2f(m_ModelShaderSolidLocs[mdlshader_texturescale], (float)ptexinfo.iWidth, (float)ptexinfo.iHeight);
-			gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptex->GetTextureInfo().iIndex);
-		}
-		else
-		{
-			m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_alphatest], 0);
+			gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptexinfo.iIndex);
 		}
 
 		m_pCurrentStudioMDL->DrawElements(pmesh->GetNumTriangles(), pmesh->GetMeshBufferOffset());
@@ -4332,8 +4390,6 @@ void CStudioModelRenderer::StudioDrawExternalEntitySolid(cl_entity_t* pEntity)
 	m_pCurrentStudioMDL = m_pCurrentExtraData->pModelData->pCacheModel;
 	m_pVBOHeader = &m_pCurrentExtraData->pModelData->pVBOHeader;
 
-	assert(m_pStudioHeader && m_pCurrentStudioMDL && m_pVBOHeader);
-
 	if (!m_pStudioHeader || !m_pCurrentStudioMDL || !m_pVBOHeader)
 		return;
 
@@ -4342,11 +4398,8 @@ void CStudioModelRenderer::StudioDrawExternalEntitySolid(cl_entity_t* pEntity)
 		m_pStudioHeader = m_pCurrentExtraData->pModelData->pHdr = (studiohdr_t*)IEngineStudio.Mod_Extradata(m_pCurrentStudioMDL->GetEngineModel());
 	}
 
-	if (m_pStudioHeader->numbodyparts == 0)
-		return;
-
-	VectorCopy(m_pCurrentExtraData->absmin, m_vMins);
-	VectorCopy(m_pCurrentExtraData->absmax, m_vMaxs);
+	m_vMins = m_pCurrentExtraData->absmin;
+	m_vMaxs = m_pCurrentExtraData->absmax;
 
 	if (gHUD.viewFrustum.CullBox(m_vMins, m_vMaxs))
 		return;
@@ -4401,16 +4454,17 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
 		auto ptexinfo = ptex->GetTextureInfo();
+		auto ptexflags = ptex->GetTextureFlags();
 
-		if (ptex->GetTextureFlags() & STUDIO_NF_ALPHATEST)
+
+		if (ptexflags & STUDIO_NF_ADDITIVE)
+			continue;
+
+		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_texture_flags], ptexflags);
+
+		if (ptexflags & STUDIO_NF_ALPHATEST)
 		{
-			m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_alphatest], 1);
-			m_ModelSolidShader->Uniform2f(m_ModelShaderSolidLocs[mdlshader_texturescale], (float)ptexinfo.iWidth, (float)ptexinfo.iHeight);
 			gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptex->GetTextureInfo().iIndex);
-		}
-		else
-		{
-			m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_alphatest], 0);
 		}
 
 		glDrawElements(GL_TRIANGLES, pvbomesh->num_vertexes, GL_UNSIGNED_INT, BUFFER_OFFSET(pvbomesh->start_vertex));
