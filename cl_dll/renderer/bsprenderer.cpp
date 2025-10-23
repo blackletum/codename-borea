@@ -2583,6 +2583,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 				{
 					g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 1);
+					m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 0);
 
 				}
 
@@ -2622,6 +2623,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 				{
 					g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 					m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 0);
+					m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 1);
 				}
 			}
 		}
