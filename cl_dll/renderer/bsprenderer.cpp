@@ -2548,7 +2548,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 			g_GlobalGLState.SetBlend(false);
 		}
 
-		if(m_pCurrentEntity->curstate.rendermode != kRenderNormal)
+		if(m_pCurrentEntity->curstate.rendermode != kRenderNormal && m_pCurrentEntity->curstate.rendermode != kRenderTransAlpha)
 		{
 			if(m_pCurrentEntity->curstate.rendermode == kRenderTransAdd)
 				m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 0);
@@ -4953,6 +4953,19 @@ void CBSPRenderer::DrawDynamicLightsForEntity(cl_entity_t* pEntity)
 
 		m_pCurrentDynLight = dynlight.get();
 		m_vCurDLightOrigin = m_pCurrentDynLight->origin;
+
+		bool onlyshadows = (m_pCurrentDynLight->flags & LIGHT_ONLYSHADOWS);
+
+		if (onlyshadows)
+		{
+			float dist = (m_RefParams.vieworg - dynlight->origin).Length();
+			if (dist > 768)
+				continue;
+		}
+
+		if (!m_pCvarShadows->value || !m_bMainPass || !m_pCurrentDynLight->cubedepth)
+			if (onlyshadows)
+				continue;
 
 		if (m_pCurrentDynLight->cone_size)
 		{

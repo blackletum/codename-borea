@@ -871,8 +871,6 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 		return;
 
 	m_pCurrentEntity = pEnt;
-	if(m_pCurrentEntity->player)
-		return;
 
 	if (IsEntityTransparent(m_pCurrentEntity) && m_pCurrentEntity->curstate.renderamt == NULL)
 		return;
