@@ -403,9 +403,6 @@ void CL_TempEntUpdate()
 {
 	if (engine_cl->worldmodel)
 		HUD_TempEntUpdate_(engine_cl->time - engine_cl->oldtime, engine_cl->time, pmove->movevars->gravity, CL_AddVisibleEntity, CL_TempEntPlaySound);
-
-	//  Get bsp renderer list
-	gBSPRenderer.GetRenderEnts();
 }
 
 /*

@@ -15,8 +15,8 @@ char glsl330_studiomdl_vert[] = R"(
 
 
 	//for gpu skinning
-	layout(std140) uniform BonesUBO // line 38 ?
-	{								// line 38 ?
+	layout(std140) uniform BonesUBO
+	{								
 		//6144 bytes
 		mat3x4 bonematrixes[128];
 	};
@@ -59,6 +59,8 @@ char glsl330_studiomdl_vert[] = R"(
 	uniform bool wireframe;
 	uniform bool viewmodel;
 
+	uniform bool studiodecal;
+	uniform vec2 decalsize;
 
 	
 	out vec4 vertexdiffusecolor;
@@ -130,6 +132,8 @@ char glsl330_studiomdl_vert[] = R"(
 	{
 		if ( (texture_flags & STUDIO_NF_CHROME) > 0)
 			texcoord = ChromeTexCoords(aNormal, bonematrixes[normboneid]);
+		else if(studiodecal)
+			texcoord = aTexCoord.xy / decalsize;
 		else
 			texcoord = aTexCoord.xy / textureSize(texture0, 0);
 	}
@@ -311,6 +315,9 @@ char glsl330_studiomdl_frag[] = R"(
 
 	uniform int texture_flags;
 
+	uniform bool studiodecal;
+	uniform vec2 decalsize;
+
 	float GetFogFactor()
 	{
 		float dist = length(renderorigin.xyz - fragPos);
@@ -323,7 +330,10 @@ char glsl330_studiomdl_frag[] = R"(
 
 	void frag_HandleWireframe()
 	{
-		gl_FragColor = vec4(0, 1, 0, 1); //solid green for models
+		if(!studiodecal)
+			gl_FragColor = vec4(0, 1, 0, 1); //solid green for models
+		else
+			gl_FragColor = vec4(1, 0, 0, 1); //solid red for studiomdl decals
 	}
 
 	void main()
@@ -340,9 +350,9 @@ char glsl330_studiomdl_frag[] = R"(
 
 		if(fogend_n_fogactive_n_lightdebug.z == 0)
 		{
-			
 			texcolor = texture(texture0, texcoord);
-			texcolor.rgb *= 2;
+			if(!studiodecal)
+				texcolor.rgb *= 2;
 		}
 
 		if (fogend_n_fogactive_n_lightdebug.y != 0)
@@ -351,8 +361,12 @@ char glsl330_studiomdl_frag[] = R"(
 		}
 		else
 		{
-			gl_FragColor = (texcolor * vertexdiffusecolor)  + (texcolor * vertexspecularcolor);
+			if(!studiodecal)
+				gl_FragColor = (texcolor * vertexdiffusecolor)  + (texcolor * vertexspecularcolor);
+			else
+				gl_FragColor = texcolor;
 		}
+		
 	}
 
 )";

@@ -296,6 +296,8 @@ const char glsl330_world_fp[] = R"(
 	uniform bool detailtexture;
 	uniform float dt_opacity;
 
+	uniform bool alphatest;
+
 	uniform vec3 renderorigin;
 	uniform vec3 renderforward;
 
@@ -573,7 +575,7 @@ const char glsl330_world_fp[] = R"(
 			lightmap_pixel.rgb *= pow(texture(detail_texture, frag_texcoord_detailtexture).rgb, vec3(dt_opacity));
 		}
 
-		gl_FragColor = basetex_pixel * lightmap_pixel;
+		gl_FragColor = (basetex_pixel * lightmap_pixel) * 2;
 		gl_FragColor.a = basetex_pixel.a;
 
 	}
@@ -616,12 +618,12 @@ const char glsl330_world_fp[] = R"(
 			gl_FragColor = vec4(0.65, 0.65, 0.65, 1);
 			return;
 		}
-
-		vec4 basetex_pixel = texture2D(base_texture, frag_texcoord_texture);
-		if(basetex_pixel.a < 0.5)
-			discard;
-
-		basetex_pixel.a *= float(renderamt) / 255;
+		if(alphatest)
+		{
+			vec4 basetex_pixel = texture2D(base_texture, frag_texcoord_texture);
+			if(basetex_pixel.a < 0.5)
+				discard;
+		}
 
 		vec4 lightmap_pixel = texture2D(lightmap_texture, frag_texcoord_lightmap);
 
@@ -639,8 +641,7 @@ const char glsl330_world_fp[] = R"(
 			lightmap_pixel.rgb *= pow(texture(detail_texture, frag_texcoord_detailtexture).rgb, vec3(dt_opacity));
 		}
 
-		gl_FragColor = lightmap_pixel;
-		gl_FragColor.a = basetex_pixel.a;
+		gl_FragColor = vec4(lightmap_pixel.rgb, lightmap_pixel.a * float(renderamt) / 255);
 	}
 
 	void main()

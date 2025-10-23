@@ -7,7 +7,7 @@
 
 #include "GL_VertexArrayObject.h"
 
-GLuint GL_VertexArrayObject::m_uiCurrentBoundVAO = 0;
+GL_VertexArrayObject* GL_VertexArrayObject::m_pCurrentBoundVAO = nullptr;
 
 GL_VertexArrayObject::GL_VertexArrayObject()
 {
@@ -23,17 +23,17 @@ GL_VertexArrayObject::~GL_VertexArrayObject()
 
 void GL_VertexArrayObject::BindVAO()
 {
-	if (m_uiCurrentBoundVAO == m_uiVAOIndex)
+	if (m_pCurrentBoundVAO == this)
 		return;
 
 	glBindVertexArray(m_uiVAOIndex);
-	m_uiCurrentBoundVAO = m_uiVAOIndex;
+	m_pCurrentBoundVAO = this;
 }
 
 void GL_VertexArrayObject::ResetVAOBinding()
 {
 	glBindVertexArray(0);
-	m_uiCurrentBoundVAO = 0;
+	m_pCurrentBoundVAO = nullptr;
 }
 
 #endif

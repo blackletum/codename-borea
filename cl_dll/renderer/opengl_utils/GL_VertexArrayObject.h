@@ -19,15 +19,18 @@ public:
 	static void ResetVAOBinding();
 
 	#else
-	__forceinline void BindVAO() {glBindVertexArray(m_uiVAOIndex);}
+	__forceinline void BindVAO() { glBindVertexArray(m_uiVAOIndex); m_pCurrentBoundVAO = this; }
 
-	static __forceinline void ResetVAOBinding() { glBindVertexArray(0); };
+	static __forceinline void ResetVAOBinding() { glBindVertexArray(0); m_pCurrentBoundVAO = nullptr; };
 
 	#endif
+
+
+	static __forceinline GL_VertexArrayObject* GetBoundVAO() { return m_pCurrentBoundVAO; };
 
 	GLuint m_uiVAOIndex = 0;
 
 private:
 
-	static GLuint m_uiCurrentBoundVAO;
+	static GL_VertexArrayObject* m_pCurrentBoundVAO;
 };

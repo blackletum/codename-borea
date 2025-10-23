@@ -102,7 +102,7 @@ public:
 
 	void RendererRefDef(ref_params_t* pparams);
 	void DrawNormalTriangles(bool draw_world = true);
-	void DrawNormalTriangles_Cheap();
+	void DrawNormalTriangles_Cheap(bool draw_world = true);
 	void DrawTransparentTriangles(void);
 	void RenderFirstPass();
 	void RenderFinalPasses();
@@ -233,6 +233,8 @@ public:
 	byte* m_pPVS;
 	mleaf_t* m_pViewLeaf;
 
+	cl_entity_t* m_pWorldEnt;
+
 	dlight_t* m_pFirstDLight;
 	dlight_t* m_pFirstELight;
 
@@ -352,7 +354,6 @@ public:
 	{
 		world_projectionmatrix = 0,
 		world_viewmatrix,
-		world_pointlight_viewmatrix_test,
 		world_modelmatrix,
 
 		world_spotlight_texturematrix,
@@ -371,6 +372,8 @@ public:
 
 		world_detailtexture,
 		world_dt_opacity,
+
+		world_alphatest,
 
 		world_renderamt,
 		world_rendercolor,

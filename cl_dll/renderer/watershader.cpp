@@ -91,6 +91,9 @@ void CWaterShader::Init(void)
 	m_pCvarWaterNormalScale = gEngfuncs.pfnRegisterVariable("r_watershader_normalscale", "0.13", 0);
 	m_pCvarWaterFresnel = gEngfuncs.pfnRegisterVariable("r_watershader_fresnel", "0.5", 0);
 
+	m_pCvarWaterForceExpensive = gEngfuncs.pfnRegisterVariable("r_waterforceexpensive", "1", FCVAR_ARCHIVE);
+	m_pCvarWaterForceReflectEntities = gEngfuncs.pfnRegisterVariable("r_waterforcereflectentities", "1", FCVAR_ARCHIVE);
+
 	m_WaterFragmentShader = new GL_ShaderProgram(water_depth_vertex, water_fragment_water_regular);
 
 	m_WaterShader_locs[watershader_renderorigin] = m_WaterFragmentShader->GetUniformLoc("renderorigin");
@@ -622,11 +625,6 @@ void CWaterShader::DrawWaterPasses(ref_params_t* pparams)
 	g_GlobalGLState.SetBlend(false);
 }
 
-void Water_DrawNormalTriangles()
-{
-	gBSPRenderer.DrawNormalTriangles_Cheap();
-}
-
 /*
 ====================
 DrawScene
@@ -641,11 +639,17 @@ void CWaterShader::DrawScene(ref_params_t* pparams, bool isrefracting)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Draw world
-	Water_DrawNormalTriangles();
+	if(m_pCvarWaterForceExpensive->value)
+		gBSPRenderer.DrawNormalTriangles_Cheap(true);
+	else
+		gBSPRenderer.DrawNormalTriangles_Cheap(false);
 
-	g_StudioRenderer.StudioDrawModels(false);
+	if(m_pCvarWaterForceReflectEntities->value)
+	{
+		g_StudioRenderer.StudioDrawModels(false);
 
-	g_BeamRenderer.R_DrawBeams(engine_cl->time - engine_cl->oldtime);
+		g_BeamRenderer.R_DrawBeams(engine_cl->time - engine_cl->oldtime);
+	}
 
 	// Render any props
 	//gPropManager.RenderProps();

@@ -47,6 +47,7 @@ public:
 	void RenderPropsSolid(void);
 
 	void HandleFoliageProp(cl_entity_s* ent, entextradata_t* extradata);
+	void HandleBlimpProp(cl_entity_s* ent, entextradata_t* extradata);
 
 	// Models
 	bool LoadMDL(const char* name, cl_entity_t* pEntity, entity_t* pBSPEntity);

@@ -68,5 +68,5 @@ void GL_DebugInterface::DebugMessage(GLenum source, GLenum type, GLuint id, GLen
 	error_msg += message;
 	error_msg += '\n';
 
- 	gEngfuncs.Con_Printf(error_msg.c_str());
+	gEngfuncs.Con_Printf(error_msg.c_str());
 }

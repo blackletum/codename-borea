@@ -78,6 +78,23 @@ void GL_BufferHandler::BindBase(const vbo_targets& target, const GLuint index)
 	glBindBufferBase(target, index, this->m_uiBufferIndex);
 }
 
+void GL_BufferHandler::BindRange(const vbo_targets& target, const GLuint index, const GLsizei offset, const GLsizei size)
+{
+	switch (target)
+	{
+	case UniformBuffer:
+	{
+		break;
+	}
+	default:
+		assert(0);
+	}
+
+	assert(offset < m_uiBufferSize && size <= m_uiBufferSize && (offset + size) <= m_uiBufferSize);
+
+	glBindBufferRange(target, index, this->m_uiBufferIndex, offset, size);
+}
+
 void GL_BufferHandler::BufferData(const vbo_targets& target, const GLsizeiptr& size, const void* data, const vbo_usage& usage)
 {
 	assert(!m_bIsImmutable);

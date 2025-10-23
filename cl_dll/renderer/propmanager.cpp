@@ -468,6 +468,12 @@ void CPropManager::LoadEntVars(void)
 				modellight.curstate.rendercolor.b = iColB;
 			}
 
+			pValue = ValueForKey(&bspent, "studioshadows");
+			if (pValue)
+			{
+				modellight.curstate.eflags = 255; //whatever
+			}
+
 			model_t* pWorld = engine_cl->worldmodel;
 			mleaf_t* pLeaf = Mod_PointInLeaf(modellight.origin, pWorld);
 
@@ -477,8 +483,9 @@ void CPropManager::LoadEntVars(void)
 				modellight.visframe = pLeaf - pWorld->leafs - 1;
 				m_pModelLights.emplace_back(modellight);
 			}
+
 		}
-		if (!strcmp(pValue, "env_cable"))
+		else if (!strcmp(pValue, "env_cable"))
 		{
 			cabledata_t cabledata;
 			if (SetupCable(&cabledata, &bspent))
@@ -517,9 +524,11 @@ void CPropManager::LoadEntVars(void)
 			strcpy(cachedecal.name, pValue);
 			m_pDecals.emplace_back(cachedecal);
 		}
-		else if (!strcmp(pValue, "item_generic") || !strcmp(pValue, "prop_static") || !strcmp(pValue, "prop_grass"))
+		else if (!strcmp(pValue, "item_generic") || !strcmp(pValue, "prop_static") || !strcmp(pValue, "prop_grass") || !strcmp(pValue, "prop_blimp"))
 		{
 			bool isfoliage = !strcmp(pValue, "prop_grass");
+			bool isblimp = false;
+
 			pValue = ValueForKey(&bspent, "targetname");
 
 			if (pValue)
@@ -556,12 +565,6 @@ void CPropManager::LoadEntVars(void)
 			propentity.visframe = -1;
 
 			pExtraInfo->pExtraData = m_pCurrentExtraData;
-			if (isfoliage)
-			{
-				pExtraInfo->prop_flags |= PROPFLAG_FOLIAGE;
-				propentity.curstate.fuser3 = gEngfuncs.pfnRandomLong(1, 25);
-				propentity.curstate.fuser4 = gEngfuncs.pfnRandomLong(1, 25);
-			}
 
 			pValue = ValueForKey(&bspent, "origin");
 			if (pValue)
@@ -629,6 +632,35 @@ void CPropManager::LoadEntVars(void)
 				propentity.curstate.rendercolor.r = iColR;
 				propentity.curstate.rendercolor.g = iColG;
 				propentity.curstate.rendercolor.b = iColB;
+			}
+
+			// bacontsu - blimps
+			pValue = ValueForKey(&bspent, "prop_blimp");
+			if (pValue)
+			{
+				sscanf(pValue, "%d", &propentity.curstate.iuser1);
+				isblimp = true;
+			}
+
+			if (propentity.curstate.iuser1 != 0)
+			{
+				pValue = ValueForKey(&bspent, "blimpspeed");
+
+				if (pValue)
+				{
+					sscanf(pValue, "%f", &propentity.curstate.fuser4);
+				}
+			}
+
+			if (isfoliage)
+			{
+				pExtraInfo->prop_flags |= PROPFLAG_FOLIAGE;
+				propentity.curstate.fuser3 = gEngfuncs.pfnRandomLong(1, 25);
+				propentity.curstate.fuser4 = gEngfuncs.pfnRandomLong(1, 25);
+			}
+			else if (isblimp)
+			{
+				pExtraInfo->prop_flags |= PROPFLAG_BLIMP;
 			}
 
 			pValue = ValueForKey(&bspent, "lightorigin");
@@ -711,6 +743,10 @@ void CPropManager::SetupVBO(void)
 	m_pStaticModelBuffer = nullptr;
 	
 	m_pStaticModelVAO = nullptr;
+
+	m_pCableVertsBuffer = nullptr;
+
+	m_pCableVertsVAO = nullptr;
 
 	if (m_pHeaders.empty())
 		return;
@@ -957,6 +993,38 @@ void CPropManager::HandleFoliageProp(cl_entity_s* ent, entextradata_t* extradata
 	extradata->modelmatrix = modelview;
 }
 
+void CPropManager::HandleBlimpProp(cl_entity_s* ent, entextradata_t* extradata)
+{
+	// bacontsu - its a blimp
+	float mult = 0;
+
+	if (ent->curstate.fuser4 > 0)
+		mult = ent->curstate.fuser4 / 2 ;//blimps are faster now fr some reason ???
+	else
+		mult = 1.7;
+
+	if (ent->curstate.iuser1 == 1)
+	{
+		ent->angles.y = engine_cl->time * mult;
+	}
+	else if (ent->curstate.iuser1 == 2)
+	{
+		ent->angles.y = -engine_cl->time * mult;
+	}
+
+	glm::vec3 entityangles = glm::vec3(-ent->angles.x, ent->angles.y, ent->angles.z);
+
+	float scale = ent->curstate.scale ? ent->curstate.scale : 1;
+
+	glm::mat4 modelview = glm::translate(glm::mat4(1.0f), glm::vec3(ent->origin.x, ent->origin.y, ent->origin.z));
+	modelview = glm::rotate(modelview, glm::radians(entityangles.y), glm::vec3(0.0f, 0.0f, 1.0f));
+	modelview = glm::rotate(modelview, glm::radians(entityangles.x), glm::vec3(0.0f, 1.0f, 0.0f));
+	modelview = glm::rotate(modelview, glm::radians(entityangles.z), glm::vec3(1.0f, 0.0f, 0.0f));
+	modelview = glm::scale(modelview, glm::vec3(scale));
+
+	extradata->modelmatrix = modelview;
+}
+
 /*
 ====================
 RenderModels
@@ -1008,6 +1076,8 @@ void CPropManager::RenderProps(bool bSkybox)
 
 		if (pExtraInfo->prop_flags & PROPFLAG_FOLIAGE)
 			HandleFoliageProp(ents, pExtraData);
+		else if (pExtraInfo->prop_flags & PROPFLAG_BLIMP)
+			HandleBlimpProp(ents, pExtraData);
 
 		g_StudioRenderer.StudioDrawExternalEntity(ents, bSkybox);
 	}
@@ -1268,10 +1338,10 @@ void CPropManager::RenderPropsSolid(void)
 	if (g_StudioRenderer.m_pCvarDrawEntities->value < 1)
 		return;
 
-	if (m_pStaticModelVAO)
-		m_pStaticModelVAO->BindVAO();
-	else
+	if (!m_pStaticModelVAO)
 		return;
+
+	m_pStaticModelVAO->BindVAO();
 
 	g_StudioRenderer.m_ModelSolidShader->Bind();
 
@@ -1297,6 +1367,8 @@ void CPropManager::RenderPropsSolid(void)
 
 	for (int i = 0; i < m_pEntities.size(); i++, ents++)
 	{
+		if (ents->curstate.iuser1 & FL_NOSHADOW)
+			continue;
 
 		entextradata_t* pExtraData = ((entextrainfo_t*)ents->topnode)->pExtraData;
 

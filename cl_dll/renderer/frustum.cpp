@@ -64,9 +64,8 @@ void FrustumCheck::V_AdjustFov(float& fov_x, float& fov_y, float width, float he
 {
 	float x, y;
 
-	if (!gBSPRenderer.gl_widescreen_yfov->value || width * 3 == 4 * height || width * 4 == height * 5)
+	if (width * 3 == 4 * height || width * 4 == height * 5)
 	{
-		fov_x = 2.0f * atan(tan(glm::radians(fov_x) / 2.0f) / (width / height));
 		return;
 	}
 

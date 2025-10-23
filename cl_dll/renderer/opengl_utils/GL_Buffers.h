@@ -54,6 +54,7 @@ public:
 	#ifdef _DEBUG
 	void Bind(const vbo_targets& target);
 	void BindBase(const vbo_targets& target, const GLuint index);
+	void BindRange(const vbo_targets& target, const GLuint index, const GLsizei offset, const GLsizei size);
 
 	void BufferData(const vbo_targets& target, const GLsizeiptr& size, const void* data, const vbo_usage& usage);
 	void BufferStorage(const vbo_targets& target, const GLsizeiptr& size, const void* data, const GLbitfield& flags);
@@ -73,6 +74,7 @@ public:
 
 	__forceinline void Bind(const vbo_targets& target) { glBindBuffer(target, this->m_uiBufferIndex); };
 	__forceinline void BindBase(const vbo_targets& target, const GLuint index) { glBindBufferBase(target, index, this->m_uiBufferIndex); };
+	__forceinline void BindRange(const vbo_targets& target, const GLuint index, const GLsizei offset, const GLsizei size) { glBindBufferRange(target, index, this->m_uiBufferIndex, offset, size); }
 
 	__forceinline void BufferData(const vbo_targets& target, const GLsizeiptr& size, const void* data, const vbo_usage& usage)
 	{

@@ -13,9 +13,11 @@ public:
 	enum GL_TextureType
 	{
 		_2DTexture = 0,
+		_2DTexture_Storage, //gltexstorage2d
 		_Rectangle,
 		_2DTextureArray,
 		_CubeMap,
+		_CubeMap_Storage //gltexstorage2d too
 	};
 
 	struct gl_texturecreationinfo_t

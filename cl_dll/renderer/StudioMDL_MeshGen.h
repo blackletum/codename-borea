@@ -55,6 +55,7 @@ public:
 	StudioMDL_Model(model_t* model);
 
 	__forceinline void EnableBuffers() const noexcept { m_pModelVAO->BindVAO(); };
+	__forceinline bool IsBufferEnabled() const noexcept { return m_pModelVAO == GL_VertexArrayObject::GetBoundVAO(); }
 	__forceinline void DisableBuffers() const noexcept { GL_VertexArrayObject::ResetVAOBinding(); };
 
 	__forceinline void DrawElements(int indexcount, int indexoffset) noexcept

@@ -17,7 +17,12 @@ char glsl330_studiomdlsolid_vert[] = R"(
 		mat4 modelmatrix;
 		vec4 light_pos; //x, y, z, light_radius
 		ivec4 int_values; //x represents if we're rendering a static model or not
+	};
 
+	//for gpu skinning
+	layout(std140) uniform BonesUBO
+	{								
+		//6144 bytes
 		mat3x4 bonematrixes[128];
 	};
 
@@ -83,12 +88,16 @@ char glsl330_studiomdlsolid_frag[] = R"(
 
 	layout(std140) uniform StudioSolidUBO
 	{
-		//6224 bytes (atleast without padding)
 		mat4 projviewmatrix;
 		mat4 modelmatrix;
 		vec4 light_pos; //x, y, z, light_radius
 		ivec4 int_values; //x represents if we're rendering a static model or not
+	};
 
+	//for gpu skinning
+	layout(std140) uniform BonesUBO
+	{								
+		//6144 bytes
 		mat3x4 bonematrixes[128];
 	};
 

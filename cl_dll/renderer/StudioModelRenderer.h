@@ -70,6 +70,9 @@ public:
 	//	makes a render list sorted by models
 	static void StudioPushEntityToDraw(cl_entity_s* pEnt); //dont add entities twice as this function doesnt test against that. unless thats what you wanna do, be smart
 
+	//	uploads render data to gpu (just bones for now)
+	static void StudioUploadRenderData();
+
 	// clears draw list
 	static void StudioClearDrawList();
 
@@ -82,6 +85,9 @@ public:
 
 	// just so StudioDrawModels is a bit smaller and compact
 	static void StudioHandleDeadPlayer(int flags);
+
+	// sets up viewmodel for rendering later
+	static void StudioSetupViewmodel();
 
 	// cleanup a entity's custom data (m_pCurrentEntity->efrag)
 	static void StudioFreeEntity();
@@ -274,6 +280,9 @@ public:
 	static GL_BufferHandler* m_ModelBones_Buffer;
 	static GL_BufferHandler* m_ModelSolid_Buffer;
 
+	static GL_BufferHandler* m_ModelDecal_Buffer;
+	static GL_VertexArrayObject* m_ModelDecal_VAO;
+
 	static GL_ShaderProgram *m_ModelShader;
 	static GL_ShaderProgram *m_ModelSolidShader;
 
@@ -285,6 +294,9 @@ public:
 
 		mdlshader_wireframe,
 		mdlshader_texture_flags,
+
+		mdlshader_studiodecal,
+		mdlshader_decalsize,
 
 
 
@@ -311,8 +323,6 @@ public:
 		glm::mat4 modelmatrix;
 		glm::vec4 light_pos;
 		glm::ivec4 int_values; // x represents if we're rendering a static model or not
-
-		matrix3x4_t bonematrixes[128];
 	};
 
 	struct mdlshader_perframedata_t
@@ -405,6 +415,7 @@ public:
 	static void StudioDecalTriangle(studiotri_t* tri, Vector position, Vector normal, studiodecal_t* decal);
 
 	static std::vector<std::unique_ptr<studiodecal_t>> m_pStudioDecals;
+	static int CStudioModelRenderer::m_iNumStudioDecalVerts;
 	static std::vector<std::unique_ptr<studioentity_data_t>> m_pStudioEntityData;
 };
 

@@ -101,7 +101,7 @@ GL_ShadowMap::GL_ShadowMap(gl_texturecreationinfo_t* texinfo, bool canuseblur)
 	std::unique_ptr<GL_ShadowMap> ptr(this);
 	m_vShadowMapList.push_back(std::move(ptr));
 	gl_texturecreationinfo_t dummyinfo = *texinfo;
-	dummyinfo.texturetype = _2DTexture;
+	dummyinfo.texturetype = _2DTexture_Storage;
 	m_pDummyTexture = new GL_TextureHandler(&dummyinfo);
 }
 
@@ -114,7 +114,7 @@ void GL_ShadowMap::InitRendering(Vector cleancolor, GLsizei layer)
 {
 	m_iCurrentLayer = layer;
 
-	if (m_TexInfo.texturetype == _2DTexture)
+	if (m_TexInfo.texturetype == _2DTexture || m_TexInfo.texturetype == _2DTexture_Storage)
 	{
 		m_pMainShadowFBO->FramebufferTexture2D(GL_FBOHandler::DrawFramebuffer, GL_FBOHandler::ColorAttachment, GL_TEXTURE_2D, m_uiTextureHandle, 0);
 	}
@@ -169,7 +169,7 @@ void GL_ShadowMap::BlurShadows()
 	
 		glViewport(0, 0, shadowmap->m_iWidth, shadowmap->m_iHeight);
 
-		if (shadowmap->GetTextureType() == _2DTexture)
+		if (shadowmap->GetTextureType() == _2DTexture || shadowmap->GetTextureType() == _2DTexture_Storage)
 		{
 			gBSPRenderer.BindGLTexture(GL_TEXTURE0, shadowmap->m_uiTextureHandle);
 			gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 1);
@@ -185,7 +185,7 @@ void GL_ShadowMap::BlurShadows()
 			//now render blurred shadow into the actual shadowmap texture
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 		}
-		else if (shadowmap->GetTextureType() == _CubeMap)
+		else if (shadowmap->GetTextureType() == _CubeMap || shadowmap->GetTextureType() == _CubeMap_Storage)
 		{
 			gBSPRenderer.BindGLTexture(GL_TEXTURE1, shadowmap->m_uiTextureHandle);
 			gBSPRenderer.BindGLTexture(GL_TEXTURE0, shadowmap->m_pDummyTexture->GetTextureID());

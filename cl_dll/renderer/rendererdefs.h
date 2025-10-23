@@ -640,6 +640,8 @@ struct studiodecal_t
 	int numverts;
 
 	const decalgroupentry_t* texture;
+
+	int vertstart; //index into m_pModelDecals_Buffer
 };
 
 struct studioentity_data_t //structure that holds info which is generated per frame per entity
@@ -647,6 +649,8 @@ struct studioentity_data_t //structure that holds info which is generated per fr
 	uint32_t entity_index;
 	model_t* entity_model;
 	matrix3x4_t rotationmatrix;
+	matrix3x4_t bonematrix[MAXSTUDIOBONES];
+	int bonearrayoffset;
 	float m_flGaitMovement;
 	std::vector<studiodecal_t*> m_vStudioDecals;
 };
@@ -770,6 +774,7 @@ struct entextradata_t
 };
 
 #define PROPFLAG_FOLIAGE (1 << 0)
+#define PROPFLAG_BLIMP (1 << 1)
 
 struct entextrainfo_t
 {

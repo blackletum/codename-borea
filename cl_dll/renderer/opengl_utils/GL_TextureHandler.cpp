@@ -59,6 +59,18 @@ GL_TextureHandler::GL_TextureHandler(gl_texturecreationinfo_t* texinfo)
 		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
 
 	}
+	else if (m_TexInfo.texturetype == _2DTexture_Storage)
+	{
+		glBindTexture(GL_TEXTURE_2D, m_uiTextureHandle);
+		glTexStorage2D(GL_TEXTURE_2D, 1, m_TexInfo.internalformat, m_iWidth, m_iHeight);
+		m_uiApproximatedBytesTextureAllocated += (m_iWidth * m_iHeight) * bytes;
+		m_uiTextureByteSize += (m_iWidth * m_iHeight) * bytes;
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+	}
 	else if (m_TexInfo.texturetype == _Rectangle)
 	{
 		glBindTexture(GL_TEXTURE_RECTANGLE, m_uiTextureHandle);
@@ -89,7 +101,6 @@ GL_TextureHandler::GL_TextureHandler(gl_texturecreationinfo_t* texinfo)
 		glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiTextureHandle);
 		for (GLuint i = 0; i < 6; ++i)
 		{
-			//hm, this gonna be difficult to implement, maybe do data += (m_iWidth * m_iHeight) * byte) ? no thats not right.
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_TexInfo.internalformat,
 				m_iWidth, m_iHeight, 0, m_TexInfo.format, m_TexInfo.colortype, nullptr);
 
@@ -102,6 +113,25 @@ GL_TextureHandler::GL_TextureHandler(gl_texturecreationinfo_t* texinfo)
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameterfv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BORDER_COLOR, color);
 
+	}
+	else if (m_TexInfo.texturetype == _CubeMap_Storage)
+	{
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiTextureHandle);
+
+		for (GLuint i = 0; i < 6; ++i)
+		{
+			m_uiApproximatedBytesTextureAllocated += (m_iWidth * m_iHeight) * bytes;
+			m_uiTextureByteSize += (m_iWidth * m_iHeight) * bytes;
+		}
+
+		glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, m_TexInfo.internalformat,
+			m_iWidth, m_iHeight);
+
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameterfv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BORDER_COLOR, color);
 	}
 	else
 		assert(0);

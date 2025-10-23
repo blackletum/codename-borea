@@ -25,7 +25,7 @@ extern engine_studio_api_t IEngineStudio;
 cvar_t* glow_blur_steps = NULL;
 cvar_t* glow_darken_steps = NULL;
 cvar_t* glow_strength = NULL;
-cvar_t* te_bloom_effect = NULL;
+cvar_t* r_bloom_effect = NULL;
 cvar_t* glow_multiplier = NULL;
 float glow_mult = 0.0f;
 
@@ -55,7 +55,7 @@ bool CBloom::Init(void)
     glow_darken_steps = CVAR_CREATE("glow_darken_steps", "1", FCVAR_ARCHIVE);
     glow_strength = CVAR_CREATE("glow_strength", "1", FCVAR_ARCHIVE);
 
-    te_bloom_effect = CVAR_CREATE("te_bloom", "1", FCVAR_ARCHIVE);
+    r_bloom_effect = CVAR_CREATE("r_bloom", "1", FCVAR_ARCHIVE);
     glow_multiplier = CVAR_CREATE("glow_multiplier", "1", FCVAR_ARCHIVE);
 
     return true;
@@ -80,7 +80,7 @@ void CBloom::Draw(void)
     if ((int)glow_blur_steps->value == 0 || (int)glow_strength->value == 0)
         return;
 
-    if (!(int)te_bloom_effect->value)
+    if (!(int)r_bloom_effect->value)
         return;
 
     // enable some OpenGL stuff

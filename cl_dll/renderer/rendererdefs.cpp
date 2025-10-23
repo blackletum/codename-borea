@@ -622,6 +622,9 @@ void R_CalcRefDef(ref_params_t* pparams)
 	pparams->onlyClientDraw = 1;
 	r_refdef = pparams;
 
+	// all entities have been set up by goldsrc, get them
+	gBSPRenderer.GetRenderEnts();
+
 	SetupFlashlight(engine_cl->viewent.origin + Vector(0, 0, 8), engine_cl->viewent.angles * Vector(-1, 1, 1), engine_cl->time, gHUD.m_flTimeDelta);
 
 
@@ -989,7 +992,7 @@ void SetupFlashlight(Vector origin, Vector angles, float time, float frametime)
 	if (flashlight->depth)
 		GL_ShadowMap::DeAllocateShadowMap(flashlight->depth);
 
-	flashlight->depth = GL_ShadowMap::AllocateShadowMap(GL_ShadowMap::_2DTexture, GL_RG16F, sm_res, sm_res, 0, GL_RG, GL_FLOAT);
+	flashlight->depth = GL_ShadowMap::AllocateShadowMap(GL_ShadowMap::_2DTexture_Storage, GL_RG16F, sm_res, sm_res, 0, GL_RG, GL_FLOAT);
 	VectorCopy(angles, flashlight->angles);
 }
 float Q_rsqrt(float number)
