@@ -2491,7 +2491,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 		b = b ? b : 255;
 	}
 
-	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], alpha / 2);
+	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], alpha);
 	m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], r, g, b);
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -2548,21 +2548,91 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 			g_GlobalGLState.SetBlend(false);
 		}
 
-		if( !(m_pCurrentEntity->curstate.rendermode == kRenderTransAdd) )
+		if(m_pCurrentEntity->curstate.rendermode != kRenderNormal)
+		{
+			if(m_pCurrentEntity->curstate.rendermode == kRenderTransAdd)
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 0);
+			else
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 1);
+
+			m_WorldShader->Uniform1i(m_WorldShader_locs[world_texture_pass], 1);
+
+			// Render normal ones first
+			for (int i = 0; i < m_iNumTextures; i++)
+			{
+				texture_t* pTexture = TextureAnimation(&m_pNormalTextureList[i], m_pCurrentEntity->curstate.frame);
+				msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+
+				// Nothing to draw
+				if (!psurface)
+					continue;
+
+				m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 0);
+				BindGLTexture(SURFTEXTURE_TEXUNIT, pTexture->gl_texturenum);
+
+				auto scrollingpoly = pTexture->texture_flag & TEXTURE_SCROLL;
+
+				// bacontsu - fake specular
+				auto specular = pTexture->texture_flag & TEXTURE_SPECULAR;
+
+				if (scrollingpoly)
+				{
+					m_WorldShader->Uniform1i(m_WorldShader_locs[world_scrollingpolys], 1);
+				}
+				else if (specular)
+				{
+					g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 1);
+
+				}
+
+				while (psurface)
+				{
+					int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+					brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
+
+					if (psurface->flags & SURF_DRAWTURB)
+					{
+						m_WorldShader->Uniform1i(m_WorldShader_locs[world_waterpolys], 1);
+						glDisable(GL_CULL_FACE);
+						glDrawArrays(GL_TRIANGLES, pbrushface->start_vertex, pbrushface->num_vertexes);
+						glEnable(GL_CULL_FACE);
+						m_WorldShader->Uniform1i(m_WorldShader_locs[world_waterpolys], 0);
+					}
+					else
+					{
+						multidraw_startverts[num_multidraws] = pbrushface->start_vertex;
+						multidraw_numverts[num_multidraws] = (pbrushface->num_vertexes);
+						num_multidraws++;
+					}
+
+					m_iBSPVertsCounter += pbrushface->num_vertexes;
+
+					psurface = psurface->texturechain;
+				}
+
+				glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
+				num_multidraws = 0;
+
+				if (scrollingpoly)
+				{
+					m_WorldShader->Uniform1i(m_WorldShader_locs[world_scrollingpolys], 0);
+				}
+				else if (specular)
+				{
+					g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+					m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 0);
+				}
+			}
+		}
+		else
 		{
 			RenderFirstPass();
+
+			DrawDynamicLightsForEntity(m_pCurrentEntity);
+
+			RenderFinalPasses();
 		}
-
-
-		DrawDynamicLightsForEntity(m_pCurrentEntity);
-
-		if (!(m_pCurrentEntity->curstate.rendermode == kRenderTransAdd))
-			g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-
-		RenderFinalPasses();
-
-		// for debugging
-		RenderWireframe();
 	}
 
 	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], 255);

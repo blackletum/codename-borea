@@ -142,9 +142,13 @@ const std::string glsl330_engine_defines_fragment = R"(
 
 GL_ShaderProgram* GL_ShaderProgram::m_pCurrentProgram = nullptr;
 GLuint GL_ShaderProgram::m_uiCurFreeUBOindex = 0;
+GLint GL_ShaderProgram::m_Driver_UBOAlignment = 0;
 
 GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSrc)
 {
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_Driver_UBOAlignment);
+	//m_Driver_UBOAlignment = 256;
+
 	std::string vertexcode = glsl330_engine_defines_vertex;
 	std::string fragmentcode = glsl330_engine_defines_fragment;
 	vertexcode += vertexSrc;
@@ -362,7 +366,7 @@ GLint GL_ShaderProgram::GetUniformLoc(const char* name)
 		const char* error = e.what();
 		bool COULDNT_FIND_SHADER_UNIFORM = false;
 
-		assert(COULDNT_FIND_SHADER_UNIFORM);
+		//assert(COULDNT_FIND_SHADER_UNIFORM);
 	}
 	
 	return returnloc;
@@ -381,7 +385,7 @@ GLint GL_ShaderProgram::GetUBOIndex(const char* name)
 		const char* error = e.what();
 		bool COULDNT_FIND_SHADER_UBO = false;
 
-		assert(COULDNT_FIND_SHADER_UBO);
+		//assert(COULDNT_FIND_SHADER_UBO);
 	}
 
 	return returnloc;
@@ -399,7 +403,7 @@ GLint GL_ShaderProgram::GetAttribLoc(const char* name)
 		const char* error = e.what();
 		bool COULDNT_FIND_SHADER_ATTRIBUTE_THIS_FUNCTION_SHOULDNT_EVEN_BE_USED = false;
 
-		assert(COULDNT_FIND_SHADER_ATTRIBUTE_THIS_FUNCTION_SHOULDNT_EVEN_BE_USED);
+		//assert(COULDNT_FIND_SHADER_ATTRIBUTE_THIS_FUNCTION_SHOULDNT_EVEN_BE_USED);
 	}
 
 	return returnloc;

@@ -761,7 +761,43 @@ void CStudioModelRenderer::StudioPreFrame(ref_params_t* pparams)
 }
 
 int gl_bonearrayoffset = 0;
-std::vector<matrix3x4_t> gl_bonetransforms;
+std::vector<float> gl_bonetransforms;
+
+inline size_t BoneData_Align(size_t value)
+{
+	return (value + GL_ShaderProgram::GetDriverUBOAlignment()  - 1) & ~(GL_ShaderProgram::GetDriverUBOAlignment() - 1);
+}
+
+void InsertBones(matrix3x4_t* bones, int numbones)
+{
+	//YOU ARE TEARING ME APART LISA
+
+	//gl_bonetransforms.resize(gl_bonetransforms.size() + numbones);
+	//memcpy(gl_bonetransforms.data() + gl_bonetransforms.size() - numbones, bones, sizeof(matrix3x4_t) * numbones);
+	//
+	//g_StudioRenderer.m_pCurrentStudioEntData->bonearrayoffset = gl_bonearrayoffset;
+	//gl_bonearrayoffset += BoneData_Align(numbones * sizeof(matrix3x4_t));
+
+	size_t boneDataSize = numbones * sizeof(matrix3x4_t);
+
+	gl_bonearrayoffset = BoneData_Align(gl_bonearrayoffset);
+
+	if (gl_bonearrayoffset > gl_bonetransforms.size() * sizeof(float))
+	{
+		size_t padBytes = gl_bonearrayoffset - gl_bonetransforms.size() * sizeof(float);
+		size_t padMatrices = (padBytes + sizeof(float) - 1) / sizeof(float);
+		gl_bonetransforms.resize(gl_bonetransforms.size() + padMatrices);
+	}
+
+	g_StudioRenderer.m_pCurrentStudioEntData->bonearrayoffset = gl_bonearrayoffset;
+
+	gl_bonetransforms.resize(gl_bonetransforms.size() + (numbones * 3 * 4));
+	memcpy(gl_bonetransforms.data() + (gl_bonearrayoffset / sizeof(float)),
+		bones,
+		boneDataSize);
+
+	gl_bonearrayoffset += boneDataSize;
+}
 
 void CStudioModelRenderer::StudioClearDrawList()
 {
@@ -781,7 +817,7 @@ void CStudioModelRenderer::StudioUploadRenderData()
 
 	m_ModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
 	//send all bone data on the scene in one single upload
-	m_ModelBones_Buffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, V_min(gl_bonetransforms.size() * sizeof(matrix3x4_t), 128 * 2048), gl_bonetransforms.data());
+	m_ModelBones_Buffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, V_min(gl_bonetransforms.size() * sizeof(float), 128 * 2048), gl_bonetransforms.data());
 
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::UniformBuffer);
 }
@@ -824,11 +860,7 @@ void CStudioModelRenderer::StudioSetupViewmodel()
 
 	memcpy(m_pCurrentStudioEntData->bonematrix, (*m_pbonetransform), sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
-	gl_bonetransforms.resize(gl_bonetransforms.size() + m_pStudioHeader->numbones);
-	memcpy(gl_bonetransforms.data() + gl_bonetransforms.size() - m_pStudioHeader->numbones, m_pbonetransform, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
-
-	m_pCurrentStudioEntData->bonearrayoffset = gl_bonearrayoffset;
-	gl_bonearrayoffset += m_pStudioHeader->numbones * sizeof(matrix3x4_t);
+	InsertBones((*m_pbonetransform), m_pStudioHeader->numbones);
 }
 
 void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
@@ -839,6 +871,8 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 		return;
 
 	m_pCurrentEntity = pEnt;
+	if(m_pCurrentEntity->player)
+		return;
 
 	if (IsEntityTransparent(m_pCurrentEntity) && m_pCurrentEntity->curstate.renderamt == NULL)
 		return;
@@ -933,11 +967,7 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 	// constantly uploading bone data for every single entity
 	// CLEAN THIS UP !!!
 
-	gl_bonetransforms.resize(gl_bonetransforms.size() + m_pStudioHeader->numbones);
-	memcpy(gl_bonetransforms.data() + gl_bonetransforms.size() - m_pStudioHeader->numbones, m_pbonetransform, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
-
-	m_pCurrentStudioEntData->bonearrayoffset = gl_bonearrayoffset;
-	gl_bonearrayoffset += m_pStudioHeader->numbones * sizeof(matrix3x4_t);
+	InsertBones((*m_pbonetransform), m_pStudioHeader->numbones);
 
 	if (pplayer)
 	{
@@ -956,12 +986,6 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 			m_pStudioHeader = (studiohdr_t*)pweaponmodel->cache.data;
 
 			StudioMergeBones(pweaponmodel);
-
-
-			gl_bonetransforms.resize(gl_bonetransforms.size() + m_pStudioHeader->numbones);
-			memcpy(gl_bonetransforms.data() + gl_bonetransforms.size() - m_pStudioHeader->numbones, m_pbonetransform, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
-
-			gl_bonearrayoffset += m_pStudioHeader->numbones * sizeof(matrix3x4_t);
 
 			StudioCalcAttachments();
 

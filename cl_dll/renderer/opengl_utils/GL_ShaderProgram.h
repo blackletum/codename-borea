@@ -228,6 +228,8 @@ public:
 		StudioMDL_BoneID, //studiomdl exclusive
 	};
 
+	static __forceinline int GetDriverUBOAlignment() { return m_Driver_UBOAlignment; }
+
 
 private:
 
@@ -247,6 +249,7 @@ private:
 
 	static GL_ShaderProgram* m_pCurrentProgram;
 	static GLuint m_uiCurFreeUBOindex;
+	static GLint m_Driver_UBOAlignment;
 };
 
 //
