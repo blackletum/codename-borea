@@ -95,6 +95,9 @@ void CSpriteRenderer::PushEntityToDraw(cl_entity_s* pEnt)
 
 void CSpriteRenderer::DrawSpriteEntities()
 {
+	if (m_vSpriteDrawList.empty())
+		return;
+
 	//first make quad list
 	for (auto ent : m_vSpriteDrawList)
 	{

@@ -485,12 +485,12 @@ void CMirrorManager::DrawMirrors(void)
 		m_MirrorShader->UniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ViewMatrix));
 
 		model_t* model = m_pMirrors[i].entity->model;
-		msurface_t* psurf = &engine_cl->worldmodel->surfaces[model->firstmodelsurface];
+		clientmsurface_t* psurf = &BSPWorld_Model::m_pWorldSurfaces[model->firstmodelsurface];
 
 		gBSPRenderer.BindGLTexture(GL_TEXTURE0, m_pCurrentMirror->texture->GetTextureID());
 
 
-		gBSPRenderer.DrawPolyFromArray(engine_cl->worldmodel->surfaces, psurf);
+		gBSPRenderer.DrawPolyFromArray(BSPWorld_Model::m_pWorldSurfaces, psurf);
 		psurf->visframe = gBSPRenderer.m_iFrameCount; // For decals
 	}
 

@@ -456,11 +456,10 @@ particle_system_t* CParticleEngine::CreateSystem(char* szPath, Vector origin, Ve
 	{
 		if (!parent)
 		{
-			model_t* pWorld = engine_cl->worldmodel;
 			VectorCopy(origin, pSystem->origin);
 
-			if (pWorld)
-				pSystem->leaf = Mod_PointInLeaf(pSystem->origin + Vector(0, 0, 8), pWorld);
+			if(BSPWorld_Model::m_pWorldNodes)
+				pSystem->leaf = Mod_PointInLeaf(pSystem->origin + Vector(0, 0, 8));
 		}
 		else
 		{
@@ -1063,11 +1062,10 @@ Vector CParticleEngine::LightForParticle(cl_particle_t* pParticle)
 	Vector vForward;
 
 	float flTime = engine_cl->time;
-	model_t* pWorld = engine_cl->worldmodel;
 	Vector vEndPos = pParticle->origin - Vector(0, 0, 8964);
 	Vector vColor = Vector(0, 0, 0);
 
-	g_StudioRenderer.StudioRecursiveLightPoint(nullptr, pWorld->nodes, pParticle->origin, vEndPos, vColor);
+	g_StudioRenderer.StudioRecursiveLightPoint(nullptr, BSPWorld_Model::m_pWorldNodes, pParticle->origin, vEndPos, vColor);
 
 	for (auto& pLight : gBSPRenderer.m_pDynLights)
 	{

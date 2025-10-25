@@ -597,4 +597,77 @@ typedef struct player_info_s
 
 extern mvertex_t *globalVertexTable;
 
+
+//
+//trinity specific
+//
+
+
+typedef struct clientmsurface_s
+{
+	int         visframe;       // should be drawn when node is crossed
+
+	mplane_t* plane;
+	int         flags;
+
+	int         firstedge;  // look up in model->surfedges[], negative numbers
+	int         numedges;   // are backwards edges
+
+	short       texturemins[2];
+	short       extents[2];
+
+	int         light_s, light_t;           // gl lightmap coordinates
+
+	glpoly_t* polys;                     // multiple if warped
+	struct clientmsurface_s* texturechain;
+
+	mtexinfo_t* texinfo;
+
+	int         lightmaptexturenum;
+	byte        styles[MAXLIGHTMAPS];
+	int         cached_light[MAXLIGHTMAPS]; // values currently used in lightmap
+
+	//  byte        *samples;                   // [numstyles*surfsize]
+	std::vector<color24> samples;                 // note: this is the actual lightmap data for this surface
+
+} clientmsurface_t;
+
+typedef struct clientmnode_t
+{
+	// common with leaf
+	int contents; // 0, to differentiate from leafs
+	int visframe; // node needs to be traversed if current
+
+	float minmaxs[6]; // for bounding box culling
+
+	struct clientmnode_t* parent;
+
+	// node specific
+	mplane_t* plane;
+	clientmnode_t* children[2];
+
+	unsigned short firstsurface;
+	unsigned short numsurfaces;
+};
+
+typedef struct clientmleaf_s
+{
+	// common with node
+	int contents; // wil be a negative contents number
+	int visframe; // node needs to be traversed if current
+
+	float minmaxs[6]; // for bounding box culling
+
+	struct clientmnode_t* parent;
+
+	// leaf specific
+	byte* compressed_vis;
+	struct efrag_s* efrags;
+
+	clientmsurface_t** firstmarksurface;
+	int nummarksurfaces;
+	int key; // BSP sequence number for leaf's contents
+	byte ambient_sound_level[NUM_AMBIENTS];
+} clientmleaf_t;
+
 #endif // #if !defined(COM_MODEL_H)

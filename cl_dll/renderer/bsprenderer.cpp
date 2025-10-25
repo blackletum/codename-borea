@@ -66,7 +66,7 @@ extern "C" {
 }
 
 extern int r_visframecount;
-extern mleaf_t* r_oldviewleaf;
+extern clientmleaf_t* r_oldviewleaf;
 
 
 static GLuint multidraw_startverts[65536];
@@ -215,11 +215,12 @@ void CBSPRenderer::Init(void)
 
 	gEngfuncs.pfnAddCommand("te_dump", RenderersDumpInfo);
 
-	m_pCvarDrawWorld = CVAR_CREATE("r_drawbsp", "1", 0);
+	m_pCvarDrawWorld = CVAR_CREATE("r_drawbsp", "1", FCVAR_ARCHIVE);
+	m_pCvarLightStyles = CVAR_CREATE("r_lightstyles", "1", FCVAR_ARCHIVE);
 	m_pCvarSpeeds = CVAR_CREATE("r_trinity_speeds", "0", 0);
 	m_pCvarDetailTextures = gEngfuncs.pfnGetCvarPointer("r_detailtextures");
 	m_pCvarWireFrame = CVAR_CREATE("r_wireframe", "0", 0);
-	m_pCvarDynamic = CVAR_CREATE("r_dynlights", "1", 0);
+	m_pCvarDynamic = CVAR_CREATE("r_dynlights", "1", FCVAR_ARCHIVE);
 	// if off, then use blobby shadows. (for now theres no blobby shadows)
 	m_pCvarShadows = CVAR_CREATE("r_shadowrendertotexture", "1", FCVAR_ARCHIVE);
 	m_pCvarFlashLightDepthRes = CVAR_CREATE("r_flashlightdepthres", "512", FCVAR_ARCHIVE);
@@ -267,6 +268,9 @@ void CBSPRenderer::Init(void)
 	m_WorldShader_locs[world_light_pos] = m_WorldShader->GetUniformLoc("light_pos");
 	m_WorldShader_locs[world_light_radius] = m_WorldShader->GetUniformLoc("light_radius");
 	m_WorldShader_locs[world_light_color] = m_WorldShader->GetUniformLoc("light_color");
+
+	m_WorldShader_locs[world_sunshadow_fadedist] = m_WorldShader->GetUniformLoc("sunshadow_fadedist");
+	m_WorldShader_locs[world_sunshadow_strength] = m_WorldShader->GetUniformLoc("sunshadow_strength");
 
 	m_WorldShader_locs[world_lightmap_pass] = m_WorldShader->GetUniformLoc("lightmap_pass");
 	m_WorldShader_locs[world_texture_pass] = m_WorldShader->GetUniformLoc("texture_pass");
@@ -896,7 +900,7 @@ void CBSPRenderer::GetAdditionalLights(void)
 			mlight->spotcos = 0;
 		}
 
-		if (!m_bGotStaticLights && mdl_light.curstate.eflags != 255) //.eflags = studioshadow keyvalue in map editor
+		if (!m_bGotStaticLights && mdl_light.curstate.eflags) //.eflags = studioshadow keyvalue in map editor
 		{
 			cl_dlight_t* dlight = CL_AllocDLight(0);
 
@@ -907,11 +911,11 @@ void CBSPRenderer::GetAdditionalLights(void)
 			dlight->origin = mdl_light.curstate.origin;
 			dlight->die = engine_cl->time + std::numeric_limits<double>::max();
 
-			mleaf_t* pLeaf = Mod_PointInLeaf(dlight->origin, engine_cl->worldmodel);
+			clientmleaf_t* pLeaf = Mod_PointInLeaf(dlight->origin);
 
 			if (pLeaf)
 			{
-				dlight->visframe = pLeaf - engine_cl->worldmodel->leafs - 1;
+				dlight->visframe = pLeaf - BSPWorld_Model::m_pWorldLeafs - 1;
 			}
 
 			dlight->flags |= LIGHT_STUDIOMDL_SHADOW | LIGHT_ONLYSHADOWS;
@@ -976,7 +980,7 @@ void CBSPRenderer::SetupPreFrame(ref_params_t* pparams)
 	VectorCopy(pparams->viewangles, m_vViewAngles);
 	VectorCopy(pparams->vieworg, m_vRenderOrigin);
 
-	m_pViewLeaf = Mod_PointInLeaf(pparams->vieworg, engine_cl->worldmodel);
+	m_pViewLeaf = Mod_PointInLeaf(pparams->vieworg);
 	R_MarkLeaves(m_pViewLeaf);
 
 	// Get additional lights here
@@ -1093,6 +1097,8 @@ void CBSPRenderer::SetupRenderer(void)
 		exit(-1);
 	}
 
+	BSPWorld_Model::InitWorldModel(engine_cl->worldmodel);
+
 	gPropManager.GenerateEntityList();
 
 	//digest studiomdls currently precached in engine
@@ -1155,7 +1161,7 @@ RemoveSky
 void CBSPRenderer::RemoveSky(void)
 {
 	bool foundSky = false;
-	msurface_t* surfaces = engine_cl->worldmodel->surfaces;
+	clientmsurface_t* surfaces = BSPWorld_Model::m_pWorldSurfaces;
 	for (int i = 0; i < engine_cl->worldmodel->numsurfaces; i++)
 	{
 		if (surfaces[i].flags & SURF_DRAWSKY)
@@ -1294,9 +1300,7 @@ void CBSPRenderer::GenerateVertexArray(void)
 	// delete existing data
 	FreeBuffer();
 
-	BSPWorld_Model::InitWorldModel(engine_cl->worldmodel);
-
-	msurface_t* surfaces = engine_cl->worldmodel->surfaces;
+	clientmsurface_t* surfaces = BSPWorld_Model::m_pWorldSurfaces;
 	for (int i = 0; i < engine_cl->worldmodel->numsurfaces; i++)
 	{
 		if (surfaces[i].flags & SURF_DRAWSKY)
@@ -1757,7 +1761,7 @@ DrawNormalTriangles
 
 ====================
 */
-void CBSPRenderer::DrawNormalTriangles_Cheap(bool drawworld)
+void CBSPRenderer::DrawNormalTriangles_Cheap(bool drawworld, bool draw_ents)
 {
 	if (m_bDrawSky)
 	{
@@ -1793,7 +1797,7 @@ void CBSPRenderer::DrawNormalTriangles_Cheap(bool drawworld)
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glBindTexture(GL_TEXTURE_2D, m_iEngineLightmapIndex);
 
-		RecursiveWorldNode(engine_cl->worldmodel->nodes);
+		RecursiveWorldNode(BSPWorld_Model::m_pWorldNodes);
 
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
@@ -1828,7 +1832,7 @@ void CBSPRenderer::DrawNormalTriangles_Cheap(bool drawworld)
 		{
 			texture_t* pTexture = &m_pNormalTextureList[i];
 
-			msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+			clientmsurface_t* psurface = (clientmsurface_t*)m_pNormalTextureList[i].texturechain;
 
 			// Nothing to draw
 			if (!psurface)
@@ -1836,7 +1840,7 @@ void CBSPRenderer::DrawNormalTriangles_Cheap(bool drawworld)
 
 			while (psurface)
 			{
-				int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+				int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 				brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 				if (psurface->flags & SURF_DRAWTURB)
@@ -1866,7 +1870,18 @@ void CBSPRenderer::DrawNormalTriangles_Cheap(bool drawworld)
 
 		DrawDynamicLightsForWorld();
 
+		if (draw_ents)
+		{
+			for (int i = 0; i < m_iNumRenderEntities; i++)
+			{
+				cl_entity_t* ent = m_pRenderEntities[i];
+				if (IsEntityMoved(ent) && !IsEntityTransparent(ent))
+					DrawBrushModel(ent, false);
+			}
+		}
 	}
+
+	g_GlobalGLState.SetBlend(false);
 
 	GL_ShaderProgram::ResetShaderBind();
 	GL_VertexArrayObject::ResetVAOBinding();
@@ -1886,21 +1901,29 @@ void CBSPRenderer::DrawTransparentTriangles(void)
 		return;
 	}
 
+	for (int i = 0; i <= m_iNumRenderEntities; i++)
+	{
+		if (i == m_iNumRenderEntities)
+			return; //jump away from this function
+
+		cl_entity_t* ent = m_pRenderEntities[i];
+		if (IsEntityTransparent(ent))
+			break;
+	}
+
 	m_pCurrentEntity = gEngfuncs.GetEntityByIndex(0);
 	
 	m_WorldShader->Bind();
 	
 	m_pBSP_VAO->BindVAO();
 	
-	if (g_StudioRenderer.m_pCvarDrawEntities->value >= 1)
+	for (int i = 0; i < m_iNumRenderEntities; i++)
 	{
-		for (int i = 0; i < m_iNumRenderEntities; i++)
-		{
-			cl_entity_t* ent = m_pRenderEntities[i];
-			if (IsEntityTransparent(ent))
-				DrawBrushModel(ent, false);
-		}
+		cl_entity_t* ent = m_pRenderEntities[i];
+		if (IsEntityTransparent(ent))
+			DrawBrushModel(ent, false);
 	}
+
 	DrawDecals(true);
 
 	GL_VertexArrayObject::ResetVAOBinding();
@@ -1930,7 +1953,7 @@ void CBSPRenderer::DrawWorld(bool m_bSkyBox)
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D, m_iEngineLightmapIndex);
 
-	RecursiveWorldNode(engine_cl->worldmodel->nodes);
+	RecursiveWorldNode(BSPWorld_Model::m_pWorldNodes);
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	
@@ -1942,7 +1965,7 @@ void CBSPRenderer::DrawWorld(bool m_bSkyBox)
 	m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
 	
 	m_WorldShader->Uniform3fv(m_WorldShader_locs[world_renderorigin], 1, m_vRenderOrigin);
-	m_WorldShader->Uniform3fv(m_WorldShader_locs[world_renderright], 1, m_RefParams.right);
+	//m_WorldShader->Uniform3fv(m_WorldShader_locs[world_renderright], 1, m_RefParams.right);
 	//m_WorldShader->Uniform3fv(m_WorldShader_locs[world_renderforward], 1, m_RefParams.forward);
 	m_WorldShader->Uniform3fv(m_WorldShader_locs[world_fogcolor], 1, gHUD.m_pFogSettings.color);
 	m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], 255, 255, 255);
@@ -1957,6 +1980,9 @@ void CBSPRenderer::DrawWorld(bool m_bSkyBox)
 	
 	m_WorldShader->Uniform1f(m_WorldShader_locs[world_texgamma], texgamma_val);
 	m_WorldShader->Uniform1f(m_WorldShader_locs[world_lightgamma], lightgamma_val);
+
+	m_WorldShader->Uniform1i(m_WorldShader_locs[world_sunshadow_fadedist], m_iSunShadow_FadeDist);
+	m_WorldShader->Uniform1i(m_WorldShader_locs[world_sunshadow_strength], m_iSunShadow_Strength);
 	
 	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], 255);
 
@@ -2000,7 +2026,6 @@ void CBSPRenderer::DrawWorld(bool m_bSkyBox)
 		}
 	}
 
-	GL_ShaderProgram::ResetShaderBind();
 	GL_VertexArrayObject::ResetVAOBinding();
 };
 
@@ -2049,7 +2074,7 @@ void CBSPRenderer::RenderFirstPass()
 	for (int i = 0; i < m_iNumTextures; i++)
 	{
 		texture_t* pTexture = TextureAnimation(&m_pNormalTextureList[i], m_pCurrentEntity->curstate.frame);
-		msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+		clientmsurface_t* psurface = (clientmsurface_t*)m_pNormalTextureList[i].texturechain;
 
 		// bacontsu - fake specular
 		auto specular = pTexture->texture_flag & TEXTURE_SPECULAR;
@@ -2067,7 +2092,7 @@ void CBSPRenderer::RenderFirstPass()
 
 		while (psurface)
 		{
-			int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+			int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 			brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 			if (!(psurface->flags & SURF_DRAWTURB))
@@ -2091,7 +2116,7 @@ void CBSPRenderer::RenderFirstPass()
 	for (int i = 0; i < m_iNumTextures; i++)
 	{
 		texture_t* pTexture = TextureAnimation(&m_pNormalTextureList[i], m_pCurrentEntity->curstate.frame);
-		msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+		clientmsurface_t* psurface = (clientmsurface_t*)m_pNormalTextureList[i].texturechain;
 	
 		// bacontsu - fake specular
 		auto specular = pTexture->texture_flag & TEXTURE_SPECULAR;
@@ -2126,7 +2151,7 @@ void CBSPRenderer::RenderFirstPass()
 	
 		while (psurface)
 		{
-			int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+			int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 			brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 	
 			if (!(psurface->flags & SURF_DRAWTURB))
@@ -2187,16 +2212,16 @@ void CBSPRenderer::RenderFinalPasses()
 	for (int i = 0; i < m_iNumTextures; i++)
 	{
 		texture_t* pTexture = TextureAnimation(&m_pNormalTextureList[i], m_pCurrentEntity->curstate.frame);
-		msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+		clientmsurface_t* psurface = (clientmsurface_t*)m_pNormalTextureList[i].texturechain;
 
 		// Nothing to draw
 		if (!psurface)
 			continue;
 
-		m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 0);
 		BindGLTexture(SURFTEXTURE_TEXUNIT, pTexture->gl_texturenum);
 
 		auto scrollingpoly = pTexture->texture_flag & TEXTURE_SCROLL;
+		auto detailtexture = pTexture->offsets[3] && m_pCvarDetailTextures->value >= 1;
 
 		// bacontsu - fake specular
 		auto specular = pTexture->texture_flag & TEXTURE_SPECULAR;
@@ -2211,10 +2236,17 @@ void CBSPRenderer::RenderFinalPasses()
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 1);
 
 		}
+		else if (detailtexture)
+		{
+			BindGLTexture(SURF_DETAILTEXTURE_TEXUNIT, pTexture->offsets[3]);
+
+			m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 1);
+			m_WorldShader->Uniform1f(m_WorldShader_locs[world_dt_opacity], m_pDetailTextures[pTexture->offsets[2]].opacity);
+		}
 
 		while (psurface)
 		{
-			int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+			int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 			brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 			if (psurface->flags & SURF_DRAWTURB)
@@ -2249,6 +2281,10 @@ void CBSPRenderer::RenderFinalPasses()
 			g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 0);
 		}
+		else if (detailtexture)
+		{
+			m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 0);
+		}
 	}
 
 	if (!r_fullbright->value)
@@ -2276,7 +2312,7 @@ void CBSPRenderer::RenderWireframe()
 
 	for (int i = 0; i < m_iNumTextures; i++)
 	{
-		msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+		clientmsurface_t* psurface = (clientmsurface_t*)m_pNormalTextureList[i].texturechain;
 
 		// Nothing to draw
 		if (!psurface)
@@ -2284,7 +2320,7 @@ void CBSPRenderer::RenderWireframe()
 
 		while (psurface)
 		{
-			int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+			int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 			brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 			multidraw_startverts[num_multidraws] = pbrushface->start_vertex;
@@ -2315,12 +2351,12 @@ RecursiveWorldNode
 
 ====================
 */
-void CBSPRenderer::RecursiveWorldNode(mnode_t* node)
+void CBSPRenderer::RecursiveWorldNode(clientmnode_t* node)
 {
 	unsigned short c, side;
 	mplane_t* plane;
-	msurface_t *surf, **mark;
-	mleaf_t* pleaf;
+	clientmsurface_t *surf, **mark;
+	clientmleaf_t* pleaf;
 	float dot;
 
 	while (true)
@@ -2338,7 +2374,7 @@ void CBSPRenderer::RecursiveWorldNode(mnode_t* node)
 		// if a leaf node, draw stuff
 		if (node->contents < 0)
 		{
-			pleaf = (mleaf_t*)node;
+			pleaf = (clientmleaf_t*)node;
 			mark = pleaf->firstmarksurface;
 			c = pleaf->nummarksurfaces;
 
@@ -2374,7 +2410,7 @@ void CBSPRenderer::RecursiveWorldNode(mnode_t* node)
 		c = node->numsurfaces;
 		if (c)
 		{
-			surf = engine_cl->worldmodel->surfaces + node->firstsurface;
+			surf = BSPWorld_Model::m_pWorldSurfaces + node->firstsurface;
 
 			for (int i = 0; i < node->numsurfaces; i++, surf++)
 			{
@@ -2388,7 +2424,7 @@ void CBSPRenderer::RecursiveWorldNode(mnode_t* node)
 				if (surf->flags & SURF_DRAWSKY)
 					continue;
 
-				SurfaceToChain(engine_cl->worldmodel->surfaces, surf);
+				SurfaceToChain(BSPWorld_Model::m_pWorldSurfaces, surf);
 			}
 		}
 
@@ -2411,7 +2447,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 {
 	Vector mins, maxs;
 	int i;
-	msurface_t* psurf;
+	clientmsurface_t* psurf;
 	float dot;
 	mplane_t* pplane;
 	Vector trans;
@@ -2473,8 +2509,6 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 
 		m_ModelMatrix = modelview;
 
-		m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
-
 		ClearSurfaceDrawChain();
 	}
 
@@ -2491,13 +2525,13 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 		b = b ? b : 255;
 	}
 
-	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], alpha);
-	m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], r, g, b);
-
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindTexture(GL_TEXTURE_2D, m_iEngineLightmapIndex);
 
-	psurf = &engine_cl->worldmodel->surfaces[pModel->firstmodelsurface];
+	psurf = &BSPWorld_Model::m_pWorldSurfaces[pModel->firstmodelsurface];
+
+	bool shoulddraw = false;
+
 	for (i = 0; i < pModel->nummodelsurfaces; i++, psurf++)
 	{
 		pplane = psurf->plane;
@@ -2515,17 +2549,32 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 			if (psurf->flags & SURF_DRAWSKY)
 				continue;
 
-			SurfaceToChain(engine_cl->worldmodel->surfaces, psurf);
+			SurfaceToChain(BSPWorld_Model::m_pWorldSurfaces, psurf);
+			shoulddraw = true;
 		}
 	}
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+	if (!shoulddraw)
+	{
+		m_ModelMatrix = oldmodelmatrix;
+
+		m_pCurrentEntity->visframe = m_iFrameCount;
+		m_pCurrentEntity = nullptr;
+		return;
+	}
 
 	//
 	// Render every pass
 	//
 	if (!bStatic)
 	{
+		m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
+
+		m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], alpha);
+		m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], r, g, b);
+
 		if (m_pCurrentEntity->curstate.rendermode == kRenderTransAdd)
 		{
 			g_GlobalGLState.SetDepthWrite(false);
@@ -2561,7 +2610,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 			for (int i = 0; i < m_iNumTextures; i++)
 			{
 				texture_t* pTexture = TextureAnimation(&m_pNormalTextureList[i], m_pCurrentEntity->curstate.frame);
-				msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+				clientmsurface_t* psurface = (clientmsurface_t*)m_pNormalTextureList[i].texturechain;
 
 				// Nothing to draw
 				if (!psurface)
@@ -2589,7 +2638,7 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 
 				while (psurface)
 				{
-					int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+					int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 					brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 					if (psurface->flags & SURF_DRAWTURB)
@@ -2635,14 +2684,14 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 
 			RenderFinalPasses();
 		}
+
+		m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], 255);
+		m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], 255, 255, 255);
+
+		m_ModelMatrix = oldmodelmatrix;
+
+		m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
 	}
-
-	m_WorldShader->Uniform1i(m_WorldShader_locs[world_renderamt], 255);
-	m_WorldShader->Uniform3i(m_WorldShader_locs[world_rendercolor], 255, 255, 255);
-
-	m_ModelMatrix = oldmodelmatrix;
-
-	m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
 
 	m_pCurrentEntity->visframe = m_iFrameCount;
 	m_pCurrentEntity = nullptr;
@@ -2654,7 +2703,7 @@ DrawPolyFromArray
 
 ====================
 */
-void CBSPRenderer::DrawPolyFromArray(msurface_t* psurfbase, msurface_t* psurf)
+void CBSPRenderer::DrawPolyFromArray(clientmsurface_t* psurfbase, clientmsurface_t* psurf)
 {
 	int surfaceIndex = psurf - psurfbase;
 	brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
@@ -2670,7 +2719,7 @@ SurfaceToChain
 
 ====================
 */
-void CBSPRenderer::SurfaceToChain(msurface_t* psurfbase, msurface_t* s)
+void CBSPRenderer::SurfaceToChain(clientmsurface_t* psurfbase, clientmsurface_t* s)
 {
 	int surfaceIndex = s - psurfbase;
 	brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
@@ -2689,18 +2738,18 @@ void CBSPRenderer::SurfaceToChain(msurface_t* psurfbase, msurface_t* s)
 			if (m_iLightStyleValue[s->styles[i]] != m_pSurfaces[pbrushface->index].cached_light[i])
 			{
 				BuildLightmap(s, surfaceIndex, m_pEngineLightmaps);
-	
+
 				int smax = (s->extents[0] >> 4) + 1;
 				int tmax = (s->extents[1] >> 4) + 1;
-	
+
 				glTexSubImage2D(GL_TEXTURE_2D, 0, m_pSurfaces[pbrushface->index].light_s, m_pSurfaces[pbrushface->index].light_t, smax, tmax, GL_RGB, GL_UNSIGNED_BYTE, m_pBlockLights);
 				break;
 			}
 		}
 	}
 
-	s->texturechain = m_pSurfaces[pbrushface->index].regtexture->texturechain;
-	m_pSurfaces[pbrushface->index].regtexture->texturechain = s;
+	s->texturechain = (clientmsurface_t*)m_pSurfaces[pbrushface->index].regtexture->texturechain;
+	m_pSurfaces[pbrushface->index].regtexture->texturechain = (msurface_t*)s;
 };
 
 /*
@@ -2712,6 +2761,9 @@ AnimateLight
 void CBSPRenderer::AnimateLight(void)
 {
 	int i, j, k;
+
+	if (!m_pCvarLightStyles->value)
+		return;
 
 	i = (int)(engine_cl->time * 10);
 	for (j = 0; j < MAX_LIGHTSTYLES; j++)
@@ -2734,7 +2786,7 @@ BuildLightmap
 
 ====================
 */
-void CBSPRenderer::BuildLightmap(msurface_t* surf, int surfindex, color24* out)
+void CBSPRenderer::BuildLightmap(clientmsurface_t* surf, int surfindex, color24* out)
 {
 	const int smax = (surf->extents[0] >> 4) + 1;
 	const int tmax = (surf->extents[1] >> 4) + 1;
@@ -2742,9 +2794,9 @@ void CBSPRenderer::BuildLightmap(msurface_t* surf, int surfindex, color24* out)
 
 	memset(m_pBlockLights, 0, sizeof(color24) * size);
 
-	if (surf->samples && size <= BLOCKLIGHTS_SIZE && surf->styles[0] != 255)
+	if (!surf->samples.empty() && size <= BLOCKLIGHTS_SIZE && surf->styles[0] != 255)
 	{
-		color24* lightmap = surf->samples;
+		color24* lightmap = surf->samples.data();
 
 		for (int maps = 0; maps < MAXLIGHTMAPS && surf->styles[maps] != 255; ++maps)
 		{
@@ -2787,8 +2839,8 @@ void CBSPRenderer::BuildLightmap(msurface_t* surf, int surfindex, color24* out)
 	for (int i = 0; i < tmax; ++i)
 	{
 		color24* src = &m_pBlockLights[i * smax];
-		color24* dest = out + BLOCK_WIDTH * BLOCK_HEIGHT * LIGHTMAP_NUMCOLUMNS * row + BLOCK_WIDTH * column;
-		dest += ((BLOCK_WIDTH * LIGHTMAP_NUMCOLUMNS * surf->light_t) + surf->light_s) + (BLOCK_WIDTH * LIGHTMAP_NUMCOLUMNS * i);
+		color24* dest = out + BLOCK_SIZE * BLOCK_SIZE * LIGHTMAP_NUMCOLUMNS * row + BLOCK_SIZE * column;
+		dest += ((BLOCK_SIZE * LIGHTMAP_NUMCOLUMNS * surf->light_t) + surf->light_s) + (BLOCK_SIZE * LIGHTMAP_NUMCOLUMNS * i);
 
 		memcpy(dest, src, sizeof(color24) * smax);
 	}
@@ -2821,7 +2873,7 @@ void CBSPRenderer::UploadLightmaps(void)
 
 		for (int i = 0; i < engine_cl->worldmodel->numsurfaces; i++)
 		{
-			msurface_t* pSurf = &engine_cl->worldmodel->surfaces[i];
+			clientmsurface_t* pSurf = &BSPWorld_Model::m_pWorldSurfaces[i];
 
 			if (pSurf->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
 				continue;
@@ -2831,8 +2883,8 @@ void CBSPRenderer::UploadLightmaps(void)
 			const int column = pSurf->lightmaptexturenum % LIGHTMAP_NUMROWS;
 			const int row = (pSurf->lightmaptexturenum / LIGHTMAP_NUMROWS) % LIGHTMAP_NUMCOLUMNS;
 
-			m_pSurfaces[i].light_s = pSurf->light_s + BLOCK_WIDTH * column;
-			m_pSurfaces[i].light_t = pSurf->light_t + BLOCK_HEIGHT * row;
+			m_pSurfaces[i].light_s = pSurf->light_s + BLOCK_SIZE * column;
+			m_pSurfaces[i].light_t = pSurf->light_t + BLOCK_SIZE * row;
 
 			if (pSurf->lightmaptexturenum > m_iNumLightmaps)
 				m_iNumLightmaps = pSurf->lightmaptexturenum;
@@ -2845,7 +2897,7 @@ void CBSPRenderer::UploadLightmaps(void)
 		//
 		for (int i = 0; i < engine_cl->worldmodel->numsurfaces; i++)
 		{
-			msurface_t* pSurf = &engine_cl->worldmodel->surfaces[i];
+			clientmsurface_t* pSurf = &BSPWorld_Model::m_pWorldSurfaces[i];
 
 			if (pSurf->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
 				continue;
@@ -3654,7 +3706,7 @@ void CBSPRenderer::CreateDecal(Vector endpos, Vector pnormal, const char* name, 
 						VectorCopy(endpos, decalpos);
 					}
 
-					msurface_t* surf = &engine_cl->worldmodel->surfaces[pEntity->model->firstmodelsurface];
+					clientmsurface_t* surf = &BSPWorld_Model::m_pWorldSurfaces[pEntity->model->firstmodelsurface];
 					for (int k = 0; k < pEntity->model->nummodelsurfaces; k++, surf++)
 					{
 						float dot;
@@ -3828,7 +3880,7 @@ void CBSPRenderer::CreateDecal(Vector endpos, Vector pnormal, const char* name, 
 			VectorCopy(endpos, decalpos);
 		}
 
-		msurface_t* surf = &engine_cl->worldmodel->surfaces[pEntity->model->firstmodelsurface];
+		clientmsurface_t* surf = &BSPWorld_Model::m_pWorldSurfaces[pEntity->model->firstmodelsurface];
 		for (int k = 0; k < pEntity->model->nummodelsurfaces; k++, surf++)
 		{
 			float dot;
@@ -3902,7 +3954,7 @@ void CBSPRenderer::RecursiveCreateDecal(mnode_t* node, decalgroupentry_t* texptr
 	int c = node->numsurfaces;
 	if (c)
 	{
-		msurface_t* surf = engine_cl->worldmodel->surfaces + node->firstsurface;
+		clientmsurface_t* surf = BSPWorld_Model::m_pWorldSurfaces + node->firstsurface;
 
 		if (dot < 0 - BACKFACE_EPSILON)
 			side = SURF_PLANEBACK;
@@ -3947,7 +3999,7 @@ DecalSurface
 
 ====================
 */
-void CBSPRenderer::DecalSurface(msurface_t* surf, decalgroupentry_t* texptr, cl_entity_t* pEntity, customdecal_t* pDecal, Vector endpos, Vector pnormal, float angle)
+void CBSPRenderer::DecalSurface(clientmsurface_t* surf, decalgroupentry_t* texptr, cl_entity_t* pEntity, customdecal_t* pDecal, Vector endpos, Vector pnormal, float angle)
 {
 	Vector norm;
 	Vector right, up;
@@ -4601,7 +4653,7 @@ void CBSPRenderer::RenderSunShadow()
 
 	for (int i = 0; i < m_iNumTextures; i++)
 	{
-		msurface_t* psurface = m_pNormalTextureList[i].texturechain;
+		clientmsurface_t* psurface = (clientmsurface_t*)m_pNormalTextureList[i].texturechain;
 
 		while (psurface)
 		{
@@ -4611,7 +4663,19 @@ void CBSPRenderer::RenderSunShadow()
 				continue;
 			}
 
-			int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+			mplane_t* plane = psurface->plane;
+
+			float dot; 
+			dot = DotProduct(plane->normal, -sunForward);
+
+			if ((dot < 0) ^ !!(psurface->flags & SURF_PLANEBACK))
+			{
+				psurface = psurface->texturechain;
+				continue;
+			}
+
+
+			int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 			brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 			multidraw_startverts[num_multidraws] = (pbrushface->start_vertex);
@@ -4692,7 +4756,7 @@ void CBSPRenderer::DrawDynamicLightsForWorld(void)
 			SetDynLightBBox();
 		}
 
-		RecursiveWorldNodeLight(engine_cl->worldmodel->nodes);
+		RecursiveWorldNodeLight(BSPWorld_Model::m_pWorldNodes);
 
 		for (int i = 0; i < m_iNumRenderEntities; i++)
 		{
@@ -4753,7 +4817,7 @@ RecursiveWorldNodeLight
 
 ====================
 */
-void CBSPRenderer::RecursiveWorldNodeLight(mnode_t* node)
+void CBSPRenderer::RecursiveWorldNodeLight(clientmnode_t* node)
 {
 	int side;
 	float dot;
@@ -4803,7 +4867,7 @@ void CBSPRenderer::RecursiveWorldNodeLight(mnode_t* node)
 		int c = node->numsurfaces;
 		if (c)
 		{
-			msurface_t* surf = engine_cl->worldmodel->surfaces + node->firstsurface;
+			clientmsurface_t* surf = BSPWorld_Model::m_pWorldSurfaces + node->firstsurface;
 
 			for (; c; c--, surf++)
 			{
@@ -4820,12 +4884,11 @@ void CBSPRenderer::RecursiveWorldNodeLight(mnode_t* node)
 				if (!(surf->flags & SURF_UNDERWATER) && ((dot < 0) ^ !!(surf->flags & SURF_PLANEBACK)))
 					continue; // wrong side
 
-				mplane_t* pplane = surf->plane;
 				DotProductSub(&dot, &m_vCurDLightOrigin, &surf->plane->normal, &surf->plane->dist);
 
 				if (dot < m_pCurrentDynLight->radius)
 				{
-					int surfaceIndex = surf - engine_cl->worldmodel->surfaces;
+					int surfaceIndex = surf - BSPWorld_Model::m_pWorldSurfaces;
 					brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 					multidraw_startverts[num_multidraws] = pbrushface->start_vertex;
@@ -4858,7 +4921,7 @@ void CBSPRenderer::RecursiveWorldNodeLight(mnode_t* node)
 //				continue;
 //			}
 //	
-//			int surfaceIndex = psurface - engine_cl->worldmodel->surfaces;
+//			int surfaceIndex = psurface - BSPWorld_Model::m_pWorldSurfaces;
 //			brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 //	
 //			faces_.insert({pbrushface->start_vertex, pbrushface->num_vertexes});
@@ -5025,7 +5088,7 @@ DrawEntityFacesForLight
 void CBSPRenderer::DrawEntityFacesForLight(cl_entity_t* pEntity)
 {
 	float dot;
-	msurface_t* psurf = &engine_cl->worldmodel->surfaces[pEntity->model->firstmodelsurface];
+	clientmsurface_t* psurf = &BSPWorld_Model::m_pWorldSurfaces[pEntity->model->firstmodelsurface];
 	for (int i = 0; i < pEntity->model->nummodelsurfaces; i++, psurf++)
 	{
 		if (psurf->flags & SURF_DRAWTURB)
@@ -5042,7 +5105,7 @@ void CBSPRenderer::DrawEntityFacesForLight(cl_entity_t* pEntity)
 				(!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON)))
 			{
 				if (dot < m_pCurrentDynLight->radius)
-					DrawPolyFromArray(engine_cl->worldmodel->surfaces, psurf);
+					DrawPolyFromArray(BSPWorld_Model::m_pWorldSurfaces, psurf);
 			}
 		}
 	}
@@ -5167,7 +5230,7 @@ void CBSPRenderer::DrawSky(void)
 		glm::vec3 cameraPos = glm::vec3(m_vRenderOrigin.x, m_vRenderOrigin.y, m_vRenderOrigin.z);
 		glm::vec3 cameraTarget = cameraPos + cameraForward;
 
-		mleaf_t* skyboxleaf = Mod_PointInLeaf(m_vRenderOrigin, engine_cl->worldmodel);
+		clientmleaf_t* skyboxleaf = Mod_PointInLeaf(m_vRenderOrigin);
 
 		R_MarkLeaves(skyboxleaf);
 
@@ -5210,7 +5273,6 @@ void CBSPRenderer::DrawSky(void)
 		R_MarkLeaves(m_pViewLeaf);
 	}
 
-	// Clear depth buffer for the final time
 	glClear(GL_DEPTH_BUFFER_BIT);
 };
 
@@ -5593,7 +5655,7 @@ void CBSPRenderer::Generate_Spotlight_Shadow(void)
 	m_vRenderOrigin = m_pCurrentDynLight->origin;
 
 
-	mleaf_t* spotlight_leaf = Mod_PointInLeaf(m_vRenderOrigin, engine_cl->worldmodel);
+	clientmleaf_t* spotlight_leaf = Mod_PointInLeaf(m_vRenderOrigin);
 
 	R_MarkLeaves(spotlight_leaf);
 
@@ -5627,12 +5689,22 @@ purpose: generates a shadow depth texture for the current point light.
 void CBSPRenderer::Generate_Pointlight_Shadow(void)
 {
 	if (!m_pCurrentDynLight->cubedepth)
-		m_pCurrentDynLight->cubedepth = GL_ShadowMap::AllocateShadowMap(
-												GL_ShadowMap::_CubeMap_Storage,
-												GL_RG16F,
-												DEFAULT_SHADOWMAP_RES, DEFAULT_SHADOWMAP_RES,
-												0,
-												GL_RG, GL_FLOAT);
+	{
+		if ((m_pCurrentDynLight->flags & LIGHT_BRUSH_SHADOW) || (m_pCurrentDynLight->flags & LIGHT_WORLD_SHADOW))
+			m_pCurrentDynLight->cubedepth = GL_ShadowMap::AllocateShadowMap(
+				GL_ShadowMap::_CubeMap_Storage,
+				GL_RG16F,
+				DEFAULT_SHADOWMAP_RES, DEFAULT_SHADOWMAP_RES,
+				0,
+				GL_RG, GL_FLOAT);
+		else //ev_elight shadows are much cheaper
+			m_pCurrentDynLight->cubedepth = GL_ShadowMap::AllocateShadowMap(
+				GL_ShadowMap::_CubeMap_Storage,
+				GL_R8,
+				DEFAULT_SHADOWMAP_RES, DEFAULT_SHADOWMAP_RES,
+				0,
+				GL_RED, GL_FLOAT);
+	}
 
 	static const Vector forwards[] = {
 		Vector(1, 0, 0), //positive x
@@ -5670,7 +5742,7 @@ void CBSPRenderer::Generate_Pointlight_Shadow(void)
 
 		r_oldviewleaf = nullptr;
 
-		mleaf_t* spotlight_leaf = Mod_PointInLeaf(m_vRenderOrigin, engine_cl->worldmodel);
+		clientmleaf_t* spotlight_leaf = Mod_PointInLeaf(m_vRenderOrigin);
 
 		R_MarkLeaves(spotlight_leaf);
 	}
@@ -5752,7 +5824,7 @@ void CBSPRenderer::DrawWorldSolid(void)
 
 	if (!m_bSunShadowMapPass && (m_pCurrentDynLight->flags & LIGHT_WORLD_SHADOW))
 	{
-		RecursiveWorldNodeSolid(engine_cl->worldmodel->nodes);
+		RecursiveWorldNodeSolid(BSPWorld_Model::m_pWorldNodes);
 
 		glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
 		num_multidraws = 0;
@@ -5778,12 +5850,12 @@ RecursiveWorldNodeSolid
 
 ====================
 */
-void CBSPRenderer::RecursiveWorldNodeSolid(mnode_t* node)
+void CBSPRenderer::RecursiveWorldNodeSolid(clientmnode_t* node)
 {
 	int c, side;
 	mplane_t* plane;
-	msurface_t *surf, **mark;
-	mleaf_t* pleaf;
+	clientmsurface_t *surf, **mark;
+	clientmleaf_t* pleaf;
 	float dot;
 
 	while (true)
@@ -5801,7 +5873,7 @@ void CBSPRenderer::RecursiveWorldNodeSolid(mnode_t* node)
 		// if a leaf node, draw stuff
 		if (node->contents < 0)
 		{
-			pleaf = (mleaf_t*)node;
+			pleaf = (clientmleaf_t*)node;
 			mark = pleaf->firstmarksurface;
 			c = pleaf->nummarksurfaces;
 
@@ -5837,7 +5909,7 @@ void CBSPRenderer::RecursiveWorldNodeSolid(mnode_t* node)
 		c = node->numsurfaces;
 		if (c)
 		{
-			surf = engine_cl->worldmodel->surfaces + node->firstsurface;
+			surf = BSPWorld_Model::m_pWorldSurfaces + node->firstsurface;
 
 			for (int i = 0; i < node->numsurfaces; i++, surf++)
 			{
@@ -5855,7 +5927,7 @@ void CBSPRenderer::RecursiveWorldNodeSolid(mnode_t* node)
 					continue;
 
 
-				int surfaceIndex = surf - engine_cl->worldmodel->surfaces;
+				int surfaceIndex = surf - BSPWorld_Model::m_pWorldSurfaces;
 				brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
 				multidraw_startverts[num_multidraws] = pbrushface->start_vertex;
@@ -5882,7 +5954,7 @@ void CBSPRenderer::DrawBrushModelSolid(cl_entity_t* pEntity)
 {
 	Vector mins, maxs;
 	int i;
-	msurface_t* psurf;
+	clientmsurface_t* psurf;
 	float dot;
 	mplane_t* pplane;
 	bool bRotated = false;
@@ -5956,7 +6028,7 @@ void CBSPRenderer::DrawBrushModelSolid(cl_entity_t* pEntity)
 
 	m_WorldSolidShader->Uniform1i(m_WorldSolidShader_locs[worldsolid_alphatest], 1); // cunt
 
-	psurf = &engine_cl->worldmodel->surfaces[pModel->firstmodelsurface];
+	psurf = &BSPWorld_Model::m_pWorldSurfaces[pModel->firstmodelsurface];
 	for (i = 0; i < pModel->nummodelsurfaces; i++, psurf++)
 	{
 		pplane = psurf->plane;
@@ -5972,7 +6044,7 @@ void CBSPRenderer::DrawBrushModelSolid(cl_entity_t* pEntity)
 				continue;
 
 			BindGLTexture(SURFTEXTURE_TEXUNIT, psurf->texinfo->texture->gl_texturenum);
-			DrawPolyFromArray(engine_cl->worldmodel->surfaces, psurf);
+			DrawPolyFromArray(BSPWorld_Model::m_pWorldSurfaces, psurf);
 		}
 	}
 

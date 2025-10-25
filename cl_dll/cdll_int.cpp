@@ -269,8 +269,11 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 #endif
 
 		// No MSAA
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+		//SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
+		//SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+		// yes msaa cause im lazy to implement my own
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
 		// -Stencil
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
@@ -282,8 +285,8 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		// auto oldCtx = wglGetCurrentContext();
 		// savedGlContext = oldCtx;
 
-		auto fullScreenFlags = flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
-		flags |= SDL_WINDOW_HIDDEN; // only start hidden seems to work properly
+		auto fullScreenFlags = flags & SDL_WINDOW_FULLSCREEN_DESKTOP ;
+		//flags |= SDL_WINDOW_HIDDEN; // only start hidden seems to work properly
 
 		SDL_Window* window = SDL_CreateWindow(titlecp, x, y, w, h, flags);
 		auto engineBase = GetModuleHandleA("hw.dll");
@@ -659,8 +662,8 @@ void DLLEXPORT HUD_Frame(double time)
 	memset(cl_visedicts, 0, sizeof(cl_visedicts));
 
 	// and now that vis entities have been retrieved from server, we close leaf access to goldsrc :3
-	// this fixes goldsrc infecting world model with its dirty r_visframecount when saving. hopefully thats
-	// the end of my battle with vis frames.
+	// this fixes goldsrc infecting world model with its dirty r_visframecount when saving.
+	// not much of a worry anymore since we host our own leafs.
 	if (engine_cl->worldmodel && restore_numleafs)
 		engine_cl->worldmodel->numleafs = 0;
 }
@@ -937,16 +940,16 @@ extern "C" void DLLEXPORT F(void* pv)
 		IN_ClearStates,
 		IN_Accumulate,
 		CL_CreateMove,
-		CL_IsThirdPerson,
-		CL_CameraOffset,
+		nullptr, // CL_IsThirdPerson : only used by goldsrc to draw viewmodel, we draw it on our own so yeah
+		nullptr, // CL_CameraOffset : not called by engine (not called by anyone as a matter of fact)
 		KB_Find,
-		CAM_Think,
+		nullptr, // CAM_Think : empty
 		V_CalcRefdef,
 		HUD_AddEntity,
 		HUD_CreateEntities,
 		HUD_DrawNormalTriangles,
-		HUD_DrawTransparentTriangles,
-		HUD_StudioEvent,
+		nullptr, // HUD_DrawTransparentTriangles : unreliable cause doesnt get called if r_drawentities = 0
+		nullptr, // HUD_StudioEvent : our studiomdl renderer calls this instead
 		HUD_PostRunCmd,
 		HUD_Shutdown,
 		HUD_TxferLocalOverrides,
@@ -958,7 +961,7 @@ extern "C" void DLLEXPORT F(void* pv)
 		HUD_Frame,
 		HUD_Key_Event,
 		HUD_TempEntUpdate,
-		HUD_GetUserEntity,
+		nullptr, //HUD_GetUserEntity : only used by goldsrc to get beam attachment entity
 		HUD_VoiceStatus,
 		HUD_DirectorMessage,
 		HUD_GetStudioModelInterface,

@@ -31,8 +31,3 @@ int DLLEXPORT CL_IsThirdPerson()
 {
 	return (gHUD.m_iCameraMode ? 1 : 0) || (g_iUser1 && (g_iUser2 == gEngfuncs.GetLocalPlayer()->index) );
 }
-
-void DLLEXPORT CL_CameraOffset( float *ofs )
-{
-	VectorCopy( vec3_origin, ofs );
-}

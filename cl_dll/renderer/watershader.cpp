@@ -285,7 +285,7 @@ void CWaterShader::AddEntity(cl_entity_t* entity)
 	m_iNumWaterEntities++;
 
 	int isurfacecount = 0;
-	msurface_t* psurfaces = engine_cl->worldmodel->surfaces + entity->model->firstmodelsurface;
+	clientmsurface_t* psurfaces = BSPWorld_Model::m_pWorldSurfaces + entity->model->firstmodelsurface;
 	for (int i = 0; i < entity->model->nummodelsurfaces; i++)
 	{
 		int j = 0;
@@ -308,7 +308,7 @@ void CWaterShader::AddEntity(cl_entity_t* entity)
 	}
 
 	// Allocate array of pointers
-	pWater->surfaces = (msurface_t**)malloc(sizeof(msurface_t*) * isurfacecount);
+	pWater->surfaces = (clientmsurface_t**)malloc(sizeof(clientmsurface_t*) * isurfacecount);
 
 	for (int i = 0; i < entity->model->nummodelsurfaces; i++)
 	{
@@ -640,7 +640,7 @@ void CWaterShader::DrawScene(ref_params_t* pparams, bool isrefracting)
 
 	// Draw world
 	if(m_pCvarWaterForceExpensive->value)
-		gBSPRenderer.DrawNormalTriangles_Cheap(true);
+		gBSPRenderer.DrawNormalTriangles_Cheap(true, m_pCvarWaterForceReflectEntities->value);
 	else
 		gBSPRenderer.DrawNormalTriangles_Cheap(false);
 
@@ -648,7 +648,7 @@ void CWaterShader::DrawScene(ref_params_t* pparams, bool isrefracting)
 	{
 		g_StudioRenderer.StudioDrawModels(false);
 
-		g_BeamRenderer.R_DrawBeams(engine_cl->time - engine_cl->oldtime);
+		gPropManager.RenderProps();
 	}
 
 	// Render any props
@@ -876,7 +876,7 @@ void CWaterShader::DrawWater(void)
 
 		for (int j = 0; j < m_pCurWater->numsurfaces; j++)
 		{
-			gBSPRenderer.DrawPolyFromArray(engine_cl->worldmodel->surfaces, m_pCurWater->surfaces[j]);
+			gBSPRenderer.DrawPolyFromArray(BSPWorld_Model::m_pWorldSurfaces, m_pCurWater->surfaces[j]);
 		}
 		if (onlyrenderthiswater)
 			break;

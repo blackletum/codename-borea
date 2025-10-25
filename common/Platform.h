@@ -43,6 +43,7 @@
 #include <cctype>
 #include <climits>
 #include <cmath>
+#include <vector>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>

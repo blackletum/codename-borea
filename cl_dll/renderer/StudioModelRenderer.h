@@ -237,7 +237,7 @@ public:
 	static bool StudioCullBBox(const Vector& mins, const Vector& maxs);
 
 	static void StudioSetupLighting(void);
-	static bool StudioRecursiveLightPoint(entextrainfo_t* ext, mnode_t* node, Vector start, Vector end, Vector& color);
+	static bool StudioRecursiveLightPoint(entextrainfo_t* ext, clientmnode_t* node, Vector start, Vector end, Vector& color);
 
 	static void StudioSwapEngineCache(void);
 

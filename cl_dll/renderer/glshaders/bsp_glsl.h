@@ -281,6 +281,9 @@ const char glsl330_world_fp[] = R"(
 	uniform vec3 light_pos;
 	uniform vec3 light_color;
 	uniform float light_radius;
+
+	uniform int sunshadow_fadedist;
+	uniform int sunshadow_strength;
 	
 	uniform bool lightmap_pass;
 	uniform bool texture_pass;
@@ -343,7 +346,7 @@ const char glsl330_world_fp[] = R"(
 		
 		float shadow = depthDifference > 0.0 ? 1.0 : 0.0;
 		
-		float fadeDistance = 0.02;
+		float fadeDistance = float(sunshadow_fadedist) / 1000.0;
 		float shadowFade = 1.0 - smoothstep(0.0, fadeDistance, abs(depthDifference));
 		
 		shadow *= shadowFade;
@@ -363,7 +366,7 @@ const char glsl330_world_fp[] = R"(
 		        shadow += sampleSunShadow(shadowMap, projCoord + vec2(x, y) * texelSize);        
 		    }    
 		}
-		return max(shadow / 25.0, 0.5);
+		return max(shadow / 25.0, 1.0 - float(sunshadow_strength) / 100.0);
 	}
 
 	float sampleCubeShadowVariance(samplerCube shadowMap, vec3 projCoord)

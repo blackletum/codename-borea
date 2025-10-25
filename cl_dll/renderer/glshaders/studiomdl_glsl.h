@@ -355,9 +355,12 @@ char glsl330_studiomdl_frag[] = R"(
 				texcolor.rgb *= 2;
 		}
 
-		if (fogend_n_fogactive_n_lightdebug.y != 0)
+		if (fogend_n_fogactive_n_lightdebug.y != 0)  // fog blend
 		{
-			gl_FragColor = mix( (texcolor * vertexdiffusecolor) + (texcolor * vertexspecularcolor), vec4(fogcolor_n_fogstart.xyz, 1), 1.0 - GetFogFactor() ); // fog blend
+			if(!studiodecal)
+				gl_FragColor = mix( (texcolor * vertexdiffusecolor) + (texcolor * vertexspecularcolor), vec4(fogcolor_n_fogstart.xyz, 1), 1.0 - GetFogFactor() );
+			else
+				gl_FragColor = mix( texcolor, vec4(fogcolor_n_fogstart.xyz, 1), 1.0 - GetFogFactor() );
 		}
 		else
 		{

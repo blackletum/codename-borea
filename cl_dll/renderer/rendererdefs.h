@@ -222,7 +222,7 @@ struct particle_system_t
 	particle_system_t* parentsystem;
 
 	cl_texture_t* texture;
-	mleaf_t* leaf;
+	clientmleaf_t* leaf;
 
 	particle_system_t* next;
 	particle_system_t* prev;
@@ -294,13 +294,12 @@ struct cl_particle_t
 #define MAX_MAP_LEAFS 65534
 #define DEPTHMAP_RESOLUTION 256
 #define MAX_MAP_TEXTURES 512
-#define LIGHTMAP_RESOLUTION 2048
+#define LIGHTMAP_RESOLUTION 1024
 
-#define BLOCK_WIDTH 128
-#define BLOCK_HEIGHT 128
+#define BLOCK_SIZE 128
 
-#define LIGHTMAP_NUMCOLUMNS (LIGHTMAP_RESOLUTION / BLOCK_WIDTH)
-#define LIGHTMAP_NUMROWS (LIGHTMAP_RESOLUTION / BLOCK_HEIGHT)
+#define LIGHTMAP_NUMCOLUMNS (LIGHTMAP_RESOLUTION / BLOCK_SIZE)
+#define LIGHTMAP_NUMROWS (LIGHTMAP_RESOLUTION / BLOCK_SIZE)
 #define MAX_SPOTLIGHT_TEXTURES 16
 
 #define MAX_GOLDSRC_DLIGHTS 32
@@ -424,7 +423,7 @@ typedef struct customdecalpoly_s
 	customdecalvert_t* pverts;
 	int numverts;
 
-	msurface_t* surface;
+	clientmsurface_t* surface;
 	cl_entity_t* entity;
 } customdecalpoly_t;
 
@@ -563,7 +562,7 @@ struct cl_water_t
 	GL_TextureHandler* refract;
 	GL_TextureHandler* reflect;
 
-	msurface_t** surfaces;
+	clientmsurface_t** surfaces;
 	int numsurfaces;
 
 	bool rendered;
@@ -838,9 +837,9 @@ extern engine_studio_api_t IEngineStudio;
 extern void ClampColor(int r, int g, int b, color24* out);
 extern void FilenameFromPath(const char* szin, char* szout);
 
-extern mleaf_t* Mod_PointInLeaf(Vector p, model_t* model);
-extern byte* Mod_LeafPVS(mleaf_t* leaf, model_t* model);
-extern void R_MarkLeaves(mleaf_t* pLeaf);
+extern clientmleaf_t* Mod_PointInLeaf(Vector p);
+extern byte* Mod_LeafPVS(clientmleaf_t* leaf);
+extern void R_MarkLeaves(clientmleaf_t* pLeaf);
 
 extern void HUD_PrintSpeeds(void);
 extern void RenderersDumpInfo(void);
@@ -868,7 +867,7 @@ extern inline void DotProductSub(float* result, Vector* v0, Vector* v1, float* s
 extern void VectorRotate(const Vector& in1, const matrix3x4_t &in2, Vector& out);
 extern void VectorIRotate(const Vector& in1, const matrix3x4_t &in2, Vector& out);
 extern void VectorRotateAbs(const Vector& in1, const matrix3x4_t& in2, Vector& out);
-extern void SV_FindTouchedLeafs(entextradata_t* ent, mnode_t* node);
+extern void SV_FindTouchedLeafs(entextradata_t* ent, clientmnode_t* node);
 
 extern byte* ResizeArray(byte* pOriginal, int iSize, int iCount);
 

@@ -196,10 +196,6 @@ extern ref_params_t* r_refdef;
 
 void DLLEXPORT HUD_DrawNormalTriangles()
 {
-	extern int restore_numleafs;
-	if (restore_numleafs)
-		engine_cl->worldmodel->numleafs = restore_numleafs;
-
 	 // god fucking dammit developer cvar, stop messing up our RENDERER FOR CHRIST SAKE
 	g_GlobalGLState.ResetStates();
 	g_GlobalGLState.SetBlend(false);
@@ -219,8 +215,6 @@ void DLLEXPORT HUD_DrawNormalTriangles()
 	GL_VertexArrayObject::ResetVAOBinding();
 
 	r_refdef->onlyClientDraw = 0; // for sound
-
-	engine_cl->worldmodel->numleafs = 0; // so engine's r_visframecount doesnt infestate into the world
 }
 
 /*

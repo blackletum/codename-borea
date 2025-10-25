@@ -414,6 +414,18 @@ void CPropManager::ParseEntities(void)
 		strcpy(gBSPRenderer.m_szSkyName, szSky);
 	else
 		sprintf(gBSPRenderer.m_szSkyName, "desert");
+
+	char* shadowstrength = ValueForKey(&m_pBSPEntities[0], "sunshadow_strength");
+	if (shadowstrength)
+		gBSPRenderer.m_iSunShadow_Strength = atoi(shadowstrength);
+	else
+		gBSPRenderer.m_iSunShadow_Strength = 30;
+
+	shadowstrength = ValueForKey(&m_pBSPEntities[0], "sunshadow_fadedist");
+	if (shadowstrength)
+		gBSPRenderer.m_iSunShadow_FadeDist = atoi(shadowstrength);
+	else
+		gBSPRenderer.m_iSunShadow_FadeDist = 20;
 }
 
 /*
@@ -471,16 +483,16 @@ void CPropManager::LoadEntVars(void)
 			pValue = ValueForKey(&bspent, "studioshadows");
 			if (pValue)
 			{
-				modellight.curstate.eflags = 255; //whatever
+				int on_off = atoi(pValue);
+				modellight.curstate.eflags = on_off; //whatever
 			}
 
-			model_t* pWorld = engine_cl->worldmodel;
-			mleaf_t* pLeaf = Mod_PointInLeaf(modellight.origin, pWorld);
+			clientmleaf_t* pLeaf = Mod_PointInLeaf(modellight.origin);
 
 			if (pLeaf)
 			{
 				// In-void entities can go eat a dick
-				modellight.visframe = pLeaf - pWorld->leafs - 1;
+				modellight.visframe = pLeaf - BSPWorld_Model::m_pWorldLeafs - 1;
 				m_pModelLights.emplace_back(modellight);
 			}
 
@@ -563,6 +575,8 @@ void CPropManager::LoadEntVars(void)
 			propentity.index = m_pEntities.size() + 4096;
 			propentity.topnode = (struct mnode_s*)pExtraInfo;
 			propentity.visframe = -1;
+
+			propentity.model = IEngineStudio.Mod_ForName(pValue, 0);
 
 			pExtraInfo->pExtraData = m_pCurrentExtraData;
 
@@ -1042,13 +1056,13 @@ void CPropManager::RenderProps(bool bSkybox)
 	if (g_StudioRenderer.m_pCvarDrawEntities->value < 1)
 		return;
 
-	if (m_pCvarDrawClientEntities->value == 2)
-		g_GlobalGLState.SetDepthTest(false);
-
 	if (m_pStaticModelVAO)
 		m_pStaticModelVAO->BindVAO();
 	else
 		return;
+
+	if (m_pCvarDrawClientEntities->value == 2)
+		g_GlobalGLState.SetDepthTest(false);
 
 	g_StudioRenderer.m_ModelShader->Bind();
 
@@ -1269,7 +1283,7 @@ bool CPropManager::SetupCable(cabledata_t* cable, entity_t* entity)
 	pdata.absmax = cable->vmaxs;
 	pdata.absmin = cable->vmins;
 
-	SV_FindTouchedLeafs(&pdata, engine_cl->worldmodel->nodes);
+	SV_FindTouchedLeafs(&pdata, BSPWorld_Model::m_pWorldNodes);
 
 	memcpy(cable->leafnums, pdata.leafnums, sizeof(short) * MAX_ENT_LEAFS);
 	cable->num_leafs = pdata.num_leafs;

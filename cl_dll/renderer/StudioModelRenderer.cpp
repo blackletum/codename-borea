@@ -48,6 +48,8 @@ Transparency code by Neil "Jed" Jedrzejewski
 
 #include "StudioModelRenderer.h"
 
+#include "BSPModel_Gen.h"
+
 #include "Exports.h"
 
 
@@ -871,6 +873,7 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 		return;
 
 	m_pCurrentEntity = pEnt;
+	m_pRenderModel = pEnt->model;
 
 	if (IsEntityTransparent(m_pCurrentEntity) && m_pCurrentEntity->curstate.renderamt == NULL)
 		return;
@@ -2228,8 +2231,6 @@ void CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 		return;
 
 	(*m_protationmatrix) = m_pCurrentStudioEntData->rotationmatrix;
-	m_ModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-	m_ModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 	if (flags & STUDIO_RENDER)
 	{
@@ -2237,6 +2238,8 @@ void CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 		if (StudioCheckBBox() && m_pCurrentEntity->index != gEngfuncs.GetLocalPlayer()->index)
 			return;
 	}
+
+	m_ModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 	//enable buffers here so we dont bind buffers of models we won't draw
 	if (!m_pCurrentStudioMDL->IsBufferEnabled())
@@ -2757,7 +2760,7 @@ void CStudioModelRenderer::StudioSetupLighting(void)
 		end.z = point.z - 8136;
 
 	if (engine_cl->worldmodel->lightdata && !gBSPRenderer.r_fullbright->value)
-		iret = StudioRecursiveLightPoint(pInfo, engine_cl->worldmodel->nodes, point, end, color);
+		iret = StudioRecursiveLightPoint(pInfo, BSPWorld_Model::m_pWorldNodes, point, end, color);
 	else
 	{
 		iret = true;
@@ -2804,7 +2807,7 @@ StudioRecursiveLightPoint
 
 ====================
 */
-bool CStudioModelRenderer::StudioRecursiveLightPoint(entextrainfo_t* ext, mnode_t* node, Vector start, Vector end, Vector& color)
+bool CStudioModelRenderer::StudioRecursiveLightPoint(entextrainfo_t* ext, clientmnode_t* node, Vector start, Vector end, Vector& color)
 {
 	float front, back = 0, frac;
 	bool side;
@@ -3303,17 +3306,12 @@ void CStudioModelRenderer::StudioDrawExternalEntity(cl_entity_t* pEntity, bool b
 	m_pCurrentEntity = pEntity;
 
 	m_pCurrentExtraData = ((entextrainfo_t*)m_pCurrentEntity->topnode)->pExtraData;
-	m_pStudioHeader = m_pCurrentExtraData->pModelData->pHdr;
-	m_pCurrentStudioMDL = m_pCurrentExtraData->pModelData->pCacheModel;
+	m_pStudioHeader = (studiohdr_t*)m_pCurrentEntity->model->cache.data;
+	m_pCurrentStudioMDL = (StudioMDL_Model*)m_pCurrentEntity->model->entities;
 	m_pVBOHeader = &m_pCurrentExtraData->pModelData->pVBOHeader;
 
 	if (!m_pStudioHeader || !m_pCurrentStudioMDL || !m_pVBOHeader)
 		return;
-
-	if (!m_pStudioHeader->version) //i have just no idea why studio headers get corrupted. i dont get it. all i know is that this happens to models that have already been loaded.
-	{
-		m_pStudioHeader = m_pCurrentExtraData->pModelData->pHdr = (studiohdr_t*)IEngineStudio.Mod_Extradata(m_pCurrentStudioMDL->GetEngineModel());
-	}
 
 	if (m_pStudioHeader->numbodyparts == 0)
 		return;
@@ -3389,7 +3387,7 @@ void CStudioModelRenderer::StudioSetupLightingEXT(void)
 		end.z = point.z - 8136;
 
 	if (engine_cl->worldmodel->lightdata && !gBSPRenderer.r_fullbright->value)
-		iret = StudioRecursiveLightPoint(pInfo, engine_cl->worldmodel->nodes, point, end, color);
+		iret = StudioRecursiveLightPoint(pInfo, BSPWorld_Model::m_pWorldNodes, point, end, color);
 	else
 	{
 		iret = true;
@@ -3696,7 +3694,7 @@ void CStudioModelRenderer::StudioSaveUniqueData(entextradata_t* pExtraData)
 
 	pExtraData->modelmatrix = modelview;
 
-	SV_FindTouchedLeafs(pExtraData, engine_cl->worldmodel->nodes);
+	SV_FindTouchedLeafs(pExtraData, BSPWorld_Model::m_pWorldNodes);
 }
 
 /*
@@ -4528,7 +4526,6 @@ void CStudioModelRenderer::StudioDrawModelSolid(void)
 	if (!m_pCurrentStudioMDL->IsBufferEnabled())
 		m_pCurrentStudioMDL->EnableBuffers();
 
-	m_ModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
 	m_ModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelSolidShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
@@ -4641,17 +4638,12 @@ void CStudioModelRenderer::StudioDrawExternalEntitySolid(cl_entity_t* pEntity)
 	m_pCurrentEntity = pEntity;
 
 	m_pCurrentExtraData = ((entextrainfo_t*)m_pCurrentEntity->topnode)->pExtraData;
-	m_pStudioHeader = m_pCurrentExtraData->pModelData->pHdr;
-	m_pCurrentStudioMDL = m_pCurrentExtraData->pModelData->pCacheModel;
+	m_pStudioHeader = (studiohdr_t*)m_pCurrentEntity->model->cache.data;
+	m_pCurrentStudioMDL = (StudioMDL_Model*)m_pCurrentEntity->model->entities;
 	m_pVBOHeader = &m_pCurrentExtraData->pModelData->pVBOHeader;
 
 	if (!m_pStudioHeader || !m_pCurrentStudioMDL || !m_pVBOHeader)
 		return;
-
-	if (!m_pStudioHeader->version) //i have just no idea why studio headers get corrupted. i dont get it. all i know is that this happens to models that have already been loaded.
-	{
-		m_pStudioHeader = m_pCurrentExtraData->pModelData->pHdr = (studiohdr_t*)IEngineStudio.Mod_Extradata(m_pCurrentStudioMDL->GetEngineModel());
-	}
 
 	m_vMins = m_pCurrentExtraData->absmin;
 	m_vMaxs = m_pCurrentExtraData->absmax;

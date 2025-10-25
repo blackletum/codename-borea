@@ -50,6 +50,8 @@ Written by Andrew Lucas, Richard Rohac, BUzer, Laurie, Botman and Id Software
 #include "opengl_utils/GL_ShadowMap.h"
 #include "opengl_utils/GL_StateHandler.h"
 
+#include "BSPModel_Gen.h"
+
 
 #ifndef BOX_ON_PLANE_SIDE
 #define BOX_ON_PLANE_SIDE(emins, emaxs, p)                                                                 \
@@ -68,7 +70,7 @@ glstate_t g_savedGLState;
 extern int g_iFlashLight;
 
 int r_visframecount;
-mleaf_t* r_oldviewleaf;
+clientmleaf_t* r_oldviewleaf;
 
 model_t* cl_sprite_dot;
 model_t* cl_sprite_lightning;
@@ -290,17 +292,17 @@ int IsPitchReversed(float pitch)
 //	MOD_PointInLeaf
 //
 //==========================
-mleaf_t* Mod_PointInLeaf(Vector p, model_t* model)
+clientmleaf_t* Mod_PointInLeaf(Vector p)
 {
-	mnode_t* node;
+	clientmnode_t* node;
 	float d;
 	mplane_t* plane;
 
-	node = model->nodes;
+	node = BSPWorld_Model::m_pWorldNodes;
 	while (1)
 	{
 		if (node->contents < 0)
-			return (mleaf_t*)node;
+			return (clientmleaf_t*)node;
 		plane = node->plane;
 		d = DotProduct (p,plane->normal) - plane->dist;
 		if (d > 0)
@@ -380,10 +382,10 @@ SV_FindTouchedLeafs
 
 ===============
 */
-void SV_FindTouchedLeafs(entextradata_t* ent, mnode_t* node)
+void SV_FindTouchedLeafs(entextradata_t* ent, clientmnode_t* node)
 {
 	mplane_t* splitplane;
-	mleaf_t* leaf;
+	clientmleaf_t* leaf;
 	int sides;
 	int leafnum;
 
@@ -391,14 +393,13 @@ void SV_FindTouchedLeafs(entextradata_t* ent, mnode_t* node)
 		return;
 
 	// add an efrag if the node is a leaf
-	model_t* world = engine_cl->worldmodel;
 	if (node->contents < 0)
 	{
 		if (ent->num_leafs == MAX_ENT_LEAFS)
 			return;
 
-		leaf = (mleaf_t*)node;
-		leafnum = leaf - world->leafs - 1;
+		leaf = (clientmleaf_t*)node;
+		leafnum = leaf - BSPWorld_Model::m_pWorldLeafs - 1;
 
 		ent->leafnums[ent->num_leafs] = leafnum;
 		ent->num_leafs++;
@@ -424,14 +425,14 @@ Mod_DecompressVis
 ===================
 */
 
-byte* Mod_DecompressVis(byte* in, model_t* model)
+byte* Mod_DecompressVis(byte* in)
 {
 	static byte decompressed[MAX_MAP_LEAFS / 8];
 	int c;
 	byte* out;
 	int row;
 
-	row = (model->numleafs + 7) >> 3;
+	row = (BSPWorld_Model::m_iNumWorldLeafs + 7) >> 3;
 	out = decompressed;
 
 	if (!in)
@@ -464,12 +465,12 @@ byte* Mod_DecompressVis(byte* in, model_t* model)
 	return decompressed;
 }
 
-byte* Mod_LeafPVS(mleaf_t* leaf, model_t* model)
+byte* Mod_LeafPVS(clientmleaf_t* leaf)
 {
-	if (leaf == model->leafs)
-		return Mod_DecompressVis(NULL, model);
+	if (leaf == BSPWorld_Model::m_pWorldLeafs)
+		return Mod_DecompressVis(NULL);
 
-	return Mod_DecompressVis(leaf->compressed_vis, model);
+	return Mod_DecompressVis(leaf->compressed_vis);
 }
 
 /*
@@ -477,9 +478,8 @@ byte* Mod_LeafPVS(mleaf_t* leaf, model_t* model)
 R_MarkLeaves
 ===============
 */
-void R_MarkLeaves(mleaf_t* pLeaf)
+void R_MarkLeaves(clientmleaf_t* pLeaf)
 {
-	model_t* pWorld = engine_cl->worldmodel;
 	static cl_entity_t* worldent = gEngfuncs.GetEntityByIndex(1);
 	static byte solid[4096];
 	static cvar_t* r_novis = gEngfuncs.pfnGetCvarPointer("r_novis");
@@ -499,23 +499,23 @@ void R_MarkLeaves(mleaf_t* pLeaf)
 		if (r_novis->value == 0)
 		{
 			// Get current vis data
-			gBSPRenderer.m_pPVS = Mod_LeafPVS(pLeaf, pWorld);
+			gBSPRenderer.m_pPVS = Mod_LeafPVS(pLeaf);
 		}
 		else
 		{
 		label:
-			memset(solid, 255, (pWorld->numleafs + 7) >> 3);
+			memset(solid, 255, (BSPWorld_Model::m_iNumWorldLeafs + 7) >> 3);
 			gBSPRenderer.m_pPVS = solid;
 		}
 	}
 
-	if (pWorld->numleafs > 0)
+	if (BSPWorld_Model::m_iNumWorldLeafs > 0)
 	{
-		for (int i = 0; i < pWorld->numleafs; i++)
+		for (int i = 0; i < BSPWorld_Model::m_iNumWorldLeafs; i++)
 		{
 			if (CHECKVISBIT(gBSPRenderer.m_pPVS, i))
 			{
-				mnode_t* node = (mnode_t*)&pWorld->leafs[i + 1];
+				clientmnode_t* node = (clientmnode_t*)&BSPWorld_Model::m_pWorldLeafs[i + 1];
 				do
 				{
 					if (node->visframe == r_visframecount)
@@ -725,7 +725,7 @@ void DrawQuadDebugTest()
 	gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 0);
 	gBSPRenderer.m_pScreenQuadVAO->BindVAO();
 
-	gBSPRenderer.BindGLTexture(GL_TEXTURE0, gBSPRenderer.m_pSunShadowMap->GetTextureID());
+	gBSPRenderer.BindGLTexture(GL_TEXTURE0, gBSPRenderer.m_iEngineLightmapIndex);
 
 	g_GlobalGLState.SetBlend(false);
 	g_GlobalGLState.SetCullFace(false);
@@ -853,7 +853,7 @@ void R_DrawNormalTriangles(void)
 	
 	R_DrawMainView();
 
-	//just for debugging the sun's shadowmap
+	//just for debugging certain textures
 	//DrawQuadDebugTest();
 
 	// Restore fog params

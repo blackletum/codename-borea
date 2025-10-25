@@ -158,7 +158,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
-    if (fb_width == 0 || fb_height == 0)
+    if (fb_width == 0 || fb_height == 0 || !draw_data->CmdListsCount)
         return;
 
     // Backup GL state

@@ -93,7 +93,7 @@ public:
 	void Generate_Pointlight_Shadow(void);
 	void DrawWorldSolid(void);
 
-	void RecursiveWorldNodeSolid(mnode_t* node);
+	void RecursiveWorldNodeSolid(clientmnode_t* node);
 	void DrawBrushModelSolid(cl_entity_t* pEntity);
 
 	bool IsInPotentiallyVisibleSet(int visframe) { return CHECKVISBIT(m_pPVS, visframe); };
@@ -102,7 +102,7 @@ public:
 
 	void RendererRefDef(ref_params_t* pparams);
 	void DrawNormalTriangles(bool draw_world = true);
-	void DrawNormalTriangles_Cheap(bool draw_world = true);
+	void DrawNormalTriangles_Cheap(bool draw_world = true, bool draw_ents = true);
 	void DrawTransparentTriangles(void);
 	void RenderFirstPass();
 	void RenderFinalPasses();
@@ -138,16 +138,16 @@ public:
 	void GenerateVertexArray(void);
 
 	void DrawBrushModel(cl_entity_t* pEntity, bool bStatic = false);
-	void RecursiveWorldNode(mnode_t* node);
+	void RecursiveWorldNode(clientmnode_t* node);
 
 	void UpdateLightStylesLM();
 
-	void SurfaceToChain(msurface_t* psurfbase, msurface_t* s);
-	void DrawPolyFromArray(msurface_t* pbaseptr, msurface_t* psurf);
+	void SurfaceToChain(clientmsurface_t* psurfbase, clientmsurface_t* s);
+	void DrawPolyFromArray(clientmsurface_t* pbaseptr, clientmsurface_t* psurf);
 
 	bool DynamicLighted(const Vector& vmins, const Vector& vmaxs);
 	void DrawDynamicLightsForWorld(void);
-	void RecursiveWorldNodeLight(mnode_t* node);
+	void RecursiveWorldNodeLight(clientmnode_t* node);
 	void DrawDynamicLightsForEntity(cl_entity_t* pEntity);
 	void DrawEntityFacesForLight(cl_entity_t* pEntity);
 
@@ -166,7 +166,7 @@ public:
 
 	void AnimateLight(void);
 	void UploadLightmaps(void);
-	void BuildLightmap(msurface_t* surf, int surfindex, color24* out);
+	void BuildLightmap(clientmsurface_t* surf, int surfindex, color24* out);
 	void AddLightStyle(int iNum, const char* szStyle);
 
 	void BindGLTexture(GLenum texture, GLuint id);
@@ -186,7 +186,7 @@ public:
 	bool CullDecalBBox(Vector mins, Vector maxs);
 	void CreateDecal(Vector endpos, Vector pnormal, const char* name, int persistent = 0, bool fromwad = false, float angle = 0);
 	void RecursiveCreateDecal(mnode_t* node, decalgroupentry_t* texptr, customdecal_t* pDecal, Vector endpos, Vector pnormal, float angle = 0);
-	void DecalSurface(msurface_t* surf, decalgroupentry_t* texptr, cl_entity_t* pEntity, customdecal_t* pDecal, Vector endpos, Vector pnormal, float angle = 0);
+	void DecalSurface(clientmsurface_t* surf, decalgroupentry_t* texptr, cl_entity_t* pEntity, customdecal_t* pDecal, Vector endpos, Vector pnormal, float angle = 0);
 
 	int MsgCustomDecal(const char* pszName, int iSize, void* pbuf);
 
@@ -231,7 +231,7 @@ public:
 	cl_entity_t* m_pCurrentEntity;
 	cl_dlight_t* m_pCurrentDynLight;
 	byte* m_pPVS;
-	mleaf_t* m_pViewLeaf;
+	clientmleaf_t* m_pViewLeaf;
 
 	cl_entity_t* m_pWorldEnt;
 
@@ -281,6 +281,7 @@ public:
 	cvar_t* m_pCvarDetailTextures;
 	cvar_t* m_pCvarDynamic;
 	cvar_t* m_pCvarDrawWorld;
+	cvar_t* m_pCvarLightStyles;
 	cvar_t* m_pCvarWireFrame;
 	cvar_t* m_pCvarShadows;
 	cvar_t* m_pCvarFlashLightDepthRes;
@@ -317,7 +318,7 @@ public:
 	color24 m_pBlockLights[BLOCKLIGHTS_SIZE];
 	int m_iNumLightmaps;
 
-	color24 m_pEngineLightmaps[MAX_LIGHTMAPS * BLOCK_WIDTH * BLOCK_HEIGHT];
+	color24 m_pEngineLightmaps[MAX_LIGHTMAPS * BLOCK_SIZE * BLOCK_SIZE];
 	GLuint m_iEngineLightmapIndex;
 
 	brushface_t** m_pSurfacePointersArray;
@@ -333,6 +334,9 @@ public:
 
 	double m_fShadowGenerationTime;
 	double m_fMainWorldRenderTime;
+
+	int m_iSunShadow_Strength;
+	int m_iSunShadow_FadeDist;
 
 	char m_szSkyName[64];
 	char m_szMapName[64];
@@ -381,6 +385,8 @@ public:
 		world_light_pos,
 		world_light_color,//red green blue
 		world_light_radius,
+		world_sunshadow_fadedist,
+		world_sunshadow_strength,
 		world_renderorigin,
 		world_renderforward,
 		world_renderright,
