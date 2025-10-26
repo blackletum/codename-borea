@@ -58,7 +58,6 @@ extern float g_clampTurnSpeed;
 
 float saved_vm_frame = 0;
 int saved_vm_sequence = -1;
-extern float weaponstarttime;
 
 /// USER-DEFINED SERVER MESSAGE HANDLERS
 
@@ -421,7 +420,7 @@ int CHud::MsgFunc_KickPunch( const char *pszName, int iSize, void *pbuf )
 	{
 		cl_entity_s* vm = &engine_cl->viewent;
 		saved_vm_sequence = vm->curstate.sequence;
-		saved_vm_frame = weaponstarttime;
+		saved_vm_frame = engine_cl->weaponstarttime;
 	}
 
 	return 1;

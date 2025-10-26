@@ -65,9 +65,6 @@ extern engine_studio_api_t IEngineStudio;
 int giR, giG, giB;
 
 extern int giOldWeapons;
-
-float weaponstarttime = 0.f; //goldsrc uses gEngfuncs.GetClientTime() to determine weaponstarttime, so lets just use our own weaponstarttime
-
 int g_iUseEnt;
 std::string g_szUseEntClassname;
 
@@ -269,7 +266,7 @@ int __MsgFunc_SendAnim(const char* pszName, int iSize, void* pbuf)
 	int iBlend = READ_BYTE();
 
 	p->latched.prevsequence = p->curstate.sequence;
-	weaponstarttime = 0;
+	engine_cl->weaponstarttime = 0;
 
 	gEngfuncs.pfnWeaponAnim(iAnim, iBody);
 

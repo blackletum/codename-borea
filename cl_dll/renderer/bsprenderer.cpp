@@ -1515,8 +1515,8 @@ void CBSPRenderer::GenerateVertexArray(void)
 						}
 					}
 
-					scale_speed[0] = fabs((pEndVert->texcoord[0]) - (pVertexes[j].texcoord[0])) / (pEndVert->pos - pVertexes[j].pos).Length();
-					scale_speed[1] = fabs((pEndVert->texcoord[1]) - (pVertexes[j].texcoord[1])) / (pEndVert->pos - pVertexes[j].pos).Length();
+					scale_speed[0] = fabs((pEndVert->texcoord[0]) - (m_pBufferData[ext->start_vertex].texcoord[0])) / (pEndVert->pos - m_pBufferData[ext->start_vertex].pos).Length();
+					scale_speed[1] = fabs((pEndVert->texcoord[1]) - (m_pBufferData[ext->start_vertex].texcoord[1])) / (pEndVert->pos - m_pBufferData[ext->start_vertex].pos).Length();
 
 					auto fa = &surfaces[i];
 

@@ -87,7 +87,6 @@ bool g_Paused = false;
 
 extern float saved_vm_frame;
 extern int saved_vm_sequence;
-extern float weaponstarttime;
 
 Vector v_client_aimangles;
 Vector ev_punchangle;
@@ -1022,7 +1021,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 
 		if (saved_vm_frame)
 		{
-			weaponstarttime = saved_vm_frame;
+			engine_cl->weaponstarttime = saved_vm_frame;
 			view->latched.prevframe = saved_vm_frame;
 			view->latched.sequencetime = saved_vm_frame;
 		}
@@ -1972,7 +1971,7 @@ void V_CalcSpectatorRefdef ( struct ref_params_s * pparams )
 				if ( lastViewModelIndex )
 				{
 					gEngfuncs.pfnWeaponAnim(0,0);	// reset weapon animation
-					weaponstarttime = 0;
+					engine_cl->weaponstarttime = 0;
 				}
 				else
 				{
