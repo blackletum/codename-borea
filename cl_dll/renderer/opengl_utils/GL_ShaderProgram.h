@@ -233,7 +233,7 @@ public:
 
 private:
 
-	static const GLuint CompileShader(const char* source, const GLuint type);
+	static const GLuint CompileShader(const char* source, const GLuint type, std::string &errormsg);
 	void ShaderPreLink();
 	void ShaderPostLink();
 

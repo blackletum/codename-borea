@@ -5524,7 +5524,7 @@ void CBasePlayer :: UpdateClientData()
 	if (m_iUseEnt != idx)
 	{
 		MESSAGE_BEGIN(MSG_ONE, gmsgUseEnt, NULL, pev);
-		WRITE_BYTE(idx);
+		WRITE_SHORT(idx);
 		if (pObject)
 			WRITE_STRING(STRING(pObject->pev->classname));
 		else

@@ -235,7 +235,11 @@ void CBSPRenderer::Init(void)
 	texgamma = gEngfuncs.pfnGetCvarPointer("texgamma");
 	r_fullbright = gEngfuncs.pfnGetCvarPointer("r_fullbright");
 	gl_fog = gEngfuncs.pfnGetCvarPointer("gl_fog");
+#ifndef HL25_UPDATE
 	gl_widescreen_yfov = CVAR_CREATE("gl_widescreen_yfov", "1", FCVAR_ARCHIVE);
+#else
+	gl_widescreen_yfov = gEngfuncs.pfnGetCvarPointer("gl_widescreen_yfov");
+#endif
 
 	//
 	// Load shaders

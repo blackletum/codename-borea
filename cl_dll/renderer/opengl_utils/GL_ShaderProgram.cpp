@@ -15,13 +15,99 @@
 
 extern SDL_Window* hlWindow;
 
-const std::string glsl330_engine_defines_vertex = R"(
+const std::string glsl_version130 = R"(
 
-	//version 330 compatibility
-	//#define GLSL_330
+#version 130
+#define GLSL_130
 
-	#version 130
-	#define GLSL_130
+)";
+
+const std::string glsl_version140 = R"(
+
+#version 140
+#define GLSL_140
+
+)";
+
+const std::string glsl_version150 = R"(
+
+#version 150
+#define GLSL_150
+
+)";
+
+const std::string glsl_version330 = R"(
+
+#version 330 compatibility
+#define GLSL_330
+
+)";
+
+const std::string glsl_version400 = R"(
+
+#version 400 compatibility
+#define GLSL_400
+
+
+)";
+
+const std::string glsl_version410 = R"(
+
+#version 410 compatibility
+#define GLSL_410
+
+)";
+
+const std::string glsl_version420 = R"(
+
+#version 420 compatibility
+#define GLSL_420
+
+)";
+
+const std::string glsl_version430 = R"(
+
+#version 430 compatibility
+#define GLSL_430
+
+)";
+
+const std::string glsl_version440 = R"(
+
+#version 440 compatibility
+#define GLSL_440
+
+)";
+
+const std::string glsl_version450 = R"(
+
+#version 450 compatibility
+#define GLSL_450
+
+)";
+
+const std::string glsl_version460 = R"(
+
+#version 460 compatibility
+#define GLSL_460
+
+)";
+
+const std::string glsl_versions[] = {  //fucking intel gpus fuck you intel
+	glsl_version130,
+	glsl_version140,
+	glsl_version150,
+	glsl_version330,
+	glsl_version400,
+	glsl_version410,
+	glsl_version420,
+	glsl_version430,
+	glsl_version440,
+	glsl_version450,
+	glsl_version460,
+};
+
+const std::string glsl_engine_defines_vertex = R"(
 
 
 	#define M_PI 3.14159265358979323846 // matches value in gcc v2 math.h
@@ -29,7 +115,6 @@ const std::string glsl330_engine_defines_vertex = R"(
 	#define M_PI2 6.28318530718
 
 	#extension GL_ARB_shading_language_420pack : enable // supported by +/- 76.86% of gpus
-	#extension GL_ARB_explicit_uniform_location : enable // supported by +/- 75.11% of gpus
 	#extension GL_ARB_uniform_buffer_object : enable // supported by +/- 78.22% of gpus
 	#extension GL_ARB_enhanced_layouts : enable // supported by +/- 67.05% of gpus (yikes)
 
@@ -84,16 +169,9 @@ const std::string glsl330_engine_defines_vertex = R"(
 
 )";
 
-const std::string glsl330_engine_defines_fragment = R"(
-
-	//version 330 compatibility
-	//#define GLSL_330
-
-	#version 130
-	#define GLSL_130
+const std::string glsl_engine_defines_fragment = R"(
 
 	#extension GL_ARB_shading_language_420pack : enable // supported by +/- 76.86% of gpus
-	#extension GL_ARB_explicit_uniform_location : enable // supported by +/- 75.11% of gpus
 	#extension GL_ARB_uniform_buffer_object : enable // supported by +/- 78.22% of gpus
 	#extension GL_ARB_enhanced_layouts : enable // supported by +/- 67.05% of gpus (yikes)
 
@@ -149,12 +227,47 @@ GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSr
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_Driver_UBOAlignment);
 	//m_Driver_UBOAlignment = 256;
 
-	std::string vertexcode = glsl330_engine_defines_vertex;
-	std::string fragmentcode = glsl330_engine_defines_fragment;
-	vertexcode += vertexSrc;
-	fragmentcode += fragmentSrc;
-	GLuint vertexShader = CompileShader(vertexcode.c_str(), GL_VERTEX_SHADER);
-	GLuint fragmentShader = CompileShader(fragmentcode.c_str(), GL_FRAGMENT_SHADER);
+	GLuint vertexShader = 123456789;
+	GLuint fragmentShader = 123456789;
+
+	std::string errormsg[2];
+
+	for (int i = 10; i >= 0; i--)
+	{
+		errormsg[0] = errormsg[1] = "";
+
+		std::string vertexcode = glsl_versions[i] + glsl_engine_defines_vertex + vertexSrc;
+		std::string fragmentcode = glsl_versions[i] + glsl_engine_defines_fragment + fragmentSrc;
+
+		errormsg[0] = "\nA OpenGL vertex shader could not be compiled.\n\n";
+
+		GLuint vertexid = CompileShader(vertexcode.c_str(), GL_VERTEX_SHADER, errormsg[0]);
+
+		if (vertexid == 0)
+			continue;
+
+		errormsg[0] = "";
+
+		errormsg[1] = "\nA OpenGL fragment shader could not be compiled.\n\n";
+		GLuint fragmentid = CompileShader(fragmentcode.c_str(), GL_FRAGMENT_SHADER, errormsg[1]);
+
+		if ((vertexid != 0) && (fragmentid != 0))
+		{
+			vertexShader = vertexid;
+			fragmentShader = fragmentid;
+			break;
+		}
+
+	}
+
+	if (vertexShader == 123456789)
+	{
+		errormsg[0] += errormsg[1];
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL OPENGL ERROR", errormsg[0].c_str(), hlWindow);
+		exit(-1);
+	}
+
+
 
 	GLuint program = m_uiProgramIndex = glCreateProgram();
 	glAttachShader(program, vertexShader);
@@ -199,7 +312,7 @@ GL_ShaderProgram::~GL_ShaderProgram()
 }
 
 
-const GLuint GL_ShaderProgram::CompileShader(const char* source, const GLuint type)
+const GLuint GL_ShaderProgram::CompileShader(const char* source, const GLuint type, std::string &errormsg)
 {
 	GLuint shader = glCreateShader(type);
 	glShaderSource(shader, 1, &source, nullptr);
@@ -213,14 +326,18 @@ const GLuint GL_ShaderProgram::CompileShader(const char* source, const GLuint ty
 		char log[512];
 		glGetShaderInfoLog(shader, 512, nullptr, log);
 
-		std::string errormsg = "A OpenGL Shader could not be compiled!!!\n error message: \n \n";
+		errormsg += "error message: \n \n";
 		errormsg += log;
 		errormsg += '\n';
 		errormsg += "Reach out to the developer of this renderer and relate this issue if you wish to.\n";
 		errormsg += "The program will now close.";
 
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL OPENGL ERROR", errormsg.c_str(), hlWindow);
-		exit(-1);
+		//SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL OPENGL ERROR", errormsg.c_str(), hlWindow);
+		//exit(-1);
+
+		glDeleteShader(shader);
+
+		return 0;
 	}
 
 	return shader;

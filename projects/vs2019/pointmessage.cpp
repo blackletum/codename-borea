@@ -137,6 +137,8 @@ void CReadable::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useT
 {
 	if(!activated)
 	{
+		assert(pActivator->IsPlayer());
+
 		// send this entity to activator
 		Vector realOrigin = pev->origin + (pev->maxs + pev->mins) / 2;
 		MESSAGE_BEGIN(MSG_ONE, gmsgReadable, pActivator->pev->origin, pActivator->pev);

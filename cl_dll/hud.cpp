@@ -496,7 +496,7 @@ int __MsgFunc_WpnSkn(const char* pszName, int iSize, void* pbuf)
 int __MsgFunc_UseEnt(const char* pszName, int iSize, void* pbuf)
 {
 	BEGIN_READ(pbuf, iSize);
-	g_iUseEnt = READ_BYTE();
+	g_iUseEnt = READ_SHORT();
 	g_szUseEntClassname = READ_STRING();
 	return 1;
 }
