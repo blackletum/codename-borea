@@ -48,11 +48,6 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 	mstudiobodyparts_t* bp = (mstudiobodyparts_t*)((byte*)m_pStudioHeader + m_pStudioHeader->bodypartindex);
 	mstudiotexture_t* tex = (mstudiotexture_t*)((byte*)m_pStudioHeader + m_pStudioHeader->textureindex);
 
-	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
-	{
-		m_vBodyParts.push_back(new StudioMDL_BodyPart(bp[i], this->m_pStudioHeader, this));
-	}
-
 	studiohdr_t* textureheader = nullptr;
 
 	if (m_pStudioHeader->textureindex)
@@ -80,11 +75,17 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 		m_vSkinIndexes.push_back(skinindexes[i]);
 	}
 
+	m_iNumTextures = m_vTextures.size();
+	m_iNumSkinIndexes = static_cast<short>(m_vSkinIndexes.size() / m_iSkinFamilies);
+
+	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
+	{
+		m_vBodyParts.push_back(new StudioMDL_BodyPart(bp[i], this->m_pStudioHeader, this));
+	}
+
 	CheckCustomMDLData();
 
 	m_iNumBodyParts = m_vBodyParts.size();
-	m_iNumTextures = m_vTextures.size();
-	m_iNumSkinIndexes = static_cast<short>(m_vSkinIndexes.size() / m_iSkinFamilies);
 
 	model->entities = (char*)this;
 
@@ -110,7 +111,7 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_SHORT, GL_TRUE, /*GL_FLOAT, GL_FALSE,*/ sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, normal));
 
 	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_UNSIGNED_SHORT, GL_FALSE, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, texcoord));
+	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_SHORT, GL_TRUE, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, texcoord));
 
 	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID);
 	glVertexAttribIPointer(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_INT, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, bonedata));
@@ -376,6 +377,7 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 {
 
 	m_pOwner = owner;
+	m_iSkinRef = mesh.skinref;
 
 	short* ptricmds = (short*)((byte*)studiohdr + mesh.triindex);
 
@@ -398,6 +400,26 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 	std::vector<uint32_t> &indices = owner->m_vTotalIndices;
 
 	std::vector<studiomdl_vertbufferdata_t> &vertices = owner->m_vTotalVerts;
+
+
+	int skinnum = 0;
+
+	short* pskinref = owner->GetSkinIndexes();
+
+	if (skinnum != 0 && skinnum < owner->GetNumSkinFamilies())
+		pskinref += (skinnum * owner->GetNumSkinIndexes());
+
+	int meshskinref = this->GetSkinReference();
+
+	if (meshskinref > (owner->GetNumTextures() - 1))
+		meshskinref = (owner->GetNumTextures() - 1);
+
+	auto ptex = owner->GetTextureByIndex(pskinref[meshskinref]);
+
+	auto texinfo = ptex->GetTextureInfo();
+	float basewidth = texinfo.iWidth;
+	float baseheight = texinfo.iHeight;
+
 
 	int i;
 	while ((i = *(ptricmds++)))
@@ -422,11 +444,8 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 			unsigned int normboneid = (unsigned int)normBoneIndices[ptricmds[1]];
 		
 			float uv[2];
-			uv[0] = ptricmds[2]; //* invTexSize[0];
-			uv[1] = ptricmds[3]; //* invTexSize[1];
-			float scaledUv[2];
-			scaledUv[0] = uv[0] * (1.0f / 8.0f);
-			scaledUv[1] = uv[1] * (1.0f / 8.0f);
+			uv[0] = static_cast<float>(ptricmds[2]); //* invTexSize[0];
+			uv[1] = static_cast<float>(ptricmds[3]); //* invTexSize[1];
 		
 			if (vertexState++ < 3)
 			{
@@ -478,8 +497,8 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 
 			unsigned int bonedata = (vertboneid & 0xFF) | (normboneid & (0xFF << 8));
 		
-			vert.texcoord[0] = static_cast<unsigned short>(uv[0]);
-			vert.texcoord[1] = static_cast<unsigned short>(uv[1]);
+			vert.texcoord[0] = (uv[0] / basewidth) * std::numeric_limits<short>::max();
+			vert.texcoord[1] = (uv[1] / baseheight) * std::numeric_limits<short>::max();
 
 			vert.bonedata = bonedata;
 		
@@ -490,7 +509,6 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 		}
 	}
 
-	m_iSkinRef = mesh.skinref;
 	m_iNumTriangles = mesh.numtris;
 	m_iNumVerts = numVerts;
 	m_iNumNorms = mesh.numnorms;

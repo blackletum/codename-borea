@@ -1583,6 +1583,22 @@ void UTIL_BloodDecalTrace( TraceResult *pTrace, int bloodColor )
 //RENDERERS END
 }
 
+void UTIL_MakeBloodPuddle(Vector origin, Vector angles, int bloodcolor, float bloodscale)
+{
+	origin.z += 1;
+
+	MESSAGE_BEGIN(MSG_BROADCAST, gmsgBloodPuddle);
+		WRITE_COORD(origin.x);
+		WRITE_COORD(origin.y);
+		WRITE_COORD(origin.z);
+		WRITE_COORD(angles.x);
+		WRITE_COORD(angles.y);
+		WRITE_COORD(angles.z);
+		WRITE_BYTE(bloodcolor);
+		WRITE_BYTE(bloodscale);
+	MESSAGE_END();
+}
+
 
 void UTIL_DecalTrace( TraceResult *pTrace, int decalNumber )
 {

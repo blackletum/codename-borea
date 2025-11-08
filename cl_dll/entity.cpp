@@ -661,6 +661,9 @@ void HUD_TempEntUpdate_(
 			g_StudioRenderer.StudioFreeEntity();
 			g_StudioRenderer.m_pCurrentEntity = nullptr;
 
+			if(pTemp->diecallback)
+				pTemp->diecallback(pTemp);
+
 			gpTempEnts.erase(gpTempEnts.begin() + i);
 			continue;
 		}
@@ -721,7 +724,7 @@ void HUD_TempEntUpdate_(
 			pTemp->entity.origin[2] += pTemp->entity.baseline.origin[2] * frametime;
 		}
 
-		else
+		else if(!(pTemp->flags & FTENT_NOGRAVITY) )
 		{
 			for (int j = 0; j < 3; j++)
 				pTemp->entity.origin[j] += pTemp->entity.baseline.origin[j] * frametime;

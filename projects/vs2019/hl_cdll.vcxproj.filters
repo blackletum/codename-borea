@@ -585,6 +585,9 @@
     <ClCompile Include="..\..\cl_dll\event_api.cpp">
       <Filter>Source Files\cl_dll</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\cl_dll\tempents.cpp">
+      <Filter>Source Files\cl_dll</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cl_dll\kbutton.h">
@@ -1237,6 +1240,9 @@
     </ClInclude>
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\cable_glsl.h">
       <Filter>Header Files\cl_dll\renderer\glshaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cl_dll\tempents.h">
+      <Filter>Header Files\cl_dll</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

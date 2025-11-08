@@ -84,6 +84,13 @@ extern void FillRGBA(float x, float y, float w, float h, int r, int g, int b, in
 #define EngineClientCmd (*gEngfuncs.pfnClientCmd)
 
 
+// All monsters need this data (from server util.h)
+#define		DONT_BLEED			-1
+#define		BLOOD_COLOR_RED		(BYTE)247
+#define		BLOOD_COLOR_YELLOW	(BYTE)195
+#define		BLOOD_COLOR_GREEN	BLOOD_COLOR_YELLOW
+
+
 inline 	client_textmessage_t	*TextMessageGet( const char *pName ) { return gEngfuncs.pfnTextMessageGet( pName ); }
 inline 	int						TextMessageDrawChar( int x, int y, int number, int r, int g, int b ) 
 { 

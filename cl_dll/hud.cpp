@@ -40,6 +40,8 @@
 #include "openal/OpenAL_System.h"
 extern CSoundSystem gSoundSystem;
 
+#include "tempents.h"
+
 hud_player_info_t	 g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
 extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
 //RENDERERS START
@@ -501,6 +503,44 @@ int __MsgFunc_UseEnt(const char* pszName, int iSize, void* pbuf)
 	return 1;
 }
 
+int __MsgFunc_BloodPuddle(const char* pszName, int iSize, void* pbuf)
+{
+	//todo: make this use (and follow?) the entity's origin
+
+	BEGIN_READ(pbuf, iSize);
+	Vector origin;
+	Vector angles;
+	origin.x = READ_COORD();
+	origin.y = READ_COORD();
+	origin.z = READ_COORD();
+
+	angles.x = READ_COORD();
+	angles.y = READ_COORD();
+	angles.z = READ_COORD();
+
+	byte bloodcolor = READ_BYTE();
+	byte bloodscale = READ_BYTE();
+
+	TEMPENTITY* ent = gEngfuncs.pEfxAPI->CL_TempEntAllocNoModel(origin);
+
+	switch (bloodcolor)
+	{
+		//case BLOOD_COLOR_GREEN:
+	case BLOOD_COLOR_YELLOW:
+		ent->entity.curstate.skin = 1;
+		break;
+	case BLOOD_COLOR_RED:
+	default:
+		ent->entity.curstate.skin = 0;
+		break;
+	}
+	ent->entity.curstate.scale = bloodscale;
+
+	new CTempBloodPuddle(ent);
+
+	return 1;
+}
+
 // Aynekko: kick
 int __MsgFunc_KickPunch( const char *pszName, int iSize, void *pbuf )
 {
@@ -646,6 +686,8 @@ void CHud :: Init()
 	HOOK_MESSAGE( SpecFade );
 	HOOK_MESSAGE( ResetFade );
 	HOOK_MESSAGE( TeamFull );
+
+	HOOK_MESSAGE(BloodPuddle);
 
 	// VGUI Menus
 	HOOK_MESSAGE( VGUIMenu );

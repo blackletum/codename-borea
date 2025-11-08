@@ -108,6 +108,8 @@ int gmsgStamina = 0;
 int gmsgReadable = 0;
 int gmsgMessage = 0;
 
+int gmsgBloodPuddle = 0;
+
 // Aynekko
 int gmsgKickPunch = 0;
 
@@ -212,6 +214,8 @@ void LinkUserMessages()
 	gmsgReadable = REG_USER_MSG("Readable", -1);
 
 	gmsgMessage = REG_USER_MSG("PointMsg", -1);
+
+	gmsgBloodPuddle = REG_USER_MSG("BloodPuddle", -1); //really need to make one single definitive user message to handle all of this. jeez
 
 	// Aynekko
 	gmsgKickPunch = REG_USER_MSG( "KickPunch", -1 );

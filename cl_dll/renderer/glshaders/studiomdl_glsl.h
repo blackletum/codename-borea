@@ -135,7 +135,7 @@ char glsl330_studiomdl_vert[] = R"(
 		else if(studiodecal)
 			texcoord = aTexCoord.xy / decalsize;
 		else
-			texcoord = aTexCoord.xy / textureSize(texture0, 0);
+			texcoord = aTexCoord.xy;
 	}
 
 	vec3 DefaultDiffuseLight(int index)

@@ -649,6 +649,7 @@ struct studioentity_data_t //structure that holds info which is generated per fr
 	model_t* entity_model;
 	matrix3x4_t rotationmatrix;
 	matrix3x4_t bonematrix[MAXSTUDIOBONES];
+	struct entextrainfo_t* entity_extrainfo;
 	int bonearrayoffset;
 	float m_flGaitMovement;
 	std::vector<studiodecal_t*> m_vStudioDecals;
@@ -658,7 +659,7 @@ struct studiovert_t
 {
 	int vertindex; //index into m_VertexTransforms
 	int normindex; //index into m_NormalTransforms
-	int texcoord[2]; //s, t
+	float texcoord[2]; //s, t
 	byte boneindex; //index into m_pbonetransforms
 };
 

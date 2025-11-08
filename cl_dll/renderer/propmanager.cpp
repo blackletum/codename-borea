@@ -573,7 +573,7 @@ void CPropManager::LoadEntVars(void)
 
 			memset(&propentity, 0, sizeof(cl_entity_t));
 			propentity.index = m_pEntities.size() + 4096;
-			propentity.topnode = (struct mnode_s*)pExtraInfo;
+
 			propentity.visframe = -1;
 
 			propentity.model = IEngineStudio.Mod_ForName(pValue, 0);
@@ -730,6 +730,8 @@ void CPropManager::LoadEntVars(void)
 			g_StudioRenderer.m_pCurrentStudioMDL = m_pCurrentExtraData->pModelData->pCacheModel;
 
 			g_StudioRenderer.StudioSaveUniqueData(m_pCurrentExtraData);
+
+			((studioentity_data_t*)m_pEntities[m_pEntities.size() - 1].efrag)->entity_extrainfo = pExtraInfo;
 		}
 	}
 }
@@ -1072,8 +1074,8 @@ void CPropManager::RenderProps(bool bSkybox)
 
 	for (int i = 0; i < m_pEntities.size(); i++, ents++)
 	{
-
-		entextrainfo_t* pExtraInfo = ((entextrainfo_t*)ents->topnode);
+		auto studioentdata = (studioentity_data_t*)ents->efrag;
+		entextrainfo_t* pExtraInfo = (studioentdata->entity_extrainfo);
 		entextradata_t* pExtraData = pExtraInfo->pExtraData;
 
 
@@ -1384,7 +1386,9 @@ void CPropManager::RenderPropsSolid(void)
 		if (ents->curstate.iuser1 & FL_NOSHADOW)
 			continue;
 
-		entextradata_t* pExtraData = ((entextrainfo_t*)ents->topnode)->pExtraData;
+		auto studioentdata = (studioentity_data_t*)ents->efrag;
+
+		entextradata_t* pExtraData = studioentdata->entity_extrainfo->pExtraData;
 
 		if (!pExtraData)
 			return;

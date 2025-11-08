@@ -63,27 +63,29 @@ color24 gTracerColors[] =
 #define TENTPRIORITY_HIGH	1
 
 // TEMPENTITY flags
-#define	FTENT_NONE				0x00000000
-#define	FTENT_SINEWAVE			0x00000001
-#define	FTENT_GRAVITY			0x00000002
-#define FTENT_ROTATE			0x00000004
-#define	FTENT_SLOWGRAVITY		0x00000008
-#define FTENT_SMOKETRAIL		0x00000010
-#define FTENT_COLLIDEWORLD		0x00000020
-#define FTENT_FLICKER			0x00000040
-#define FTENT_FADEOUT			0x00000080
-#define FTENT_SPRANIMATE		0x00000100
-#define FTENT_HITSOUND			0x00000200
-#define FTENT_SPIRAL			0x00000400
-#define FTENT_SPRCYCLE			0x00000800
-#define FTENT_COLLIDEALL		0x00001000 // will collide with world and slideboxes
-#define FTENT_PERSIST			0x00002000 // tent is not removed when unable to draw 
-#define FTENT_COLLIDEKILL		0x00004000 // tent is removed upon collision with anything
-#define FTENT_PLYRATTACHMENT	0x00008000 // tent is attached to a player (owner)
-#define FTENT_SPRANIMATELOOP	0x00010000 // animating sprite doesn't die when last frame is displayed
-#define FTENT_SPARKSHOWER		0x00020000
-#define FTENT_NOMODEL			0x00040000 // Doesn't have a model, never try to draw ( it just triggers other things )
-#define FTENT_CLIENTCUSTOM		0x00080000 // Must specify callback.  Callback function is responsible for killing tempent and updating fields ( unless other flags specify how to do things )
+#define	FTENT_NONE				0b00000000000000000000000000000000
+#define	FTENT_SINEWAVE			0b00000000000000000000000000000001
+#define	FTENT_GRAVITY			0b00000000000000000000000000000010
+#define FTENT_ROTATE			0b00000000000000000000000000000100
+#define	FTENT_SLOWGRAVITY		0b00000000000000000000000000001000
+#define FTENT_SMOKETRAIL		0b00000000000000000000000000010000
+#define FTENT_COLLIDEWORLD		0b00000000000000000000000000100000
+#define FTENT_FLICKER			0b00000000000000000000000001000000
+#define FTENT_FADEOUT			0b00000000000000000000000010000000
+#define FTENT_SPRANIMATE		0b00000000000000000000000100000000
+#define FTENT_HITSOUND			0b00000000000000000000001000000000
+#define FTENT_SPIRAL			0b00000000000000000000010000000000
+#define FTENT_SPRCYCLE			0b00000000000000000000100000000000
+#define FTENT_COLLIDEALL		0b00000000000000000001000000000000 // will collide with world and slideboxes
+#define FTENT_PERSIST			0b00000000000000000010000000000000 // tent is not removed when unable to draw 
+#define FTENT_COLLIDEKILL		0b00000000000000000100000000000000 // tent is removed upon collision with anything
+#define FTENT_PLYRATTACHMENT	0b00000000000000001000000000000000 // tent is attached to a player (owner)
+#define FTENT_SPRANIMATELOOP	0b00000000000000010000000000000000 // animating sprite doesn't die when last frame is displayed
+#define FTENT_SPARKSHOWER		0b00000000000000100000000000000000
+#define FTENT_NOMODEL			0b00000000000001000000000000000000 // Doesn't have a model, never try to draw ( it just triggers other things )
+#define FTENT_CLIENTCUSTOM		0b00000000000010000000000000000000 // Must specify callback.  Callback function is responsible for killing tempent and updating fields ( unless other flags specify how to do things )
+#define FTENT_NOGRAVITY			0b00000000000100000000000000000000
+
 
 #define MAX_TEMPENTS 4096
 
@@ -108,6 +110,10 @@ typedef struct tempent_s
 
 	Vector		tentOffset;		// if attached, client origin + tentOffset = tent origin.
 	cl_entity_t	entity;
+
+
+	void		(*diecallback)		(struct tempent_s* ent); //put in the end of this structure to ensure compatibility
+
 
 	// baseline.origin		- velocity
 	// baseline.renderamt	- starting fadeout intensity

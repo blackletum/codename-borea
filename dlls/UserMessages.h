@@ -105,6 +105,8 @@ extern int gmsgChapterName;
 extern int gmsgReadable; // bacontsu - func_readable
 extern int gmsgMessage;
 
+extern int gmsgBloodPuddle;
+
 // Aynekko
 extern int gmsgKickPunch;
 

@@ -2700,7 +2700,7 @@ void CStudioModelRenderer::StudioSetupLighting(void)
 	Vector end;
 	Vector point;
 
-	entextrainfo_t* pInfo = (entextrainfo_t*)m_pCurrentEntity->topnode;
+	entextrainfo_t* pInfo = m_pCurrentStudioEntData->entity_extrainfo;
 
 	Vector eorigin;
 	eorigin[0] = (*m_protationmatrix)[0][3];
@@ -2714,7 +2714,7 @@ void CStudioModelRenderer::StudioSetupLighting(void)
 			pInfo = StudioAllocExtraInfo();
 			pInfo->pEntity = m_pCurrentEntity;
 
-			m_pCurrentEntity->topnode = (mnode_s*)pInfo;
+			m_pCurrentStudioEntData->entity_extrainfo = pInfo;
 		}
 	}
 	else
@@ -3202,6 +3202,8 @@ StudioCheckBBox
 qboolean CStudioModelRenderer::StudioCheckBBox(void)
 {
 
+	m_vMins = m_vMaxs = vec3_origin;
+
 	R_ComputeBBox(m_pCurrentEntity->origin, m_pCurrentEntity->curstate.sequence, m_vMins, m_vMaxs);
 
 	// View entity is always present
@@ -3305,7 +3307,9 @@ void CStudioModelRenderer::StudioDrawExternalEntity(cl_entity_t* pEntity, bool b
 
 	m_pCurrentEntity = pEntity;
 
-	m_pCurrentExtraData = ((entextrainfo_t*)m_pCurrentEntity->topnode)->pExtraData;
+	m_pCurrentStudioEntData = (studioentity_data_t*)m_pCurrentEntity->efrag;
+
+	m_pCurrentExtraData = m_pCurrentStudioEntData->entity_extrainfo->pExtraData;
 	m_pStudioHeader = (studiohdr_t*)m_pCurrentEntity->model->cache.data;
 	m_pCurrentStudioMDL = (StudioMDL_Model*)m_pCurrentEntity->model->entities;
 	m_pVBOHeader = &m_pCurrentExtraData->pModelData->pVBOHeader;
@@ -3340,7 +3344,7 @@ void CStudioModelRenderer::StudioSetupLightingEXT(void)
 	Vector end;
 	Vector point;
 
-	entextrainfo_t* pInfo = (entextrainfo_t*)m_pCurrentEntity->topnode;
+	entextrainfo_t* pInfo = m_pCurrentStudioEntData->entity_extrainfo;
 
 	Vector eorigin = m_pCurrentEntity->origin;
 
@@ -3351,7 +3355,7 @@ void CStudioModelRenderer::StudioSetupLightingEXT(void)
 			pInfo = StudioAllocExtraInfo();
 			pInfo->pEntity = m_pCurrentEntity;
 
-			m_pCurrentEntity->topnode = (mnode_s*)pInfo;
+			m_pCurrentStudioEntData->entity_extrainfo = pInfo;
 		}
 	}
 	else
@@ -3442,6 +3446,9 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 	if (n == 0)
 		return;
 
+	assert(pExtraData->pCacheModel);
+	m_pCurrentStudioMDL = pExtraData->pCacheModel;
+
 	m_pVBOHeader = &pExtraData->pVBOHeader;
 	m_pVBOHeader->numsubmodels = n;
 	m_pVBOHeader->submodels = new vbosubmodel_t[n];
@@ -3454,6 +3461,7 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
 	{
 		m_pSubModel = (mstudiomodel_t*)((byte*)m_pStudioHeader + bp[i].modelindex);
+		auto bodypart = m_pCurrentStudioMDL->GetBodyPartbyIndex(i);
 		for (int k = 0; k < bp[i].nummodels; k++)
 		{
 			vbosubmodel_t* pvbosubmodel = &pExtraData->pVBOHeader.submodels[n];
@@ -3482,6 +3490,21 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 				vbomesh_t* pvbomesh = &pvbosubmodel->meshes[l];
 				pvbomesh->start_vertex = m_usIndexes.size();
 
+				short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes();
+
+				int meshskinref = bodypart->GetModelbyIndex(k)->GetMeshbyIndex(l)->GetSkinReference();
+
+				if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
+					meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+
+				auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
+				auto ptexinfo = ptex->GetTextureInfo();
+
+				float basewidth = ptexinfo.iWidth;
+				float baseheight = ptexinfo.iHeight;
+
+
+
 				int j = 0;
 				short* ptricmds = (short*)((byte*)m_pStudioHeader + pmeshes[l].triindex);
 				while (j = *(ptricmds++))
@@ -3495,8 +3518,16 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 						{
 							indices[i].vertindex = ptricmds[0];
 							indices[i].normindex = ptricmds[1];
-							indices[i].texcoord[0] = ptricmds[2];
-							indices[i].texcoord[1] = ptricmds[3];
+
+							float texcoord1 = static_cast<float>(ptricmds[2]);
+							float texcoord2 = static_cast<float>(ptricmds[3]);
+
+							texcoord1 /= basewidth;
+							texcoord2 /= baseheight;
+
+
+							indices[i].texcoord[0] = texcoord1;
+							indices[i].texcoord[1] = texcoord2;
 							StudioManageVertex(&indices[i]);
 						}
 
@@ -3507,8 +3538,21 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 							indices[1] = indices[2];
 							indices[2].vertindex = ptricmds[0];
 							indices[2].normindex = ptricmds[1];
-							indices[2].texcoord[0] = ptricmds[2];
-							indices[2].texcoord[1] = ptricmds[3];
+
+							float texcoord1 = static_cast<float>(ptricmds[2]);
+							float texcoord2 = static_cast<float>(ptricmds[3]);
+
+							texcoord1 /= basewidth;
+							texcoord2 /= baseheight;
+
+							if (texcoord1 < 0)
+								texcoord1 = 0.0f;
+
+							if (texcoord2 < 0)
+								texcoord2 = 0.0f;
+
+							indices[2].texcoord[0] = texcoord1;
+							indices[2].texcoord[1] = texcoord2;
 
 							if (!reverse)
 							{
@@ -3534,8 +3578,21 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 						{
 							indices[i].vertindex = ptricmds[0];
 							indices[i].normindex = ptricmds[1];
-							indices[i].texcoord[0] = ptricmds[2];
-							indices[i].texcoord[1] = ptricmds[3];
+
+							float texcoord1 = static_cast<float>(ptricmds[2]);
+							float texcoord2 = static_cast<float>(ptricmds[3]);
+
+							texcoord1 /= basewidth;
+							texcoord2 /= baseheight;
+
+							if (texcoord1 < 0)
+								texcoord1 = 0.0f;
+
+							if (texcoord2 < 0)
+								texcoord2 = 0.0f;
+
+							indices[i].texcoord[0] = texcoord1;
+							indices[i].texcoord[1] = texcoord2;
 							StudioManageVertex(&indices[i]);
 						}
 
@@ -3544,8 +3601,21 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 							indices[1] = indices[2];
 							indices[2].vertindex = ptricmds[0];
 							indices[2].normindex = ptricmds[1];
-							indices[2].texcoord[0] = ptricmds[2];
-							indices[2].texcoord[1] = ptricmds[3];
+
+							float texcoord1 = static_cast<float>(ptricmds[2]);
+							float texcoord2 = static_cast<float>(ptricmds[3]);
+
+							texcoord1 /= basewidth;
+							texcoord2 /= baseheight;
+
+							if (texcoord1 < 0)
+								texcoord1 = 0.0f;
+
+							if (texcoord2 < 0)
+								texcoord2 = 0.0f;
+
+							indices[2].texcoord[0] = texcoord1;
+							indices[2].texcoord[1] = texcoord2;
 
 							StudioManageVertex(&indices[0]);
 							StudioManageVertex(&indices[1]);
@@ -3626,6 +3696,8 @@ void CStudioModelRenderer::StudioSaveUniqueData(entextradata_t* pExtraData)
 
 	m_pVBOHeader = &pExtraData->pModelData->pVBOHeader;
 	m_pStudioHeader = pExtraData->pModelData->pHdr;
+
+	m_pCurrentEntity->efrag = (efrag_s*)StudioAllocEntityData();
 
 	m_pCurrentEntity->angles[PITCH] = -m_pCurrentEntity->angles[PITCH];
 	AngleMatrix(m_pCurrentEntity->angles, (*m_protationmatrix));
@@ -4348,10 +4420,15 @@ void CStudioModelRenderer::StudioDecalExternal(Vector vpos, Vector vnorm, const 
 
 	for (auto propent : gPropManager.m_pEntities)
 	{
-		if (!propent.topnode)
+		if(!propent.efrag)
+			propent.efrag = (efrag_t*)StudioAllocEntityData();
+
+		m_pCurrentStudioEntData = (studioentity_data_t*)propent.efrag;
+
+		if (!m_pCurrentStudioEntData->entity_extrainfo)
 			continue;
 
-		entextrainfo_t* pInfo = (entextrainfo_t*)propent.topnode;
+		entextrainfo_t* pInfo = m_pCurrentStudioEntData->entity_extrainfo;
 		VectorCopy(pInfo->pExtraData->absmax, m_vMaxs);
 		VectorCopy(pInfo->pExtraData->absmin, m_vMins);
 
@@ -4637,7 +4714,8 @@ void CStudioModelRenderer::StudioDrawExternalEntitySolid(cl_entity_t* pEntity)
 {
 	m_pCurrentEntity = pEntity;
 
-	m_pCurrentExtraData = ((entextrainfo_t*)m_pCurrentEntity->topnode)->pExtraData;
+	m_pCurrentStudioEntData = (studioentity_data_t*)m_pCurrentEntity->efrag;
+	m_pCurrentExtraData = m_pCurrentStudioEntData->entity_extrainfo->pExtraData;
 	m_pStudioHeader = (studiohdr_t*)m_pCurrentEntity->model->cache.data;
 	m_pCurrentStudioMDL = (StudioMDL_Model*)m_pCurrentEntity->model->entities;
 	m_pVBOHeader = &m_pCurrentExtraData->pModelData->pVBOHeader;

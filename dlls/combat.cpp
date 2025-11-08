@@ -844,7 +844,11 @@ void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib )
 	//Vector vecSrc =  pev->origin;// +gpGlobals->v_up * -8;
 
 	if (m_fCanBleed)
-		m_pMyBloodPuddle = CBloodPuddle::CreatePuddle(pev->origin/*m_vecLastHitLocation*/, pev->v_angle, this, m_bloodColor, m_fBloodScale)->pev;
+	{
+		UTIL_MakeBloodPuddle(pev->origin, pev->angles, m_bloodColor, m_fBloodScale);
+		//ported to client. uncomment if you wish blood puddles to go through level save/load or transition
+		//m_pMyBloodPuddle = CBloodPuddle::CreatePuddle(pev->origin/*m_vecLastHitLocation*/, pev->v_angle, this, m_bloodColor, m_fBloodScale)->pev;
+	}
 
 	return;
 
