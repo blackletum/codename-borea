@@ -691,9 +691,6 @@ void CParticleEngine::CreateParticle(particle_system_t* pSystem, float* flOrigin
 	}
 	else if (pSystem->shapetype == SYSTEM_SHAPE_BOX_AROUND_PLAYER)
 	{
-		if (!gHUD.pparams)
-			return;
-
 		Vector vPlayer = gEngfuncs.GetLocalPlayer()->origin;
 		Vector vSpeed = gBSPRenderer.m_RefParams.simvel;
 		pParticle->origin[0] = vPlayer[0] + vSpeed[0] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
