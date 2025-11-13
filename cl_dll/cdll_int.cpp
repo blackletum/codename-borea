@@ -553,38 +553,11 @@ int DLLEXPORT HUD_Redraw(float time, int intermission)
 
 	if (gEngfuncs.pfnGetCvarFloat("crosshair"))
 		DrawCrosshair();
-
-	// salsatobias: pretty hacky way to call into goldsrc's GL_Bind() function and change currenttexture variable, 
-	// this makes it so the following check will always fail and bind the loading texture:
-	//
-	// 
-	//	if (*pic->data != currenttexture) 
-	//	{
-	//		pic_palette = (*pic->data >> 16) - 1;
-	//		currenttexture = *pic->data;
-	//		qglBindTexture(GL_TEXTURE_2D, *pic->data);
-	//		if (pic_palette >= 0 && pic_palette != g_currentpalette)
-	//		{
-	//			g_currentpalette = pic_palette;
-	//			qglColorTableEXT(GL_SHARED_TEXTURE_PALETTE_EXT, GL_RGB, GL_DYNAMIC_STORAGE_BIT, GL_RGB, GL_UNSIGNED_BYTE, gGLPalette[pic_palette].colors);
-	//		}
-	//	}
-
-	if (dummymodel.type != mod_sprite)
-	{
-		dummymodel.type = mod_sprite;
-		dummysprite.numframes = 1;
-		dummyspriteframe.gl_texturenum = 0;
-		dummysprite.frames[0].type = SPR_SINGLE;
-		dummysprite.frames[0].frameptr = &dummyspriteframe;
-		dummymodel.cache.data = &dummysprite;
-	}
-
-	mspriteframe_t* test = &dummyspriteframe;
-
+	
 	gEngfuncs.pTriAPI->SpriteTexture(&dummymodel, 0);
 
 	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.666);
 
 	return 1;
 }
@@ -666,6 +639,39 @@ void DLLEXPORT HUD_Frame(double time)
 	// not much of a worry anymore since we host our own leafs.
 	if (engine_cl->worldmodel && restore_numleafs)
 		engine_cl->worldmodel->numleafs = 0;
+
+	// salsatobias: pretty hacky way to call into goldsrc's GL_Bind() function and change currenttexture variable, 
+	// this makes it so the following check will always fail and bind the loading texture:
+	//
+	// 
+	//	if (*pic->data != currenttexture) 
+	//	{
+	//		pic_palette = (*pic->data >> 16) - 1;
+	//		currenttexture = *pic->data;
+	//		qglBindTexture(GL_TEXTURE_2D, *pic->data);
+	//		if (pic_palette >= 0 && pic_palette != g_currentpalette)
+	//		{
+	//			g_currentpalette = pic_palette;
+	//			qglColorTableEXT(GL_SHARED_TEXTURE_PALETTE_EXT, GL_RGB, GL_DYNAMIC_STORAGE_BIT, GL_RGB, GL_UNSIGNED_BYTE, gGLPalette[pic_palette].colors);
+	//		}
+	//	}
+
+	if (dummymodel.type != mod_sprite)
+	{
+		dummymodel.type = mod_sprite;
+		dummysprite.numframes = 1;
+		dummyspriteframe.gl_texturenum = 0;
+		dummysprite.frames[0].type = SPR_SINGLE;
+		dummysprite.frames[0].frameptr = &dummyspriteframe;
+		dummymodel.cache.data = &dummysprite;
+	}
+	
+	mspriteframe_t* test = &dummyspriteframe;
+	
+	gEngfuncs.pTriAPI->SpriteTexture(&dummymodel, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glAlphaFunc(GL_NOTEQUAL, 0);
 }
 
 

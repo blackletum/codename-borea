@@ -2695,6 +2695,8 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 		m_ModelMatrix = oldmodelmatrix;
 
 		m_WorldShader->UniformMatrix4fv(m_WorldShader_locs[world_modelmatrix], 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
+
+		g_GlobalGLState.SetDepthWrite(true);
 	}
 
 	m_pCurrentEntity->visframe = m_iFrameCount;

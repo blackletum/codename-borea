@@ -122,6 +122,7 @@ void CHud::Think()
 // returns 1 if they've changed, 0 otherwise
 int CHud :: Redraw( float flTime, int intermission )
 {
+	glDisable(GL_ALPHA_TEST);
 	if (!gVideoEngine.videoended)
 	{
 		gVideoEngine.DrawVideo(flTime);

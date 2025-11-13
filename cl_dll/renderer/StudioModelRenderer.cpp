@@ -2445,6 +2445,9 @@ void CStudioModelRenderer::StudioRenderModel(void)
 	{
 		StudioRenderFinal();
 	}
+
+	g_GlobalGLState.SetBlend(false);
+	g_GlobalGLState.SetDepthWrite(true);
 }
 
 /*
@@ -2470,9 +2473,6 @@ void CStudioModelRenderer::StudioRenderFinal(void)
 
 	if (m_pCvarStudioModelBBox->value > 0)
 		StudioDrawBBox();
-
-
-	g_GlobalGLState.SetBlend(false);
 }
 
 /*

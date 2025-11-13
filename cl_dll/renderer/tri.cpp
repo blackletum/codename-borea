@@ -205,14 +205,16 @@ void DLLEXPORT HUD_DrawNormalTriangles()
 	g_GlobalGLState.SetDepthWrite(true);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glColor4f(1, 1, 1, 1);
-
+	
 	R_DrawNormalTriangles();
-
+	
 	gHUD.m_Spectator.DrawOverview();
-
+	
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
 	GL_VertexArrayObject::ResetVAOBinding();
+
+	glAlphaFunc(GL_NOTEQUAL, 0);
 
 	r_refdef->onlyClientDraw = 0; // for sound
 }
