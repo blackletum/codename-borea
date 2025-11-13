@@ -31,6 +31,7 @@ class BSPWorld_Model
 {
 public:
 	static void InitWorldModel(model_t* worldmdl);
+	static void VidInit();
 
 	static clientmnode_t* m_pWorldNodes;
 	static clientmleaf_t* m_pWorldLeafs;

@@ -647,7 +647,7 @@ typedef struct clientmsurface_s
 	int cached_light[MAXLIGHTMAPS]; // values currently used in lightmap
 
 	//  byte        *samples;                   // [numstyles*surfsize]
-	std::vector<color24> samples; // note: this is the actual lightmap data for this surface
+	color24* samples; // note: this is the actual lightmap data for this surface
 
 } clientmsurface_t;
 

@@ -73,14 +73,14 @@ void BSPWorld_Model::InitWorldModel(model_t* worldmdl)
 
 	if (m_pWorldNodes)
 	{
-		delete[] m_pWorldNodes;
-		delete[] m_pWorldLeafs;
-		delete[] m_pWorldSurfaces;
+		free(m_pWorldNodes);
+		free(m_pWorldLeafs);
+		free(m_pWorldSurfaces);
 	}
 
-	m_pWorldNodes = new clientmnode_t[worldmdl->numnodes];
-	m_pWorldLeafs = new clientmleaf_t[worldmdl->numleafs + 1];
-	m_pWorldSurfaces = new clientmsurface_t[worldmdl->numsurfaces];
+	m_pWorldNodes = (clientmnode_t*)calloc(worldmdl->numnodes, sizeof(clientmnode_t));
+	m_pWorldLeafs = (clientmleaf_t*)calloc(worldmdl->numleafs + 1, sizeof(clientmleaf_t));
+	m_pWorldSurfaces = (clientmsurface_t*)calloc(worldmdl->numsurfaces, sizeof(clientmsurface_t));
 
 	auto remapNode = [&](mnode_t* old) -> clientmnode_t*
 	{
@@ -136,23 +136,7 @@ void BSPWorld_Model::InitWorldModel(model_t* worldmdl)
 		const int tmax = (newSurf->extents[1] >> 4) + 1;
 		const int size = smax * tmax;
 
-		color24* lightmap = oldSurf->samples;
-
-		if(lightmap)
-		{
-			for (int maps = 0; maps < MAXLIGHTMAPS && newSurf->styles[maps] != 255; ++maps)
-			{
-				const int style = newSurf->styles[maps];
-
-				for (int i = 0; i < size; ++i)
-				{
-					newSurf->samples.push_back(lightmap[i]);
-
-				}
-
-				lightmap += size;
-			}
-		}
+		newSurf->samples = oldSurf->samples;
 
 		m_iNumWorldSurfaces++;
 	}
@@ -207,6 +191,19 @@ void BSPWorld_Model::InitWorldModel(model_t* worldmdl)
 	//worldmdl->surfaces = m_pWorldSurfaces;
 
 
+}
+
+void BSPWorld_Model::VidInit()
+{
+	if(m_pWorldNodes)
+	{
+		free(m_pWorldNodes);
+		free(m_pWorldLeafs);
+		free(m_pWorldSurfaces);
+		m_pWorldNodes = nullptr;
+		m_pWorldLeafs = nullptr;
+		m_pWorldSurfaces = nullptr;
+	}
 }
 
 //int AllocBlock(int w, int h, int* x, int* y)

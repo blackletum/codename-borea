@@ -1062,7 +1062,8 @@ Vector CParticleEngine::LightForParticle(cl_particle_t* pParticle)
 	Vector vEndPos = pParticle->origin - Vector(0, 0, 8964);
 	Vector vColor = Vector(0, 0, 0);
 
-	g_StudioRenderer.StudioRecursiveLightPoint(nullptr, BSPWorld_Model::m_pWorldNodes, pParticle->origin, vEndPos, vColor);
+	if(BSPWorld_Model::m_pWorldNodes)
+		g_StudioRenderer.StudioRecursiveLightPoint(nullptr, BSPWorld_Model::m_pWorldNodes, pParticle->origin, vEndPos, vColor);
 
 	for (auto& pLight : gBSPRenderer.m_pDynLights)
 	{
@@ -1659,6 +1660,22 @@ void CParticleEngine::DrawParticles()
 				psystem = pnext;
 				continue;
 			}
+		}
+		else
+		{
+			if (psystem->shapetype != SYSTEM_SHAPE_PLANE_ABOVE_PLAYER)
+			{
+				if (BSPWorld_Model::m_pWorldNodes)
+					psystem->leaf = Mod_PointInLeaf(psystem->origin + Vector(0, 0, 8));
+
+				if (psystem->leaf->visframe != gBSPRenderer.m_pViewLeaf->visframe)
+				{
+					particle_system_t* pnext = psystem->next;
+					psystem = pnext;
+					continue;
+				}
+			}
+
 		}
 
 		// Calculate up and right scalers

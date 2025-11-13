@@ -545,6 +545,8 @@ void CBSPRenderer::VidInit(void)
 
 	// A call to VidInit means a reload
 	m_bReloaded = true;
+
+	BSPWorld_Model::VidInit();
 }
 
 /*
@@ -2800,9 +2802,9 @@ void CBSPRenderer::BuildLightmap(clientmsurface_t* surf, int surfindex, color24*
 
 	memset(m_pBlockLights, 0, sizeof(color24) * size);
 
-	if (!surf->samples.empty() && size <= BLOCKLIGHTS_SIZE && surf->styles[0] != 255)
+	if (surf->samples && size <= BLOCKLIGHTS_SIZE && surf->styles[0] != 255)
 	{
-		color24* lightmap = surf->samples.data();
+		color24* lightmap = surf->samples;
 
 		for (int maps = 0; maps < MAXLIGHTMAPS && surf->styles[maps] != 255; ++maps)
 		{
