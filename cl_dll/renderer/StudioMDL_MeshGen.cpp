@@ -7,9 +7,6 @@
 #include "entity_state.h"
 #include "cl_entity.h"
 
-#include "event_api.h"
-#include "pmtrace.h"
-
 #include <stdio.h>
 #include <vector>
 #include <string.h>
@@ -90,7 +87,7 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 	model->entities = (char*)this;
 
 	//
-	//generate opengl mesh buffer
+	// generate opengl mesh buffer
 	//
 
 	m_pModelVAO = new GL_VertexArrayObject();
@@ -111,7 +108,7 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_SHORT, GL_TRUE, /*GL_FLOAT, GL_FALSE,*/ sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, normal));
 
 	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_SHORT, GL_TRUE, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, texcoord));
+	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, texcoord));
 
 	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID);
 	glVertexAttribIPointer(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_INT, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, bonedata));
@@ -120,8 +117,6 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
-
-
 }
 
 extern char* UTIL_VarArgs_client(const char* format, ...);
@@ -151,42 +146,42 @@ void StudioMDL_Model::CheckCustomMDLData()
 		return; // Invalid header
 	}
 
-	//salsatobias: this will be used for my own little mod
+	// salsatobias: this will be used for my own little mod
 
-	//m_studiocustomdata mdldata{};
+	// m_studiocustomdata mdldata{};
 	//
-	//long datastart_offset;
+	// long datastart_offset;
 	//
-	//filepointer -= offset_size;
-	//memcpy(&datastart_offset, &data[filepointer], sizeof(long));
+	// filepointer -= offset_size;
+	// memcpy(&datastart_offset, &data[filepointer], sizeof(long));
 	//
-	//filepointer = datastart_offset;
-	//
-	//
-	//memcpy(&mdldata.numeyes, &data[filepointer], sizeof(int));
-	//filepointer += sizeof(int);
-	//memcpy(&mdldata.numcdpaths, &data[filepointer], sizeof(int));
-	//filepointer += sizeof(int);
+	// filepointer = datastart_offset;
 	//
 	//
-	//if (mdldata.numeyes > 0)
+	// memcpy(&mdldata.numeyes, &data[filepointer], sizeof(int));
+	// filepointer += sizeof(int);
+	// memcpy(&mdldata.numcdpaths, &data[filepointer], sizeof(int));
+	// filepointer += sizeof(int);
+	//
+	//
+	// if (mdldata.numeyes > 0)
 	//{
 	//	size_t size = mdldata.numeyes;
 	//	mdldata.eyedata.resize(size);
 	//	memcpy((char*)(mdldata.eyedata.data()), &data[filepointer], mdldata.numeyes * sizeof(m_eyedata));
 	//
 	//	filepointer += mdldata.numeyes * sizeof(m_eyedata);
-	//}
+	// }
 	//
-	//if (mdldata.numcdpaths > 0)
+	// if (mdldata.numcdpaths > 0)
 	//{
 	//	mdldata.cdmaterials.resize(mdldata.numcdpaths);
 	//	memcpy((char*)(mdldata.cdmaterials.data()), &data[filepointer], mdldata.numcdpaths * sizeof(m_cdmaterial));
 	//
 	//	filepointer += mdldata.numcdpaths * sizeof(m_cdmaterial);
-	//}
+	// }
 	//
-	//for (auto cdpath : mdldata.cdmaterials)
+	// for (auto cdpath : mdldata.cdmaterials)
 	//{
 	//	for (int k = 0; k < m_vTextures.size(); k++)
 	//	{
@@ -216,12 +211,12 @@ void StudioMDL_Model::CheckCustomMDLData()
 	//			gEngfuncs.Con_Printf("[STUDIOMDL_GEN] loaded custom material texture \"%s\" for model \"%s\".\n", szPath, this->m_pEngineModel->name);
 	//		}
 	//	}
-	//}
+	// }
 	//
-	//for (auto eyes : mdldata.eyedata)
+	// for (auto eyes : mdldata.eyedata)
 	//{
 	//	m_vEyePositions.push_back(eyes);
-	//}
+	// }
 }
 
 void StudioMDL_Model::CheckExternTextures()
@@ -266,7 +261,7 @@ StudioMDL_BodyPart::StudioMDL_BodyPart(mstudiobodyparts_t bodypart, studiohdr_t*
 	m_iNumSubModels = m_vSubModels.size();
 }
 
-StudioMDL_SubModel::StudioMDL_SubModel(mstudiomodel_t *submodel, studiohdr_t* studiohdr, StudioMDL_Model* owner)
+StudioMDL_SubModel::StudioMDL_SubModel(mstudiomodel_t* submodel, studiohdr_t* studiohdr, StudioMDL_Model* owner)
 {
 	m_pOwner = owner;
 	m_pRawModel = submodel;
@@ -322,18 +317,17 @@ StudioMDL_SubModel::StudioMDL_SubModel(mstudiomodel_t *submodel, studiohdr_t* st
 		auto norm = m_pOwner->m_vTotalVerts[i + base].normal;
 		m_vRealNormInfo[i] = Vector(norm.x, norm.y, norm.z) / std::numeric_limits<short>::max();
 	}
-
 }
 
 Vector* StudioMDL_SubModel::GetVertInfo()
-{ 
+{
 	if (m_vMesh.empty())
 		return nullptr;
 
 	return m_vRealVertInfo.data();
 };
 Vector* StudioMDL_SubModel::GetNormInfo()
-{ 
+{
 	if (m_vMesh.empty())
 		return nullptr;
 
@@ -367,9 +361,9 @@ struct VertexKey
 	bool operator==(const VertexKey& other) const
 	{
 		return pos == other.pos &&
-			   normal == other.normal &&
-			   uv[0] == other.uv[0] &&
-			   uv[1] == other.uv[1];
+			normal == other.normal &&
+			uv[0] == other.uv[0] &&
+			uv[1] == other.uv[1];
 	}
 };
 
@@ -397,10 +391,10 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 
 	int numVerts = 0;
 	int numVertsTotal = owner->m_vTotalVerts.size();
-	std::vector<uint32_t> &indices = owner->m_vTotalIndices;
+	std::vector<uint32_t>& indices = owner->m_vTotalIndices;
 
-	std::vector<studiomdl_vertbufferdata_t> &vertices = owner->m_vTotalVerts;
-
+	std::vector<studiomdl_vertbufferdata_t>& vertices = owner->m_vTotalVerts;
+	std::vector<studiomdl_vertbufferdata_t> vertstest;
 
 	int skinnum = 0;
 
@@ -442,11 +436,11 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 			auto normal = norms[ptricmds[1]];
 			unsigned int vertboneid = (unsigned int)boneIndices[ptricmds[0]];
 			unsigned int normboneid = (unsigned int)normBoneIndices[ptricmds[1]];
-		
+
 			float uv[2];
 			uv[0] = static_cast<float>(ptricmds[2]); //* invTexSize[0];
 			uv[1] = static_cast<float>(ptricmds[3]); //* invTexSize[1];
-		
+
 			if (vertexState++ < 3)
 			{
 				indices.push_back(numVertsTotal);
@@ -476,19 +470,19 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 				indices.push_back(numVertsTotal - 1);
 				indices.push_back(numVertsTotal);
 			}
-		
+
 			normal = normal.Normalize();
-		
+
 			submodelparent->m_vVertBoneInfo.push_back(vertboneid);
 			submodelparent->m_vNormBoneInfo.push_back(normboneid);
-		
-		
-			studiomdl_vertbufferdata_t vert;
+
+
+			studiomdl_vertbufferdata_t vert{};
 			vert.pos[0] = vpos.x;
 			vert.pos[1] = vpos.y;
 			vert.pos[2] = vpos.z;
 
-			//in doubt of whether memory alignment is more important than memory size but oh well
+			// in doubt of whether memory alignment is more important than memory size but oh well
 			vert.normal.x = normal.x * std::numeric_limits<short>::max();
 			vert.normal.y = normal.y * std::numeric_limits<short>::max();
 			vert.normal.z = normal.z * std::numeric_limits<short>::max();
@@ -496,14 +490,15 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 			assert(uv[0] < 32767 && uv[0] > -32767 && uv[1] < 32767 && uv[1] > -32767);
 
 			unsigned int bonedata = (vertboneid & 0xFF) | (normboneid & (0xFF << 8));
-		
-			vert.texcoord[0] = (uv[0] / basewidth) * std::numeric_limits<short>::max();
-			vert.texcoord[1] = (uv[1] / baseheight) * std::numeric_limits<short>::max();
+
+			vert.texcoord[0] = (uv[0] / basewidth);
+			vert.texcoord[1] = (uv[1] / baseheight);
 
 			vert.bonedata = bonedata;
-		
+
 			vertices.push_back(vert);
-		
+			vertstest.push_back(vert);
+
 			numVerts++;
 			numVertsTotal = owner->m_vTotalVerts.size();
 		}
@@ -516,21 +511,20 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 	submodelparent->m_iNumVerts += m_iNumVerts;
 	submodelparent->m_iNumTriangles += m_iNumTriangles;
 
-	//assert(m_iNumVerts == owner->m_vTotalIndices.size() - m_iStartVertex);
-
+	// assert(m_iNumVerts == owner->m_vTotalIndices.size() - m_iStartVertex);
 }
 
 void StudioMDL_SubModel::UploadVertexData(Vector* pos, Vector* norm, float (*chromeuv)[2])
 {
-	if (m_vMesh.empty()) //how?
+	if (m_vMesh.empty()) // how?
 		return;
 
-	//std::vector<studiomdl_vertbufferdata_t> vertdata;
-	//vertdata.resize(this->m_iNumVerts);
+	// std::vector<studiomdl_vertbufferdata_t> vertdata;
+	// vertdata.resize(this->m_iNumVerts);
 	//
-	//int basedata = m_vMesh[0]->m_iStartVertexData;
+	// int basedata = m_vMesh[0]->m_iStartVertexData;
 	//
-	//for (int i = 0; i < this->m_iNumVerts; i++)
+	// for (int i = 0; i < this->m_iNumVerts; i++)
 	//{
 	//	auto mdl_texcoord = m_pOwner->m_vTotalVerts[i + basedata].texcoord;
 	//
@@ -546,11 +540,11 @@ void StudioMDL_SubModel::UploadVertexData(Vector* pos, Vector* norm, float (*chr
 	//	}
 	//
 	//	 vertdata[i] = studiomdl_vertbufferdata_t{pos[i], norm[i], 0, 0, {mdl_texcoord[0], mdl_texcoord[1]}};
-	//}
+	// }
 	//
-	//auto& vertbuffer = m_pOwner->m_pModelVertBuffer;
-	//vertbuffer->Bind(GL_BufferHandler::ArrayBuffer);
-	//vertbuffer->BufferSubData(GL_BufferHandler::ArrayBuffer, basedata * sizeof(studiomdl_vertbufferdata_t), this->m_iNumVerts * sizeof(studiomdl_vertbufferdata_t), vertdata.data());
+	// auto& vertbuffer = m_pOwner->m_pModelVertBuffer;
+	// vertbuffer->Bind(GL_BufferHandler::ArrayBuffer);
+	// vertbuffer->BufferSubData(GL_BufferHandler::ArrayBuffer, basedata * sizeof(studiomdl_vertbufferdata_t), this->m_iNumVerts * sizeof(studiomdl_vertbufferdata_t), vertdata.data());
 }
 
 StudioMDL_Texture::StudioMDL_Texture(mstudiotexture_t* texture)
@@ -560,8 +554,6 @@ StudioMDL_Texture::StudioMDL_Texture(mstudiotexture_t* texture)
 	m_pTexture->iWidth = texture->width;
 	m_pTexture->iHeight = texture->height;
 	strcpy(m_pTexture->szName, texture->name);
-
-
 }
 
 void StudioMDL_Texture::ReplaceMDLTexture(cl_texture_t* texture, const int flags)

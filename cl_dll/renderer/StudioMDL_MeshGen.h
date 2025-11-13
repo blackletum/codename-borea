@@ -38,10 +38,9 @@ class GL_VertexArrayObject;
 struct studiomdl_vertbufferdata_t
 {
 	Vector pos;
+	float texcoord[2];
 	short_3dvector normal;
-	short texcoord[2];
 	unsigned int bonedata;
-	byte _padding[4]; //:(
 };
 
 class StudioMDL_Model

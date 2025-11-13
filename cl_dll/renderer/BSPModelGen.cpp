@@ -138,17 +138,20 @@ void BSPWorld_Model::InitWorldModel(model_t* worldmdl)
 
 		color24* lightmap = oldSurf->samples;
 
-		for (int maps = 0; maps < MAXLIGHTMAPS && newSurf->styles[maps] != 255; ++maps)
+		if(lightmap)
 		{
-			const int style = newSurf->styles[maps];
-
-			for (int i = 0; i < size; ++i)
+			for (int maps = 0; maps < MAXLIGHTMAPS && newSurf->styles[maps] != 255; ++maps)
 			{
-				newSurf->samples.push_back(lightmap[i]);
+				const int style = newSurf->styles[maps];
 
+				for (int i = 0; i < size; ++i)
+				{
+					newSurf->samples.push_back(lightmap[i]);
+
+				}
+
+				lightmap += size;
 			}
-
-			lightmap += size;
 		}
 
 		m_iNumWorldSurfaces++;

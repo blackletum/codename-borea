@@ -10,8 +10,9 @@ char glsl330_studiomdl_vert[] = R"(
 	#define STUDIO_NF_CHROME 2
 	#define STUDIO_NF_ADDITIVE 32  // buz
 	#define STUDIO_NF_ALPHATEST 64 // buz
-	#define STUDIO_NF_FULLBRIGHT 512
 	#define STUDIO_NF_NOMIPMAP 256
+	#define STUDIO_NF_FULLBRIGHT 512
+
 
 
 	//for gpu skinning
@@ -46,6 +47,7 @@ char glsl330_studiomdl_vert[] = R"(
 	
 		ivec4 int_values; //x = numlights; y = chromeshell boolean; z = is this entity is static (prop_static) or not |||| 16 bytes
 
+		vec4 rendervalues; //rendercolor.r, rendercolor.g, rendercolor.b, renderamt
 		
 		mat3x4 modellight_info[MAX_MODEL_LIGHTS]; // 1536 bytes
 
@@ -266,7 +268,7 @@ char glsl330_studiomdl_frag[] = R"(
 	in vec4 vertexdiffusecolor;
 	in vec4 vertexspecularcolor;
 
-	#define MAX_MODEL_LIGHTS 12 // 2x(up, down, left, right, front, back)
+	#define MAX_MODEL_LIGHTS 12 // 2*(up, down, left, right, front, back)
 
 	// lighting options
 	#define STUDIO_NF_FLATSHADE 1
@@ -299,6 +301,7 @@ char glsl330_studiomdl_frag[] = R"(
 	
 		ivec4 int_values; //x = numlights; y = chromeshell boolean; z = is this entity is static (prop_static) or not
 
+		vec4 rendervalues; //rendercolor.r, rendercolor.g, rendercolor.b, renderamt
 		
 		mat3x4 modellight_info[MAX_MODEL_LIGHTS];
 
@@ -369,6 +372,8 @@ char glsl330_studiomdl_frag[] = R"(
 			else
 				gl_FragColor = texcolor;
 		}
+
+		gl_FragColor.a = rendervalues.a;
 		
 	}
 
