@@ -12,26 +12,26 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_cdll", "hl_cdll.vcxproj"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug_HL25|Win32 = Debug_HL25|Win32
+		Debug (pre_hl25)|Win32 = Debug (pre_hl25)|Win32
 		Debug|Win32 = Debug|Win32
-		Release_HL25|Win32 = Release_HL25|Win32
+		Release (pre_hl25)|Win32 = Release (pre_hl25)|Win32
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Debug_HL25|Win32.ActiveCfg = Debug (POST_HL25)|Win32
-		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Debug_HL25|Win32.Build.0 = Debug (POST_HL25)|Win32
+		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Debug (pre_hl25)|Win32.ActiveCfg = Debug (pre_hl25)|Win32
+		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Debug (pre_hl25)|Win32.Build.0 = Debug (pre_hl25)|Win32
 		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Debug|Win32.ActiveCfg = Debug|Win32
 		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Debug|Win32.Build.0 = Debug|Win32
-		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Release_HL25|Win32.ActiveCfg = Release (POST_HL25)|Win32
-		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Release_HL25|Win32.Build.0 = Release (POST_HL25)|Win32
+		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Release (pre_hl25)|Win32.ActiveCfg = Release (pre_hl25)|Win32
+		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Release (pre_hl25)|Win32.Build.0 = Release (pre_hl25)|Win32
 		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Release|Win32.ActiveCfg = Release|Win32
 		{69DDADC0-97F4-419E-86EB-C91781A0D2E0}.Release|Win32.Build.0 = Release|Win32
-		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Debug_HL25|Win32.ActiveCfg = Debug (POST_HL25)|Win32
-		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Debug_HL25|Win32.Build.0 = Debug (POST_HL25)|Win32
+		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Debug (pre_hl25)|Win32.ActiveCfg = Debug (pre_hl25)|Win32
+		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Debug (pre_hl25)|Win32.Build.0 = Debug (pre_hl25)|Win32
 		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Debug|Win32.ActiveCfg = Debug|Win32
 		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Debug|Win32.Build.0 = Debug|Win32
-		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Release_HL25|Win32.ActiveCfg = Release (POST_HL25)|Win32
-		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Release_HL25|Win32.Build.0 = Release (POST_HL25)|Win32
+		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Release (pre_hl25)|Win32.ActiveCfg = Release (pre_hl25)|Win32
+		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Release (pre_hl25)|Win32.Build.0 = Release (pre_hl25)|Win32
 		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Release|Win32.ActiveCfg = Release|Win32
 		{DC1DD765-CFEB-47DA-A2EA-9F1E20A24272}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection

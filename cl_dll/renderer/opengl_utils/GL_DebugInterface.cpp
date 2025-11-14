@@ -27,6 +27,8 @@ void GL_DebugInterface::Initialize()
 	#endif
 }
 
+extern bool bGoldsrcDrawing;
+
 void GL_DebugInterface::DebugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
 	std::string error_msg;
@@ -52,21 +54,24 @@ void GL_DebugInterface::DebugMessage(GLenum source, GLenum type, GLuint id, GLen
 		break;
 	}
 
-	switch (severity)
-	{
-	case GL_DEBUG_SEVERITY_HIGH:
-		error_msg += "(SEVERE) ";
-		break;
-	case GL_DEBUG_SEVERITY_MEDIUM:
-		error_msg += "(KINDA SEVERE) ";
-		break;
-	case GL_DEBUG_SEVERITY_LOW:
-		error_msg += "(WARNING) ";
-		break;
-	}
+	if (bGoldsrcDrawing)
+		error_msg += "(GOLDSRC ERROR)";
+	else 
+		switch (severity)
+		{
+		case GL_DEBUG_SEVERITY_HIGH:
+			error_msg += "(SEVERE) ";
+			break;
+		case GL_DEBUG_SEVERITY_MEDIUM:
+			error_msg += "(KINDA SEVERE) ";
+			break;
+		case GL_DEBUG_SEVERITY_LOW:
+			error_msg += "(WARNING) ";
+			break;
+		}
 
 	error_msg += message;
 	error_msg += '\n';
 
-	gEngfuncs.Con_Printf(error_msg.c_str());
+	gEngfuncs.Con_DPrintf(error_msg.c_str());
 }

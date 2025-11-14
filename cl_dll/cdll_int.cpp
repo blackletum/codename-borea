@@ -227,6 +227,19 @@ size_t GetModuleSize(HMODULE hModule)
 	return ntHeader->OptionalHeader.SizeOfImage;
 }
 
+#ifdef HL25_UPDATE
+
+void WINAPI replace_glBindFramebufferEXT(GLenum target, GLuint framebuffer)
+{
+	glBindFramebufferEXT(target, !framebuffer); //this seems to override the new hl25 fbo stuff, ugly but i dont care
+}
+
+void WINAPI replace_glBlitFramebufferEXT(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
+{
+	//dont do anything
+}
+
+#endif
 
 int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 {
@@ -291,8 +304,39 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		SDL_Window* window = SDL_CreateWindow(titlecp, x, y, w, h, flags);
 		auto engineBase = GetModuleHandleA("hw.dll");
 		auto size = GetModuleSize(engineBase);
+
+#ifdef HL25_UPDATE
+
+		bool got_bindframebuffer = false;
+		bool got_blitframebuffer = false;
+
+		PFNGLBINDFRAMEBUFFEREXTPROC framebuffer_func = (PFNGLBINDFRAMEBUFFEREXTPROC)SDL_GL_GetProcAddress("glBindFramebufferEXT"); 
+		PFNGLBLITFRAMEBUFFEREXTPROC blitframebuffer_func = (PFNGLBLITFRAMEBUFFEREXTPROC)SDL_GL_GetProcAddress("glBlitFramebufferEXT");
+#endif
+
+
 		if (windowPptr == nullptr)
 		{
+#ifdef HL25_UPDATE
+			if( !gEngfuncs.CheckParm("-nofbo", nullptr) )
+			for (int i = 0; i < size; i += 4)
+			{
+				auto* ptr = (void**)((uint8_t*)engineBase + i);
+				if (*ptr == framebuffer_func)
+				{
+					*ptr = replace_glBindFramebufferEXT;
+					got_bindframebuffer = true;
+				}
+				else if (*ptr == blitframebuffer_func)
+				{
+					*ptr = replace_glBlitFramebufferEXT;
+					got_blitframebuffer = true;
+				}
+				if (got_bindframebuffer && got_blitframebuffer)
+					break;
+			}
+#endif
+
 			for (int i = 0; i < size; i += 4)
 			{
 				auto* ptr = (SDL_Window**)((uint8_t*)engineBase + i);

@@ -193,9 +193,12 @@ salsa: anything can be rendered here, transparent or not
 */
 
 extern ref_params_t* r_refdef;
+bool bGoldsrcDrawing = true;
 
 void DLLEXPORT HUD_DrawNormalTriangles()
 {
+	bGoldsrcDrawing = false;
+
 	 // god fucking dammit developer cvar, stop messing up our RENDERER FOR CHRIST SAKE
 	g_GlobalGLState.ResetStates();
 	g_GlobalGLState.SetBlend(false);
@@ -217,6 +220,8 @@ void DLLEXPORT HUD_DrawNormalTriangles()
 	glAlphaFunc(GL_NOTEQUAL, 0);
 
 	r_refdef->onlyClientDraw = 0; // for sound
+
+	bGoldsrcDrawing = true;
 }
 
 /*

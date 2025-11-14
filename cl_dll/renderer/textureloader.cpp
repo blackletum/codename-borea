@@ -1358,7 +1358,7 @@ byte* CTextureLoader::LoadTGAFileRaw(const char* filename, int &width, int &heig
 	gEngfuncs.COM_FreeFile(pFile);
 
 
-	delete[] pOriginal;
+	delete[] pFlipped;
 
-	return pFlipped;
+	return pOriginal;
 }

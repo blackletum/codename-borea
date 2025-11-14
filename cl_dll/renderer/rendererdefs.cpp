@@ -1086,13 +1086,7 @@ void R_VidInit(void)
 {
 	restore_numleafs = 0;
 
-	GLint mainfbo;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &mainfbo);
-
-	GL_FBOHandler::SetMainGameFBO(mainfbo);
-
-	if (mainfbo < 0)
-		mainfbo = 0;
+	GL_FBOHandler::SetMainGameFBO(0);
 
 	gpTempEnts.clear();
 
