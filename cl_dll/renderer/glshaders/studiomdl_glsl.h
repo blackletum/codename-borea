@@ -227,6 +227,7 @@ char glsl330_studiomdl_vert[] = R"(
 	void Vertex_NoLight()
 	{
 		vertexdiffusecolor = vec4(1.0);
+		vertexspecularcolor = vec4(1.0);
 	}
 
 	void main() {
