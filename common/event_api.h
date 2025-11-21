@@ -17,6 +17,9 @@
 
 #define EVENT_API_VERSION 1
 
+typedef struct msurface_s msurface_t;
+typedef struct mnode_s mnode_t;
+
 typedef struct event_api_s
 {
 	int version;
@@ -57,6 +60,7 @@ extern void EV_WeaponAnimation(int sequence, int body);
 extern unsigned short EV_PrecacheEvent(int type, const char* psz);
 extern void EV_PlaybackEvent(int flags, const edict_t* pInvoker, unsigned short eventindex, float delay, float* origin, float* angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2);
 extern void EV_KillEvents(int entnum, const char* eventname);
+extern msurface_t* SurfaceAtPoint(model_t* pModel, mnode_t* node, vec_t* start, vec_t* end);
 extern const char* EV_TraceTexture(int ground, float* vstart, float* vend);
 
 

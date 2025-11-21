@@ -597,6 +597,62 @@ void CParticleEngine::CreateParticle(particle_system_t* pSystem, float* flOrigin
 {
 	Vector vBaseOrigin;
 	Vector vForward, vUp, vRight;
+
+	Vector vecOrg;
+
+	if (pSystem->collision == PARTICLE_COLLISION_RAIN)
+	{
+		pmtrace_t tr;
+		Vector vPlayer = gEngfuncs.GetLocalPlayer()->origin;
+		Vector vSpeed = gBSPRenderer.m_RefParams.simvel;
+
+		vecOrg[0] = vPlayer[0] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
+		vecOrg[1] = vPlayer[1] + gEngfuncs.pfnRandomLong(-pSystem->systemsize, pSystem->systemsize);
+
+		if (pSystem->maxheight)
+		{
+			vecOrg = vPlayer[2] + pSystem->maxheight;
+
+			if (vecOrg[2] > pSystem->skyheight)
+				vecOrg[2] = pSystem->skyheight;
+		}
+		else
+		{
+			vecOrg[2] = pSystem->skyheight;
+		}
+
+		gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction(false, true);
+
+		// Store off the old count
+		EV_PushPMStates();
+
+		EV_SetTraceHull(2);
+		gEngfuncs.pEventAPI->EV_PlayerTrace(vecOrg, (vecOrg + Vector(0, 0, 8192)), PM_STUDIO_IGNORE, -1, &tr);
+
+		EV_PopPMStates();
+		
+		if (gEngfuncs.PM_PointContents(tr.endpos, nullptr) != CONTENTS_SKY)
+			return;
+
+		const char* name = EV_TraceTexture(0, vecOrg, vecOrg + Vector(0, 0, 8192));
+
+		if (!name)
+			return;
+
+		if (strcmp(name, "sky"))
+			return;
+
+		//perform a trace upwards and see if we hit the sky
+		//msurface_t* surf = SurfaceAtPoint(engine_cl->worldmodel, engine_cl->worldmodel->nodes, tr.endpos, tr.endpos + Vector(0, 0, 1024));
+		//if (!surf)
+		//	return;
+		
+		//if (!(surf->flags & SURF_DRAWSKY))
+		//	return;//didnt hit a sky
+	}
+
+
+
 	cl_particle_t* pParticle = AllocParticle(pSystem);
 
 	if (!pParticle)
@@ -1293,7 +1349,7 @@ bool CParticleEngine::UpdateParticle(cl_particle_t* pParticle)
 				gBSPRenderer.CreateDecal(pmtrace.endpos, pmtrace.plane.normal, pSystem->create);
 				return false;
 			}
-			else if (pSystem->collision == PARTICLE_COLLISION_NEW_SYSTEM)
+			else if (pSystem->collision == PARTICLE_COLLISION_NEW_SYSTEM || pSystem->collision == PARTICLE_COLLISION_RAIN)
 			{
 				if (bColWater && pSystem->watercreate[0] != 0)
 				{
