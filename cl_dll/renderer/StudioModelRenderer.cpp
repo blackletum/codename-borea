@@ -4505,7 +4505,7 @@ void CStudioModelRenderer::StudioDecalExternal(Vector vpos, Vector vnorm, const 
 
 				auto ptexture = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
 
-				if (ptexture->GetTextureFlags() & STUDIO_NF_ALPHATEST)
+				if (ptexture->GetTextureFlags() & STUDIO_NF_MASKED)
 					continue;
 
 				vbomesh_t* pmesh = &m_pVBOSubModel->meshes[k];
@@ -4681,7 +4681,7 @@ void CStudioModelRenderer::StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart)
 
 		numtris += pmesh->GetNumTriangles();
 
-		if ((ptexflags & STUDIO_NF_ALPHATEST) || (ptexflags & STUDIO_NF_ADDITIVE))
+		if ((ptexflags & STUDIO_NF_MASKED) || (ptexflags & STUDIO_NF_ADDITIVE))
 		{
 			hasalpha_oradditive = true;
 			break;
@@ -4715,7 +4715,7 @@ void CStudioModelRenderer::StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart)
 
 		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_texture_flags], ptexflags);
 
-		if (ptexflags & STUDIO_NF_ALPHATEST)
+		if (ptexflags & STUDIO_NF_MASKED)
 		{
 			gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptexinfo.iIndex);
 		}
@@ -4810,7 +4810,7 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 		vbomesh_t* pvbomesh = &m_pVBOSubModel->meshes[i];
 		numverts += pvbomesh->num_vertexes;
 
-		if ((ptexflags & STUDIO_NF_ALPHATEST) || (ptexflags & STUDIO_NF_ADDITIVE))
+		if ((ptexflags & STUDIO_NF_MASKED) || (ptexflags & STUDIO_NF_ADDITIVE))
 		{
 			hasalpha_oradditive = true;
 			break;
@@ -4846,7 +4846,7 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 			if (ptexflags & STUDIO_NF_ADDITIVE)
 				continue;
 
-			if (ptexflags & STUDIO_NF_ALPHATEST)
+			if (ptexflags & STUDIO_NF_MASKED)
 			{
 				gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptex->GetTextureInfo().iIndex);
 			}

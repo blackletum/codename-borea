@@ -19,16 +19,7 @@
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
-#include "weapons/CGrapple.h"
-#include "weapons/CEagle.h"
 #include "weapons/fists.h"
-#include "weapons/CM249.h"
-#include "weapons/CDisplacer.h"
-#include "weapons/CShockRifle.h"
-#include "weapons/CSporeLauncher.h"
-#include "weapons/CSniperRifle.h"
-#include "weapons/CKnife.h"
-#include "weapons/CPenguin.h"
 
 #include "usercmd.h"
 #include "entity_state.h"
@@ -68,29 +59,12 @@ int giOldWeapons = 0;
 
 // HLDM Weapon placeholder entities.
 CGlock g_Glock;
-CCrowbar g_Crowbar;
 CPython g_Python;
 CMP5 g_Mp5;
-CCrossbow g_Crossbow;
 CShotgun g_Shotgun;
-CRpg g_Rpg;
-CGauss g_Gauss;
-CEgon g_Egon;
-CHgun g_HGun;
 CHandGrenade g_HandGren;
-CSatchel g_Satchel;
-CTripmine g_Tripmine;
-CSqueak g_Snark;
-CGrapple g_Grapple;
-CEagle g_Eagle;
-CFists g_Pipewrench;
-CM249 g_M249;
-CDisplacer g_Displacer;
-CShockRifle g_ShockRifle;
-CSporeLauncher g_SporeLauncher;
-CSniperRifle g_SniperRifle;
-CKnife g_Knife;
-CPenguin g_Penguin;
+CMolotov g_Molotov;
+CFists g_Fists;
 
 
 /*
@@ -510,29 +484,12 @@ void HUD_InitClientWeapons()
 
 	// Allocate slot(s) for each weapon that we are going to be predicting
 	HUD_PrepEntity( &g_Glock	, &player );
-	HUD_PrepEntity( &g_Crowbar	, &player );
 	HUD_PrepEntity( &g_Python	, &player );
-	HUD_PrepEntity( &g_Mp5	, &player );
-	HUD_PrepEntity( &g_Crossbow	, &player );
+	HUD_PrepEntity( &g_Mp5		, &player );
 	HUD_PrepEntity( &g_Shotgun	, &player );
-	HUD_PrepEntity( &g_Rpg	, &player );
-	HUD_PrepEntity( &g_Gauss	, &player );
-	HUD_PrepEntity( &g_Egon	, &player );
-	HUD_PrepEntity( &g_HGun	, &player );
 	HUD_PrepEntity( &g_HandGren	, &player );
-	HUD_PrepEntity( &g_Satchel	, &player );
-	HUD_PrepEntity( &g_Tripmine	, &player );
-	HUD_PrepEntity( &g_Snark	, &player );
-	HUD_PrepEntity( &g_Grapple, &player );
-	HUD_PrepEntity( &g_Eagle, &player );
-	HUD_PrepEntity( &g_Pipewrench, &player );
-	HUD_PrepEntity( &g_M249, &player );
-	HUD_PrepEntity( &g_Displacer, &player );
-	HUD_PrepEntity( &g_ShockRifle, &player );
-	HUD_PrepEntity( &g_SporeLauncher, &player );
-	HUD_PrepEntity( &g_SniperRifle, &player );
-	HUD_PrepEntity( &g_Knife, &player );
-	HUD_PrepEntity(&g_Penguin, &player);
+	HUD_PrepEntity( &g_Molotov	, &player );
+	HUD_PrepEntity( &g_Fists, &player );
 }
 
 /*
@@ -584,30 +541,13 @@ CBasePlayerWeapon* GetLocalWeapon( int id )
 
 	switch( id )
 	{
-	case WEAPON_CROWBAR: return &g_Crowbar;
 	case WEAPON_GLOCK: return &g_Glock;
 	case WEAPON_PYTHON: return &g_Python;
 	case WEAPON_MP5: return &g_Mp5;
-	case WEAPON_CROSSBOW: return &g_Crossbow;
 	case WEAPON_SHOTGUN: return &g_Shotgun;
-	case WEAPON_RPG: return &g_Rpg;
-	case WEAPON_GAUSS: return &g_Gauss;
-	case WEAPON_EGON: return &g_Egon;
-	case WEAPON_HORNETGUN: return &g_HGun;
 	case WEAPON_HANDGRENADE: return &g_HandGren;
-	case WEAPON_SATCHEL: return &g_Satchel;
-	case WEAPON_TRIPMINE: return &g_Tripmine;
-	case WEAPON_SNARK: return &g_Snark;
-	case WEAPON_GRAPPLE: return &g_Grapple;
-	case WEAPON_EAGLE: return &g_Eagle;
-	case WEAPON_FISTS: return &g_Pipewrench;
-	case WEAPON_M249: return &g_M249;
-	case WEAPON_DISPLACER: return &g_Displacer;
-	case WEAPON_SHOCKRIFLE: return &g_ShockRifle;
-	case WEAPON_SPORELAUNCHER: return &g_SporeLauncher;
-	case WEAPON_SNIPERRIFLE: return &g_SniperRifle;
-	case WEAPON_KNIFE: return &g_Knife;
-	case WEAPON_PENGUIN: return &g_Penguin;
+	case WEAPON_MOLOTOV: return &g_Molotov;
+	case WEAPON_FISTS: return &g_Fists;
 
 	default: return nullptr;
 	}
@@ -756,12 +696,6 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	{
 		player.m_pActiveItem = g_pWpns[ from->client.m_iId ];
 	}
-
-	if ( player.m_pActiveItem->m_iId == WEAPON_RPG )
-	{
-		 ( ( CRpg * )player.m_pActiveItem)->m_fSpotActive = (int)from->client.vuser2[ 1 ];
-		 ( ( CRpg * )player.m_pActiveItem)->m_cActiveRockets = (int)from->client.vuser2[ 2 ];
-	}
 	
 	// Don't go firing anything if we have died or are spectating
 	// Or if we don't have a weapon model deployed
@@ -826,12 +760,6 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	to->client.ammo_rockets				= player.ammo_rockets;
 	to->client.vuser2.y					= player.ammo_spores;
 	to->client.vuser2.z					= player.ammo_762;
-
-	if ( player.m_pActiveItem->m_iId == WEAPON_RPG )
-	{
-		 from->client.vuser2[ 1 ] = ( ( CRpg * )player.m_pActiveItem)->m_fSpotActive;
-		 from->client.vuser2[ 2 ] = ( ( CRpg * )player.m_pActiveItem)->m_cActiveRockets;
-	}
 
 	// Make sure that weapon animation matches what the game .dll is telling us
 	//  over the wire ( fixes some animation glitches )

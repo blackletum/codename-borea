@@ -6,12 +6,13 @@ char glsl330_studiomdl_vert[] = R"(
 	#define MAX_MODEL_LIGHTS 12 // 2x(up, down, left, right, front, back)
 
 	// lighting options
-	#define STUDIO_NF_FLATSHADE 1
-	#define STUDIO_NF_CHROME 2
-	#define STUDIO_NF_ADDITIVE 32  // buz
-	#define STUDIO_NF_ALPHATEST 64 // buz
-	#define STUDIO_NF_NOMIPMAP 256
-	#define STUDIO_NF_FULLBRIGHT 512
+	#define STUDIO_NF_FLATSHADE		1
+	#define STUDIO_NF_CHROME		2
+	#define STUDIO_NF_FULLBRIGHT	4
+	#define STUDIO_NF_NOMIPMAPS		8
+	#define STUDIO_NF_ALPHA			16 //(unused ?)
+	#define STUDIO_NF_ADDITIVE		32
+	#define STUDIO_NF_MASKED		64
 
 
 
@@ -271,12 +272,13 @@ char glsl330_studiomdl_frag[] = R"(
 	#define MAX_MODEL_LIGHTS 12 // 2*(up, down, left, right, front, back)
 
 	// lighting options
-	#define STUDIO_NF_FLATSHADE 1
-	#define STUDIO_NF_CHROME 2
-	#define STUDIO_NF_ADDITIVE 32  // buz
-	#define STUDIO_NF_ALPHATEST 64 // buz
-	#define STUDIO_NF_FULLBRIGHT 512
-	#define STUDIO_NF_NOMIPMAP 256
+	#define STUDIO_NF_FLATSHADE		1
+	#define STUDIO_NF_CHROME		2
+	#define STUDIO_NF_FULLBRIGHT	4
+	#define STUDIO_NF_NOMIPMAPS		8
+	#define STUDIO_NF_ALPHA			16 //(unused ?)
+	#define STUDIO_NF_ADDITIVE		32
+	#define STUDIO_NF_MASKED		64
 
 
 	layout(std140) uniform studiomdl_PerFrame

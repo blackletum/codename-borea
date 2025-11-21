@@ -244,6 +244,7 @@ DECLARE_MESSAGE(m_Ammo, AmmoPickup);	// flashes an ammo pickup record
 DECLARE_MESSAGE(m_Ammo, WeapPickup);    // flashes a weapon pickup record
 DECLARE_MESSAGE(m_Ammo, HideWeapon);	// hides the weapon, ammo, and crosshair displays temporarily
 DECLARE_MESSAGE(m_Ammo, ItemPickup);
+DECLARE_MESSAGE(m_Ammo, CrosshairColor);
 
 DECLARE_COMMAND(m_Ammo, Slot1);
 DECLARE_COMMAND(m_Ammo, Slot2);
@@ -275,6 +276,8 @@ int CHudAmmo::Init()
 	HOOK_MESSAGE(WeapPickup);
 	HOOK_MESSAGE(ItemPickup);
 	HOOK_MESSAGE(HideWeapon);
+	//stupid goldsrc 11 character limit for message names
+	gEngfuncs.pfnHookUserMsg("ReticleRgb", __MsgFunc_CrosshairColor);
 	HOOK_MESSAGE(AmmoX);
 
 	HOOK_COMMAND("slot1", Slot1);
@@ -300,6 +303,11 @@ int CHudAmmo::Init()
 
 	gWR.Init();
 	gHR.Init();
+
+	m_crosshairColor.r = 255;
+	m_crosshairColor.g = 255;
+	m_crosshairColor.b = 255;
+	m_crosshairColor.a = 255;
 
 	return 1;
 };
@@ -552,22 +560,35 @@ int CHudAmmo::MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf )
 	{
 		WEAPON *pWeapon = gWR.GetWeapon(4);
 		if ( pWeapon )
-			SetCrosshair( pWeapon->hCrosshair, pWeapon->rcCrosshair, 255, 255, 255 );
+			SetCrosshair( pWeapon->hCrosshair, pWeapon->rcCrosshair, m_crosshairColor);
 //		CONPRINT("Selecting custom crosshair");
 	}
 	else if ( (m_pWeapon == nullptr) || (gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
 	{
 		static Rect nullrc;
 		gpActiveSel = nullptr;
-		SetCrosshair( 0, nullrc, 0, 0, 0 );
+		SetCrosshair( 0, nullrc, RGBA{0, 0, 0, 0});
 //		CONPRINT("Blanking crosshair\n");
 	}
 	else
 	{
 		//if ( m_pWeapon )
-		SetCrosshair( m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255 );
+		SetCrosshair( m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, m_crosshairColor);
 //		CONPRINT("Selecting weapon crosshair\n");
 	}
+
+	return 1;
+}
+
+int CHudAmmo::MsgFunc_CrosshairColor(const char* pszName, int iSize, void* pbuf)
+{
+	BEGIN_READ(pbuf, iSize);
+	m_crosshairColor.r = READ_BYTE();
+	m_crosshairColor.g = READ_BYTE();
+	m_crosshairColor.b = READ_BYTE();
+	m_crosshairColor.a = 255;
+
+	SetCrosshairColor(m_crosshairColor);
 
 	return 1;
 }
@@ -596,7 +617,7 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 
 	if ( iId < 1 )
 	{
-		SetCrosshair(0, nullrc, 0, 0, 0);
+		SetCrosshair(0, nullrc, RGBA{ 0, 0, 0, 0 });
 		m_pWeapon = nullptr;
 		return 0;
 	}
@@ -633,23 +654,23 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_CUSTOMCROSSHAIR ))
 	{
 		WEAPON *ccWeapon = gWR.GetWeapon(7);
-		SetCrosshair(ccWeapon->hCrosshair, ccWeapon->rcCrosshair, 255, 255, 255);
+		SetCrosshair(ccWeapon->hCrosshair, ccWeapon->rcCrosshair, m_crosshairColor);
 	}
 	else if ( !(gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
 	{
 		if ( gHUD.m_iFOV >= 90 )
 		{ // normal crosshairs
 			if (fOnTarget && m_pWeapon->hAutoaim)
-				SetCrosshair(m_pWeapon->hAutoaim, m_pWeapon->rcAutoaim, 255, 255, 255);
+				SetCrosshair(m_pWeapon->hAutoaim, m_pWeapon->rcAutoaim, m_crosshairColor);
 			else
-				SetCrosshair(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255);
+				SetCrosshair(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, m_crosshairColor);
 		}
 		else
 		{ // zoomed crosshairs
 			if (fOnTarget && m_pWeapon->hZoomedAutoaim)
-				SetCrosshair(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, 255, 255, 255);
+				SetCrosshair(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, m_crosshairColor);
 			else
-				SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255);
+				SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, m_crosshairColor);
 
 		}
 	}

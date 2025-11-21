@@ -127,7 +127,7 @@ int CHud :: Redraw( float flTime, int intermission )
 	{
 		gVideoEngine.DrawVideo(flTime);
 		static Rect nullrc;
-		SetCrosshair(0, nullrc, 0, 0, 0); //hide crosshair
+		SetCrosshair(0, nullrc, RGBA{ 0, 0, 0, 0 }); //hide crosshair
 		return true;
 	}
 	//RENDERERS START

@@ -1929,9 +1929,12 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 				 // make distance based!
 			{
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, gMultiDamage.type );
-				pEntity->pev->velocity.x = vecDirShooting.x * 200.0f;
-				pEntity->pev->velocity.y = vecDirShooting.y * 200.0f;
-				pEntity->pev->velocity.z = 200.0f;
+				if(!pEntity->IsBSPModel()) //salsa: fix bsp ents flying away when shot at
+				{
+					pEntity->pev->velocity.x = vecDirShooting.x * 200.0f;
+					pEntity->pev->velocity.y = vecDirShooting.y * 200.0f;
+					pEntity->pev->velocity.z = 200.0f;
+				}
 			}
 				break;
 			

@@ -38,8 +38,6 @@
 #include "monsters.h"
 #include "talkmonster.h"
 #include "squadmonster.h"
-#include "COFAllyMonster.h"
-#include "COFSquadTalkMonster.h"
 #include "shake.h"
 #include "decals.h"
 #include "gamerules.h"
@@ -802,32 +800,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			SetSuitUpdate("!HEV_HLTH1", FALSE, SUIT_NEXT_IN_10MIN);	// health dropping
 	}
 
-	//Make all grunts following me attack the NPC that attacked me
-	if (pAttacker)
-	{
-		auto enemy = pAttacker->MyMonsterPointer();
-
-		if (!enemy || enemy->IRelationship(this) == R_AL)
-		{
-			return fTookDamage;
-		}
-
-		for (int i = 0; i < ARRAYSIZE(m_szSquadClasses); ++i)
-		{
-			for (auto ally : UTIL_FindEntitiesByClassname<CBaseEntity>(m_szSquadClasses[i]))
-			{
-				auto squadAlly = ally->MySquadTalkMonsterPointer();
-
-				if (squadAlly
-					&& squadAlly->m_hTargetEnt
-					&& squadAlly->m_hTargetEnt->IsPlayer())
-				{
-					squadAlly->SquadMakeEnemy(enemy);
-				}
-			}
-		}
-	}
-
 	return fTookDamage;
 }
 
@@ -1045,22 +1017,11 @@ void CBasePlayer::RemoveItems( int iWeaponMask, int i9mm, int i357, int iBuck, i
 	int i;
 	CBasePlayerItem *pCurrentItem;
 
-	// hornetgun is outside the spawnflags Worldcraft can set - handle it seperately.
-	if (iHornet)
-		iWeaponMask |= 1<<WEAPON_HORNETGUN;
-
 	RemoveAmmo("9mm", i9mm);
 	RemoveAmmo("357", i357);
 	RemoveAmmo("buckshot", iBuck);
-	RemoveAmmo("bolts", iBolt);
 	RemoveAmmo("ARgrenades", iARGren);
-	RemoveAmmo("uranium", iUranium);
-	RemoveAmmo("rockets", iRock);
-	RemoveAmmo("Satchel Charge", iSatchel);
-	RemoveAmmo("Snarks", iSnark);
-	RemoveAmmo("Trip Mine", iTrip);
 	RemoveAmmo("Hand Grenade", iGren);
-	RemoveAmmo("Hornets", iHornet);
 
 	for (i = 0; i < MAX_ITEM_TYPES; i++)
 	{
@@ -3132,6 +3093,45 @@ void CBasePlayer :: UpdatePlayerSound ()
 	//ALERT ( at_console, "%d/%d\n", iVolume, m_iTargetVolume );
 }
 
+void CBasePlayer::UpdateCrosshairColor()
+{
+	byte r = 255, g = 255, b = 255;
+	Vector vecFwd;
+	AngleVectors(pev->v_angle, &vecFwd, nullptr, nullptr);
+	TraceResult tr;
+	UTIL_TraceLine(EyePosition(), EyePosition() + (vecFwd * 4096), dont_ignore_monsters, edict(), &tr);
+
+	if (tr.pHit)
+	{
+		CBaseMonster* ent = CBaseEntity::Instance(tr.pHit)->MyMonsterPointer();
+		edict_t* pWorld = g_engfuncs.pfnPEntityOfEntIndex(0);
+		if (ent && !ent->IsBSPModel() && ent->IsAlive())
+		{
+			int rel = IRelationship(ent);
+			if (rel > R_NO)
+			{//enemy
+				r = 192;
+				g = 0;
+				b = 0;
+			}
+			else if (rel <= R_NO)
+			{//friend
+				r = 0;
+				g = 192;
+				b = 0;
+			}
+		}
+	}
+
+	//its just 3 bytes so its not a big deal to send every frame
+	MESSAGE_BEGIN(MSG_ONE, gmsgCrosshairColor, nullptr, pev);
+		WRITE_BYTE(r);
+		WRITE_BYTE(g);
+		WRITE_BYTE(b);
+	MESSAGE_END();
+
+}
+
 
 void CBasePlayer::PostThink()
 {
@@ -3168,6 +3168,8 @@ void CBasePlayer::PostThink()
 
 // do weapon stuff
 	ItemPostFrame( );
+
+	UpdateCrosshairColor();
 
 // check to see if player landed hard enough to make a sound
 // falling farther than half of the maximum safe distance, but not as far a max safe distance will
@@ -4352,35 +4354,6 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		GiveNamedItem( "weapon_dynamite" );
 		GiveNamedItem( "weapon_molotov" );
 
-	//	GiveNamedItem( "weapon_crowbar" );
-		
-	//	GiveNamedItem( "ammo_ARgrenades" );
-		
-	//	GiveNamedItem( "weapon_tripmine" );
-#ifndef OEM_BUILD
-		
-	//	GiveNamedItem( "weapon_crossbow" );
-	//	GiveNamedItem( "ammo_crossbow" );
-	//	GiveNamedItem( "weapon_egon" );
-	//	GiveNamedItem( "weapon_gauss" );
-	//	GiveNamedItem( "ammo_gaussclip" );
-	//	GiveNamedItem( "weapon_rpg" );
-	//	GiveNamedItem( "ammo_rpgclip" );
-	//	GiveNamedItem( "weapon_satchel" );
-	//	GiveNamedItem( "weapon_snark" );
-	//	GiveNamedItem( "weapon_hornetgun" );
-	//	GiveNamedItem( "weapon_eagle" );
-	//	GiveNamedItem( "weapon_sporelauncher" );
-	//	GiveNamedItem( "weapon_shockrifle" );
-	//	GiveNamedItem( "weapon_knife" );
-	//	GiveNamedItem( "weapon_m249" );
-	//	GiveNamedItem( "weapon_grapple" );
-	//	GiveNamedItem( "weapon_sniperrifle" );
-	//	GiveNamedItem( "weapon_displacer" );
-	//	GiveNamedItem( "item_longjump" );
-		//TODO: not given
-		//GiveNamedItem( "ammo_762" );
-#endif
 		gEvilImpulse101 = FALSE;
 		break;
 
@@ -4731,6 +4704,50 @@ void CBasePlayer::ItemPreFrame()
 		return;
 
 	m_pActiveItem->ItemPreFrame( );
+}
+
+void FindHullIntersection(const Vector& vecSrc, TraceResult& tr, const Vector& mins, const Vector& maxs, edict_t* pEntity)
+{
+	int i, j, k;
+	float distance;
+	const Vector* minmaxs[2] = { &mins, &maxs };
+	TraceResult tmpTrace;
+	Vector vecHullEnd = tr.vecEndPos;
+	Vector vecEnd;
+
+	distance = 1e6f;
+
+	vecHullEnd = vecSrc + ((vecHullEnd - vecSrc) * 2);
+	UTIL_TraceLine(vecSrc, vecHullEnd, dont_ignore_monsters, pEntity, &tmpTrace);
+	if (tmpTrace.flFraction < 1.0)
+	{
+		tr = tmpTrace;
+		return;
+	}
+
+	for (i = 0; i < 2; i++)
+	{
+		for (j = 0; j < 2; j++)
+		{
+			for (k = 0; k < 2; k++)
+			{
+				vecEnd.x = vecHullEnd.x + minmaxs[i]->x;
+				vecEnd.y = vecHullEnd.y + minmaxs[j]->y;
+				vecEnd.z = vecHullEnd.z + minmaxs[k]->z;
+
+				UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, pEntity, &tmpTrace);
+				if (tmpTrace.flFraction < 1.0)
+				{
+					float thisDistance = (tmpTrace.vecEndPos - vecSrc).Length();
+					if (thisDistance < distance)
+					{
+						tr = tmpTrace;
+						distance = thisDistance;
+					}
+				}
+			}
+		}
+	}
 }
 
 

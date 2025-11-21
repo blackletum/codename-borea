@@ -133,6 +133,7 @@ public:
 	void Think() override;
 	void Reset() override;
 	int DrawWList(float flTime);
+	int MsgFunc_CrosshairColor(const char* pszName, int iSize, void* pbuf);
 	int MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf);
 	int MsgFunc_WeaponList(const char *pszName, int iSize, void *pbuf);
 	int MsgFunc_AmmoX(const char *pszName, int iSize, void *pbuf);
@@ -161,6 +162,7 @@ public:
 private:
 	float m_fFade;
 	RGBA  m_rgba;
+	RGBA m_crosshairColor;
 	int	m_HUD_bucket0;
 	int m_HUD_selection;
 

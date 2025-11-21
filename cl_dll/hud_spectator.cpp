@@ -1213,12 +1213,12 @@ void CHudSpectator::SetModes(int iNewMainMode, int iNewInsetMode)
 			m_crosshairRect.right	 = 48;
 			m_crosshairRect.bottom = 24;
 						
-			SetCrosshair( m_hCrosshair, m_crosshairRect, 255, 255, 255 );
+			SetCrosshair(m_hCrosshair, m_crosshairRect, RGBA{0, 0, 0, 0});
 		}
 		else
 		{
 			memset( &m_crosshairRect,0,sizeof(m_crosshairRect) );
-			SetCrosshair( 0, m_crosshairRect, 0, 0, 0 );
+			SetCrosshair( 0, m_crosshairRect, RGBA{ 0, 0, 0, 0 });
 		} 
 
 		gViewPort->MsgFunc_ResetFade( nullptr, 0, nullptr );
@@ -1880,12 +1880,12 @@ void CHudSpectator::CheckSettings()
 		m_crosshairRect.right	 = 48;
 		m_crosshairRect.bottom = 24;
 					
-		SetCrosshair( m_hCrosshair, m_crosshairRect, 255, 255, 255 );
+		SetCrosshair( m_hCrosshair, m_crosshairRect, RGBA{ 255, 255, 255, 255 });
 	}
 	else
 	{
 		memset( &m_crosshairRect,0,sizeof(m_crosshairRect) );
-		SetCrosshair( 0, m_crosshairRect, 0, 0, 0 );
+		SetCrosshair( 0, m_crosshairRect, RGBA{ 0, 0, 0, 0 });
 	} 
 
 

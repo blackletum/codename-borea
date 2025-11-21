@@ -103,6 +103,7 @@ int gmsgStatsPlayer = 0;
 int gmsgTeamFull = 0;
 int gmsgOldWeapon = 0;
 int gmsgCustomIcon = 0;
+int gmsgCrosshairColor = 0;
 int gmsgStamina = 0;
 
 int gmsgReadable = 0;
@@ -210,6 +211,7 @@ void LinkUserMessages()
 	gmsgTeamFull = g_engfuncs.pfnRegUserMsg("TeamFull", 1);
 	gmsgOldWeapon = g_engfuncs.pfnRegUserMsg("OldWeapon", 1);
 	gmsgCustomIcon = g_engfuncs.pfnRegUserMsg("CustomIcon", -1);
+	gmsgCrosshairColor = g_engfuncs.pfnRegUserMsg("ReticleRgb", -1);
 
 	gmsgReadable = REG_USER_MSG("Readable", -1);
 

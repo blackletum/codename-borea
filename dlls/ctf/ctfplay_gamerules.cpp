@@ -1423,9 +1423,6 @@ void CHalfLifeCTFplay::ChangePlayerTeam( CBasePlayer* pPlayer, const char* pChar
 		pPlayer->Observer_SetMode( OBS_CHASE_FREE );
 		pPlayer->pev->deadflag = DEAD_RESPAWNABLE;
 
-		if( pPlayer->HasNamedPlayerItem( "weapon_satchel" ) )
-			DeactivateSatchels( pPlayer );
-
 		pPlayer->RemoveAllItems( false );
 
 		if( !g_fGameOver )

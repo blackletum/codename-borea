@@ -838,9 +838,12 @@ void CHud :: Init()
 // cleans up memory allocated for m_rg* arrays
 CHud :: ~CHud()
 {
-#ifdef ENGINE_DEBUG
-	CONPRINT("## CHud::destructor\n");
-#endif
+	//	this is currently called in a moment where the engine functions have been shut down
+	// so calling conprint just gives an error
+//#ifdef ENGINE_DEBUG
+//	CONPRINT("## CHud::destructor\n");
+// 
+//#endif
 	delete [] m_rghSprites;
 	delete [] m_rgrcRects;
 	delete [] m_rgszSpriteNames;

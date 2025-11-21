@@ -99,6 +99,7 @@ extern int gmsgStatsPlayer;
 extern int gmsgTeamFull;
 extern int gmsgOldWeapon;
 extern int gmsgCustomIcon;
+extern int gmsgCrosshairColor;
 extern int gmsgStamina;
 extern int gmsgChapterName;
 

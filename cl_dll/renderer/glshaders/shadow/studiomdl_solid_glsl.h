@@ -4,12 +4,13 @@
 char glsl330_studiomdlsolid_vert[] = R"(
 
 	// lighting options
-	#define STUDIO_NF_FLATSHADE 1
-	#define STUDIO_NF_CHROME 2
-	#define STUDIO_NF_ADDITIVE 32  // buz
-	#define STUDIO_NF_ALPHATEST 64 // buz
-	#define STUDIO_NF_FULLBRIGHT 512
-	#define STUDIO_NF_NOMIPMAP 256
+	#define STUDIO_NF_FLATSHADE		1
+	#define STUDIO_NF_CHROME		2
+	#define STUDIO_NF_FULLBRIGHT	4
+	#define STUDIO_NF_NOMIPMAPS		8
+	#define STUDIO_NF_ALPHA			16 //(unused ?)
+	#define STUDIO_NF_ADDITIVE		32
+	#define STUDIO_NF_MASKED		64
 
 	layout(std140) uniform StudioSolidUBO
 	{
@@ -60,7 +61,7 @@ char glsl330_studiomdlsolid_vert[] = R"(
 		else
 			translated_vertpos = vec4( modelmatrix * vec4(aPosition, 1)).xyz; //static prop
 
-		texcoord = aTexCoord.xy / textureSize(texture0, 0);
+		texcoord = aTexCoord.xy;
 
 		gl_Position = projviewmatrix * vec4(translated_vertpos, 1);
 
@@ -74,12 +75,13 @@ char glsl330_studiomdlsolid_vert[] = R"(
 char glsl330_studiomdlsolid_frag[] = R"(
 
 	// lighting options
-	#define STUDIO_NF_FLATSHADE 1
-	#define STUDIO_NF_CHROME 2
-	#define STUDIO_NF_ADDITIVE 32  // buz
-	#define STUDIO_NF_ALPHATEST 64 // buz
-	#define STUDIO_NF_FULLBRIGHT 512
-	#define STUDIO_NF_NOMIPMAP 256
+	#define STUDIO_NF_FLATSHADE		1
+	#define STUDIO_NF_CHROME		2
+	#define STUDIO_NF_FULLBRIGHT	4
+	#define STUDIO_NF_NOMIPMAPS		8
+	#define STUDIO_NF_ALPHA			16 //(unused ?)
+	#define STUDIO_NF_ADDITIVE		32
+	#define STUDIO_NF_MASKED		64
 
 	uniform sampler2D texture0;
 	uniform int texture_flags;
@@ -106,7 +108,7 @@ char glsl330_studiomdlsolid_frag[] = R"(
 
 	void main()
 	{
-		if ( (texture_flags & STUDIO_NF_ALPHATEST) > 0)
+		if ( (texture_flags & STUDIO_NF_MASKED) > 0)
 			if(texture(texture0, texcoord).a < 0.5)
 				discard;
 

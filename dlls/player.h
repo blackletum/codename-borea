@@ -402,6 +402,8 @@ public:
 	int  GiveAmmo( int iAmount, const char *szName, int iMax ) override;
 	void SendAmmoUpdate();
 
+	void UpdateCrosshairColor();
+
 	void WaterMove();
 	void EXPORT PlayerDeathThink();
 	void PlayerUse();

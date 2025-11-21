@@ -56,7 +56,8 @@ extern void SPR_DisableScissor(void);
 
 extern model_t* GetSpritePointer(HSPRITE_GOLDSRC hSprite);
 
-extern void SetCrosshair(HSPRITE_GOLDSRC hspr, Rect rc, int r, int g, int b);
+extern void SetCrosshair(HSPRITE_GOLDSRC hspr, Rect rc, RGBA color);
+extern void SetCrosshairColor(RGBA color);
 extern void DrawCrosshair();
 
 

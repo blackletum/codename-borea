@@ -444,7 +444,6 @@ void DLLEXPORT HUD_CreateEntities()
 
 void MuzzleFlash(int index, const cl_entity_s* entity)
 {
-
 	cl_dlight_t* dl = gBSPRenderer.CL_AllocDLight(entity->index);
 
 	Vector viewheight = Vector(0, 0, 0);
@@ -503,30 +502,49 @@ void DLLEXPORT HUD_StudioEvent(const struct mstudioevent_s* event, const struct 
 {
 	//	RecClStudioEvent(event, entity);
 
+	bool bHasSilencer = false;
+
+	if (engine_cl->viewent.model)
+	{
+		if (engine_cl->viewent.curstate.body == 1) //i hope the pistel model is the only one with extra bodygroups
+			bHasSilencer = true;
+	}
+
 	switch (event->event)
 	{
 	case 5001:
 
-		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[0], atoi(event->options));
-		MuzzleFlash(0, entity);
+		if(!bHasSilencer)
+		{
+			gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[0], atoi(event->options));
+			MuzzleFlash(0, entity);
+		}
 
 		break;
 	case 5011:
 
-		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[1], atoi(event->options));
-		MuzzleFlash(1, entity);
+		if (!bHasSilencer)
+		{
+			gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[1], atoi(event->options));
+			MuzzleFlash(1, entity);
+		}
 
 		break;
 	case 5021:
-
-		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[2], atoi(event->options));
-		MuzzleFlash(2, entity);
+		if (!bHasSilencer)
+		{
+			gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[2], atoi(event->options));
+			MuzzleFlash(2, entity);
+		}
 
 		break;
 	case 5031:
 
-		gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[3], atoi(event->options));
-		MuzzleFlash(3, entity);
+		if (!bHasSilencer)
+		{
+			gEngfuncs.pEfxAPI->R_MuzzleFlash((float*)&entity->attachment[3], atoi(event->options));
+			MuzzleFlash(3, entity);
+		}
 
 		break;
 	case 5002:

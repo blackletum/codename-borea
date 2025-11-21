@@ -340,19 +340,26 @@ void Draw_SpriteFrameHoles(mspriteframe_t* pFrame, int x, int y, const Rect* prc
 }
 
 Rect gCrosshairRc;
-int gCrosshairR;
-int gCrosshairG;
-int gCrosshairB;
+byte gCrosshairR;
+byte gCrosshairG;
+byte gCrosshairB;
 
 
 
-void SetCrosshair(HSPRITE_GOLDSRC hspr, Rect rc, int r, int g, int b)
+void SetCrosshair(HSPRITE_GOLDSRC hspr, Rect rc, RGBA color)
 {
 	ghCrosshair = hspr;
 	gCrosshairRc = rc;
-	gCrosshairR = r;
-	gCrosshairG = g;
-	gCrosshairB = b;
+	gCrosshairR = color.r;
+	gCrosshairG = color.g;
+	gCrosshairB = color.b;
+}
+
+void SetCrosshairColor(RGBA color)
+{
+	gCrosshairR = color.r;
+	gCrosshairG = color.g;
+	gCrosshairB = color.b;
 }
 
 void DrawCrosshair()

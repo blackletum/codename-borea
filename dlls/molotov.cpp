@@ -30,7 +30,7 @@ LINK_ENTITY_TO_CLASS( weapon_molotov, CMolotov );
 void CMolotov::Spawn( )
 {
 	Precache( );
-	m_iId = WEAPON_PENGUIN;
+	m_iId = WEAPON_MOLOTOV;
 	SET_MODEL(ENT(pev), "models/w_molotov.mdl");
 
 #ifndef CLIENT_DLL
@@ -65,7 +65,7 @@ int CMolotov::GetItemInfo(ItemInfo *p)
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 3;
 	p->iPosition = 1;
-	p->iId = m_iId = WEAPON_PENGUIN; // Aynekko: I'll reuse this, thanks...
+	p->iId = m_iId = WEAPON_MOLOTOV; // Aynekko: I'll reuse this, thanks...
 	p->iWeight = HANDGRENADE_WEIGHT;
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
 
@@ -111,7 +111,7 @@ void CMolotov::Holster( int skiplocal /* = 0 */ )
 	else
 	{
 		// no more grenades!
-		m_pPlayer->pev->weapons &= ~(1<<WEAPON_PENGUIN);
+		m_pPlayer->pev->weapons &= ~(1<<WEAPON_MOLOTOV);
 		SetThink( &CHandGrenade::DestroyItem );
 		SetNextThink( 0.1 );
 	}
