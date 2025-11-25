@@ -56,7 +56,20 @@ void CHealthKit :: Spawn()
 	Precache( );
 	SET_MODEL(ENT(pev), "models/w_medkit.mdl");
 
-	CItem::Spawn();
+	pev->movetype = MOVETYPE_TOSS;
+	pev->solid = SOLID_TRIGGER;
+	UTIL_SetOrigin(this, pev->origin);
+	//make healthkit point-sized so it wont phase through world in tight areas
+	UTIL_SetSize(pev, Vector(0, 0, 0), Vector(0, 0, 0));
+	//	SetTouch(&CItem::ItemTouch);
+	SetUse(&CItem::ItemUse);
+
+	if (DROP_TO_FLOOR(ENT(pev)) == 0)
+	{
+		ALERT(at_error, "Item %s fell out of level at %f,%f,%f", STRING(pev->classname), pev->origin.x, pev->origin.y, pev->origin.z);
+		UTIL_Remove(this);
+		return;
+	}
 }
 
 void CHealthKit::Precache()

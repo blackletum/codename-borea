@@ -231,10 +231,17 @@ public:
 	int slowmoCounter;
 	void SlowmoPhysics();
 	
+	enum ELeanMode
+	{
+		_NotLeaning = 0,
+		_LeaningLeft,
+		_LeaningRight,
+	};
+
 	// leaning
 	void LeaningThink();
 	bool isLeaning;
-	int leanMode; // 0 - none	1 - left	2 - right
+	ELeanMode leanMode; // 0 - none	1 - left	2 - right
 	float leanAngle;
 	TraceResult leanRightTr, leanLeftTr;
 
@@ -242,7 +249,7 @@ public:
 	int m_iUseEnt;
 
 	// sliding
-	int m_iSlidingStage;
+	BOOL m_bIsSliding;
 	Vector m_vecSlidingDir;
 	float m_flSlidingMultiplier;
 	float m_flSlidingTimer;
@@ -251,10 +258,18 @@ public:
 	TraceResult m_slidingTr;
 	void SlidingThink();
 
+	enum EKickStage
+	{
+		_Idle = 0,
+		_StartKick,
+		_DoKick,
+		_EndKick,
+	};
+
 	bool DoPlayerKickPunch;
 	float KickPunchStartTime;
 	bool DoKickDamage;
-	int KickStage;
+	EKickStage KickStage;
 
 	// ads
 	int m_iScopeType;

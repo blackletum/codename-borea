@@ -361,6 +361,13 @@ char glsl330_studiomdl_frag[] = R"(
 				texcolor.rgb *= 2;
 		}
 
+		if( (texture_flags & STUDIO_NF_FULLBRIGHT) > 0)
+		{
+			gl_FragColor = texcolor;
+			gl_FragColor.a = rendervalues.a;
+			return;
+		}
+
 		if (fogend_n_fogactive_n_lightdebug.y != 0)  // fog blend
 		{
 			if(!studiodecal)

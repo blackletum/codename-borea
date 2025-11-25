@@ -214,7 +214,7 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD(CBasePlayer, nextSlowmoUpdate, FIELD_TIME),
 
 	// sliding
-	DEFINE_FIELD(CBasePlayer, m_iSlidingStage, FIELD_INTEGER),
+	DEFINE_FIELD(CBasePlayer, m_bIsSliding, FIELD_BOOLEAN),
 	DEFINE_FIELD(CBasePlayer, m_vecSlidingDir, FIELD_VECTOR),
 	DEFINE_FIELD(CBasePlayer, m_flSlidingMultiplier, FIELD_FLOAT),
 	DEFINE_FIELD(CBasePlayer, m_flSlidingTimer, FIELD_TIME),
@@ -1593,7 +1593,7 @@ void CBasePlayer::PlayerDeathThink()
 	pev->effects |= EF_NOINTERP;
 	pev->framerate = 0.0;
 
-	BOOL fAnyButtonDown = (pev->button & ~IN_SCORE );
+	BOOL fAnyButtonDown = (pev->button & ~IN_SCORE ); //UNDONE: make player uncrouch if they have sticky crouch key
 
 	// wait for all buttons released
 	if (pev->deadflag == DEAD_DEAD)
@@ -3263,7 +3263,9 @@ pt_end:
 
 				gun = (CBasePlayerWeapon *)pPlayerItem->GetWeaponPtr();
 				
-				if ( gun && gun->UseDecrement() && !(!KickStage && gun->m_fInReload) )
+				bool bNotKicking = (KickStage == EKickStage::_Idle);
+
+				if ( gun && gun->UseDecrement() && !(bNotKicking && gun->m_fInReload) )
 				{
 					gun->m_flNextPrimaryAttack		= V_max( gun->m_flNextPrimaryAttack - gpGlobals->frametime, -1.0 );
 					gun->m_flNextSecondaryAttack	= V_max( gun->m_flNextSecondaryAttack - gpGlobals->frametime, -0.001 );
@@ -4229,7 +4231,7 @@ void CBasePlayer::ImpulseCommands( )
 				DoPlayerKickPunch = true;
 				KickPunchStartTime = gpGlobals->time;
 				DoKickDamage = false;
-				KickStage = 0;
+				KickStage = EKickStage::_Idle;
 				saved_viewmodel = pev->viewmodel;
 			}
 			break;
@@ -4855,20 +4857,20 @@ void CBasePlayer::ItemPostFrame()
 			}
 		}
 		
-		if( KickStage == 0 )
+		if( KickStage == EKickStage::_Idle )
 		{
 			// lower the weapon quickly
-			KickStage = 1;
+			KickStage = EKickStage::_StartKick;
 			MESSAGE_BEGIN( MSG_ONE, gmsgKickPunch, nullptr, pev );
 			WRITE_BYTE( KickStage );
 			MESSAGE_END();
 		}
-		else if( KickStage == 1 )
+		else if( KickStage == EKickStage::_StartKick)
 		{
 			if( gpGlobals->time > KickPunchStartTime + 0.2 )
 			{
 				// do kicking
-				KickStage = 2;
+				KickStage = EKickStage::_DoKick;
 				MESSAGE_BEGIN( MSG_ONE, gmsgKickPunch, nullptr, pev );
 				WRITE_BYTE( KickStage );
 				MESSAGE_END();
@@ -4890,12 +4892,12 @@ void CBasePlayer::ItemPostFrame()
 				}
 			}
 		}
-		else if( KickStage == 2 )
+		else if( KickStage == EKickStage::_DoKick)
 		{
 			if( gpGlobals->time > KickPunchStartTime + 0.7 )
 			{
 				// bring back weapon
-				KickStage = 3;
+				KickStage = EKickStage::_EndKick;
 				MESSAGE_BEGIN( MSG_ONE, gmsgKickPunch, nullptr, pev );
 				WRITE_BYTE( KickStage );
 				MESSAGE_END();
@@ -4905,13 +4907,13 @@ void CBasePlayer::ItemPostFrame()
 			//	m_pActiveItem->Deploy(); // no, not better
 			}
 		}
-		else if( KickStage == 3 )
+		else if( KickStage == EKickStage::_EndKick)
 		{
 			// weapon brought back, restore shooting functionality
 			if( gpGlobals->time > KickPunchStartTime + 1.3 )
 			{
 				// bring back weapon
-				KickStage = 0;
+				KickStage = EKickStage::_Idle;
 				MESSAGE_BEGIN( MSG_ONE, gmsgKickPunch, nullptr, pev );
 				WRITE_BYTE( KickStage );
 				MESSAGE_END();
@@ -5025,7 +5027,7 @@ void CBasePlayer :: UpdateClientData()
 			WRITE_BYTE( 0 );
 		MESSAGE_END();
 		DoPlayerKickPunch = false;
-		KickStage = 0;
+		KickStage = EKickStage::_Idle;
 		KickPunchStartTime = 0;
 		DoKickDamage = false;
 		// this is an attempt to fix stuck kick if player saved during it.
@@ -5178,7 +5180,7 @@ void CBasePlayer :: UpdateClientData()
 	WRITE_SHORT(isSlowmo);
 	WRITE_BYTE(isRunning);
 	WRITE_FLOAT(leanAngle);
-	WRITE_BYTE((bool)m_iSlidingStage);
+	WRITE_BYTE((bool)m_bIsSliding);
 	WRITE_FLOAT(light);
 	WRITE_BYTE(m_iScopeType);
 	MESSAGE_END();
@@ -6941,7 +6943,7 @@ void CBasePlayer::LeaningThink()
 		if (leanAngle > 0) leanAngle = 0;
 
 		isLeaning = true;
-		leanMode = 1;
+		leanMode = ELeanMode::_LeaningLeft;
 	}
 
 	// right leaning
@@ -6970,14 +6972,14 @@ void CBasePlayer::LeaningThink()
 		if (leanAngle > 30.0f) leanAngle = 30.0f;
 
 		isLeaning = true;
-		leanMode = 2;			
+		leanMode = ELeanMode::_LeaningRight;
 
 	}
 	//ALERT(at_console, "%f", leanAngle);
 	else if (isLeaning)
 	{
 		isLeaning = false;
-		leanMode = 0;
+		leanMode = ELeanMode::_NotLeaning;
 		leanAngle = 0.0f;
 	}
 
@@ -6994,15 +6996,17 @@ void CBasePlayer::SlidingThink()
 {
 	float SlidingTime = 1.25f;
 	int SlidingCounter = (int)(SlidingTime / 0.05f);
-	if (pev->velocity.Length2D() > 280.0f && (pev->button & IN_DUCK) && m_iSlidingStage == 0 && m_flSlidingCooldown < gpGlobals->time && (pev->flags & FL_ONGROUND))
+	bool bCrouching = (pev->button & IN_DUCK);
+	bool bSprinting = (pev->button & IN_RUN);
+	if (pev->velocity.Length2D() > 280.0f && bSprinting && bCrouching && !m_bIsSliding && m_flSlidingCooldown < gpGlobals->time && (pev->flags & FL_ONGROUND))
 	{
 		m_vecSlidingDir = pev->velocity;
-		m_iSlidingStage = 1;
+		m_bIsSliding = TRUE;
 		m_iSlidingCounter = SlidingCounter;
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/playerslide.wav", 1, ATTN_NORM);
 	}
 
-	if (m_iSlidingStage == 1)
+	if (m_bIsSliding)
 	{
 		Vector right, up;
 		AngleVectors(pev->angles, nullptr, &right, &up);
@@ -7042,7 +7046,7 @@ void CBasePlayer::SlidingThink()
 				pev->punchangle.z += 20;
 			}
 
-			m_iSlidingStage = 0;
+			m_bIsSliding = FALSE;
 			m_flSlidingCooldown = gpGlobals->time + 0.5f;
 		}
 

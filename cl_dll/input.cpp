@@ -881,7 +881,10 @@ int CL_ButtonBits( int bResetState )
 	
 	if (in_duck.state & 3)
 	{
-		bits |= IN_DUCK;
+		if (CL_IsDead())
+			KeyUp(&in_duck);
+		else
+			bits |= IN_DUCK;
 	}
  
 	if (in_jump.state & 3)

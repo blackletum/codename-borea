@@ -4,6 +4,7 @@
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
+#include "player.h"
 #include "UserMessages.h"
 
 class CPointMessage : public CBaseEntity
@@ -140,9 +141,12 @@ void CReadable::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useT
 		if (!pActivator->IsPlayer())
 			ALERT(at_error, "func_readable activator is not a player !\n");
 
+		edict_t* edictplayer = FIND_ENTITY_BY_CLASSNAME(nullptr, "player");
+		CBasePlayer* player = (CBasePlayer*)CBaseEntity::Instance(edictplayer);
+
 		// send this entity to activator
 		Vector realOrigin = pev->origin + (pev->maxs + pev->mins) / 2;
-		MESSAGE_BEGIN(MSG_ONE, gmsgReadable, pActivator->pev->origin, pActivator->pev);
+		MESSAGE_BEGIN(MSG_ONE, gmsgReadable, player->pev->origin, player->pev);
 		WRITE_COORD(realOrigin.x);
 		WRITE_COORD(realOrigin.y);
 		WRITE_COORD(realOrigin.z);
