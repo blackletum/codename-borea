@@ -32,6 +32,20 @@ struct CClientPointMessage
 	float maxDistance;
 };
 
+char *V_strupr( char *start )
+{
+	unsigned char *str = (unsigned char *)start;
+	while( *str )
+	{
+		if( (unsigned char)(*str - 'a') <= ('z' - 'a') )
+			*str -= 'a' - 'A';
+		else if( (unsigned char)*str >= 0x80 ) // non-ascii, fall back to CRT
+			*str = toupper( *str );
+		str++;
+	}
+	return start;
+}
+
 extern SDL_Window* mainWindow;
 extern SDL_GLContext mainContext;
 std::vector<CClientPointMessage> MessageList;
@@ -231,11 +245,21 @@ int CPointMessageRenderer::Draw(float flTime)
 		ImGui::SetNextWindowSize(ImVec2(window.x * 1.6, window.y * 1.6 )); //make sure its not cropped
 		ImGui::Begin("test", null, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 		ImGui::Image((void*)(intptr_t)readableTex, ImVec2(window.x, window.y));
-		std::string text = "Press E or walk away to close.";
+	//	std::string text = "Press E or walk away to close.";
+		char text[128];
+		char key_c[128];
+		const char *key = gEngfuncs.Key_LookupBinding( "use" );
+		if( !key || key[0] == '\0' )
+			key = "< not bound >";
+
+		std::snprintf( key_c, sizeof( key_c ), "%s", key );
+		V_strupr( key_c );
+
+		std::snprintf( text, sizeof( text ), "Press %s or walk away to close.", key_c );
 		auto windowWidth = ImGui::GetWindowSize().x;
-		auto textWidth = ImGui::CalcTextSize(text.c_str()).x;
+		auto textWidth = ImGui::CalcTextSize(text).x;
 		ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
-		ImGui::Text(text.c_str());
+		ImGui::Text(text);
 
 		ImGui::End();
 
