@@ -1066,6 +1066,9 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	if (!pev->takedamage)
 		return 0;
 
+	if( bitsDamageType & DMG_BULLET )
+		bitsDamageType |= DMG_NEVERGIB;
+
 	if ( !IsAlive() )
 	{
 		return DeadTakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );

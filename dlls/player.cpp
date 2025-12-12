@@ -4829,7 +4829,7 @@ void CBasePlayer::ItemPostFrame()
 				if( pEntity )
 				{
 					ClearMultiDamage();
-					pEntity->TraceAttack( pev, gSkillData.kickDmg, gpGlobals->v_forward, &tr, DMG_CLUB );
+					pEntity->TraceAttack( pev, gSkillData.kickDmg, gpGlobals->v_forward, &tr, DMG_CLUB | DMG_NEVERGIB );
 					ApplyMultiDamage( pev, pev );
 					if( pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE )
 					{

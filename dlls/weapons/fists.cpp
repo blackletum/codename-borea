@@ -279,7 +279,7 @@ void CFists::DoAttack()
 		{
 			ClearMultiDamage();
 
-			pEntity->TraceAttack( m_pPlayer->pev, Damage, gpGlobals->v_forward, &tr, DMG_CLUB );
+			pEntity->TraceAttack( m_pPlayer->pev, Damage, gpGlobals->v_forward, &tr, DMG_CLUB | DMG_NEVERGIB );
 
 			ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 		}
