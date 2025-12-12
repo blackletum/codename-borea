@@ -4802,7 +4802,7 @@ void CBasePlayer::ItemPostFrame()
 			TraceResult tr;
 			UTIL_MakeVectors( pev->v_angle );
 			Vector vecSrc = GetGunPosition();
-			Vector vecEnd = vecSrc + gpGlobals->v_forward * 50;
+			Vector vecEnd = vecSrc + gpGlobals->v_forward * 64;
 			UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), &tr );
 			if( tr.flFraction >= 1.0 )
 			{

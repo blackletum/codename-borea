@@ -643,7 +643,9 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 	pGrenade->pev->friction = 0.8;
 
 	SET_MODEL(ENT(pGrenade->pev), "models/w_dynamite.mdl");
-	pGrenade->pev->dmg = 100;
+	pGrenade->pev->dmg = 125;
+	// Aynekko - radius is set as dmg x 2.5, so 100 means 250 radius
+	// I will set the damage to 125 so it will be 125 x 2.5 = 312.5
 
 	return pGrenade;
 }
