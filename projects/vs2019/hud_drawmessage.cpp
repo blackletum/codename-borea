@@ -150,6 +150,11 @@ bool CPointMessageRenderer::MsgFunc_Readable(const char* pszName, int iSize, voi
 	readableOrg.x = READ_COORD();
 	readableOrg.y = READ_COORD();
 	readableOrg.z = READ_COORD();
+
+	// Aynekko - for readable origin, use the activation location, not the location of readable itself
+	// it could be placed in different place
+	readableOrg = gEngfuncs.GetLocalPlayer()->curstate.origin;
+
 	char* path = READ_STRING();
 	readablePath = path;
 	int oldwidth = readableWidth;
