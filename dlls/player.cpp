@@ -6487,6 +6487,7 @@ void CBasePlayer::RunningThink()
 	{
 		bool StillRunning = (
 			pev->button & IN_FORWARD
+			&& pev->button & IN_RUN
 			&& !(pev->button & IN_DUCK)
 		//	&& pev->flags & FL_ONGROUND // Aynekko - disable
 			&& playerStamina > 0

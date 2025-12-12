@@ -446,8 +446,6 @@ void IN_MoverightUp()
 	KeyUp(&in_moveright);
 	gHUD.m_Spectator.HandleButtonsUp( IN_MOVERIGHT );
 }
-void IN_SpeedDown() { KeyDown(&in_speed); gHUD.m_Spectator.HandleButtonsDown(IN_RUN); }
-void IN_SpeedUp() {KeyUp(&in_speed);}
 void IN_StrafeDown() {KeyDown(&in_strafe);}
 void IN_StrafeUp() {KeyUp(&in_strafe);}
 
@@ -481,6 +479,21 @@ void IN_JumpDown ()
 
 }
 void IN_JumpUp () {KeyUp(&in_jump);}
+
+void IN_SpeedDown()
+{ 
+	if( gEngfuncs.GetLocalPlayer()->curstate.usehull == 1 ) // duck pose
+		KeyUp( &in_speed );
+	else
+	{
+		if( in_speed.state & 1 )
+			KeyUp( &in_speed );
+		else
+			KeyDown( &in_speed );
+	}
+	gHUD.m_Spectator.HandleButtonsDown( IN_RUN );
+}
+void IN_SpeedUp() {}// KeyUp( &in_speed ); }
 void IN_DuckDown()
 {
 	if (in_duck.state & 1)
