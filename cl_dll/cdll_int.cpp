@@ -241,6 +241,34 @@ void WINAPI replace_glBlitFramebufferEXT(GLint srcX0, GLint srcY0, GLint srcX1, 
 
 #endif
 
+void GetDefaultSettings(int *width, int *height)
+{
+	BYTE value[4];
+	DWORD resultlen;
+	HKEY key = NULL;
+
+	//salsatobias: i dont know, man. what other way would i go about doing this?
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Half-Life\\Settings", 0, STANDARD_RIGHTS_READ | KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
+	{
+		RegQueryValueEx(key, "DisplayWidth", NULL, NULL, (LPBYTE)value, &resultlen);
+		*width = *(int*)value;
+		RegQueryValueEx(key, "DisplayHeight", NULL, NULL, (LPBYTE)value, &resultlen);
+		*height = *(int*)value;
+	}
+
+	char* test = nullptr;
+
+	if (gEngfuncs.CheckParm("-width", &test))
+		*width = strtol(test, nullptr, 10);
+	if (gEngfuncs.CheckParm("-height", &test))
+		*height = strtol(test, nullptr, 10);
+
+	if (gEngfuncs.CheckParm("-w", &test))
+		*width = strtol(test, nullptr, 10);
+	if (gEngfuncs.CheckParm("-h", &test))
+		*height = strtol(test, nullptr, 10);
+}
+
 int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 {
 	gEngfuncs = *pEnginefuncs;
@@ -249,6 +277,7 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 
 
 	// !!!!!!!!! credits to Meetem for the code below !!!!!!!
+	//salsatobias: holy jank and hacky code below, sorry about this
 
 	auto oldHlWindow = hlWindow == nullptr ? SDL_GetWindowFromID(1) : hlWindow;
 	hlWindow = oldHlWindow;
@@ -262,11 +291,14 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 
 		SDL_DisplayMode dm;
 		auto displayMode = SDL_GetWindowDisplayMode(oldHlWindow, &dm);
+
+		GetDefaultSettings(&dm.w, &dm.h);
+
 		auto surf = SDL_GetWindowSurface(oldHlWindow);
 
-		int w, h;
+		int w = dm.w, h = dm.h;
 		int x, y;
-		SDL_GetWindowSize(oldHlWindow, &w, &h);
+		//SDL_GetWindowSize(oldHlWindow, &w, &h);
 		SDL_GetWindowPosition(oldHlWindow, &x, &y);
 
 		auto title = SDL_GetWindowTitle(oldHlWindow);
@@ -281,10 +313,7 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 #endif
 
-		// No MSAA
-		//SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-		//SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
-		// yes msaa cause im lazy to implement my own
+		// MSAA
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
@@ -298,7 +327,6 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		// auto oldCtx = wglGetCurrentContext();
 		// savedGlContext = oldCtx;
 
-		auto fullScreenFlags = flags & SDL_WINDOW_FULLSCREEN_DESKTOP ;
 		//flags |= SDL_WINDOW_HIDDEN; // only start hidden seems to work properly
 
 		SDL_Window* window = SDL_CreateWindow(titlecp, x, y, w, h, flags);
@@ -383,6 +411,11 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		SDL_ShowWindow(window);
 		SDL_RaiseWindow(window);
 
+		if((flags & SDL_WINDOW_FULLSCREEN) || (flags & SDL_WINDOW_FULLSCREEN_DESKTOP))
+		{
+			SDL_SetWindowFullscreen(window, 1);
+		}
+
 		int flags_ = 0;
 		SDL_GL_GetAttribute(SDL_GL_CONTEXT_FLAGS, &flags_);
 		assert(flags_ & SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -390,9 +423,6 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		//SDL_AddEventWatch(CloseWindowOnAltF4, nullptr);
 
 		hlWindow = window;
-		// wglMakeCurrent()
-
-		//*sdlWindow = window;
 	}
 
 	LoadWindowIcon();

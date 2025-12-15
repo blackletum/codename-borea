@@ -811,19 +811,9 @@ void CHud :: Init()
 	char gameWindowName[512];
 	GetWindowNameFromGameDir(gameWindowName, sizeof(gameWindowName));
 
-	for (Uint32 id = 0; id < UINT32_MAX; ++id)
-	{
-		auto brd_window = SDL_GetWindowFromID(id);
-		if (brd_window)
-		{
-			if(!strcmp(SDL_GetWindowTitle(brd_window), gameWindowName))
-			{
-				m_hGameWindow = brd_window;
-				break;
-			}
-		}
-			
-	}
+	extern SDL_Window* hlWindow;
+
+	m_hGameWindow = hlWindow;
 
 	// pre-hl25 anniversary goldsrc uses sdl versions < 2.0.0, 
 	// its very limited and buggy, for example, using SDL_SetWindowBordered
