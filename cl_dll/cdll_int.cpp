@@ -250,10 +250,17 @@ void GetDefaultSettings(int *width, int *height)
 	//salsatobias: i dont know, man. what other way would i go about doing this?
 	if (RegOpenKeyEx(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Half-Life\\Settings", 0, STANDARD_RIGHTS_READ | KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
 	{
+#ifdef HL25_UPDATE //cunt
 		RegQueryValueEx(key, "DisplayWidth", NULL, NULL, (LPBYTE)value, &resultlen);
 		*width = *(int*)value;
 		RegQueryValueEx(key, "DisplayHeight", NULL, NULL, (LPBYTE)value, &resultlen);
 		*height = *(int*)value;
+#else
+		RegQueryValueEx(key, "ScreenWidth", NULL, NULL, (LPBYTE)value, &resultlen);
+		*width = *(int*)value;
+		RegQueryValueEx(key, "ScreenHeight", NULL, NULL, (LPBYTE)value, &resultlen);
+		*height = *(int*)value;
+#endif
 	}
 
 	char* test = nullptr;
