@@ -214,7 +214,7 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD(CBasePlayer, nextSlowmoUpdate, FIELD_TIME),
 
 	// sliding
-	DEFINE_FIELD(CBasePlayer, m_bIsSliding, FIELD_BOOLEAN),
+	DEFINE_FIELD(CBasePlayer, m_iSlidingStage, FIELD_BOOLEAN),
 	DEFINE_FIELD(CBasePlayer, m_vecSlidingDir, FIELD_VECTOR),
 	DEFINE_FIELD(CBasePlayer, m_flSlidingMultiplier, FIELD_FLOAT),
 	DEFINE_FIELD(CBasePlayer, m_flSlidingTimer, FIELD_TIME),
@@ -5180,7 +5180,7 @@ void CBasePlayer :: UpdateClientData()
 	WRITE_SHORT(isSlowmo);
 	WRITE_BYTE(isRunning);
 	WRITE_FLOAT(leanAngle);
-	WRITE_BYTE((bool)m_bIsSliding);
+	WRITE_BYTE((bool)m_iSlidingStage);
 	WRITE_FLOAT(light);
 	WRITE_BYTE(m_iScopeType);
 	MESSAGE_END();
@@ -6999,15 +6999,15 @@ void CBasePlayer::SlidingThink()
 	int SlidingCounter = (int)(SlidingTime / 0.05f);
 	bool bCrouching = (pev->button & IN_DUCK);
 	bool bSprinting = (pev->button & IN_RUN);
-	if (pev->velocity.Length2D() > 280.0f && bSprinting && bCrouching && !m_bIsSliding && m_flSlidingCooldown < gpGlobals->time && (pev->flags & FL_ONGROUND))
+	if (pev->velocity.Length2D() > 280.0f && bCrouching && m_iSlidingStage == 0 && m_flSlidingCooldown < gpGlobals->time && (pev->flags & FL_ONGROUND))
 	{
 		m_vecSlidingDir = pev->velocity;
-		m_bIsSliding = TRUE;
+		m_iSlidingStage = 1;
 		m_iSlidingCounter = SlidingCounter;
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/playerslide.wav", 1, ATTN_NORM);
 	}
 
-	if (m_bIsSliding)
+	if (m_iSlidingStage == 1)
 	{
 		Vector right, up;
 		AngleVectors(pev->angles, nullptr, &right, &up);
@@ -7047,7 +7047,7 @@ void CBasePlayer::SlidingThink()
 				pev->punchangle.z += 20;
 			}
 
-			m_bIsSliding = FALSE;
+			m_iSlidingStage = 0;
 			m_flSlidingCooldown = gpGlobals->time + 0.5f;
 		}
 

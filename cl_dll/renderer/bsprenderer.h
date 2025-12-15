@@ -40,10 +40,9 @@ Extended and/or recoded by Andrew Lucas
 
 #define LIGHTMAP_TEXUNIT GL_TEXTURE0
 #define SURFTEXTURE_TEXUNIT GL_TEXTURE1
-#define SURF_DETAILTEXTURE_TEXUNIT GL_TEXTURE2
-#define SPOTLIGHT_TEXUNIT GL_TEXTURE3
-#define SHADOWMAP_TEXUNIT GL_TEXTURE4
-#define CUBEMAPSHADOW_TEXUNIT GL_TEXTURE5
+#define SPOTLIGHT_TEXUNIT GL_TEXTURE2
+#define SHADOWMAP_TEXUNIT GL_TEXTURE3
+#define CUBEMAPSHADOW_TEXUNIT GL_TEXTURE4
 
 #define DEFAULT_SHADOWMAP_RES 256
 
@@ -67,6 +66,7 @@ struct skyvert_t
 };
 
 class GL_FBOHandler;
+class GL_RBOHandler;
 class GL_BufferHandler;
 class GL_ShaderProgram;
 class GL_VertexArrayObject;
@@ -160,9 +160,6 @@ public:
 	void ClearSurfaceDrawChain(void);
 
 	bool ExtensionSupported(const char* ext);
-	cl_texture_t* LoadDetailTexture(char* texname);
-	void ParseDetailTextureFile(void);
-	void LoadDetailTextures(void);
 
 	void AnimateLight(void);
 	void UploadLightmaps(void);
@@ -225,6 +222,9 @@ public:
 	GL_VertexArrayObject* m_pSimpleSkyVAO;
 	GL_VertexArrayObject* m_pScreenQuadVAO;
 
+	GL_TextureHandler* m_pMainFBOTexture;
+	GL_FBOHandler* m_pMainFBO;
+	GL_RBOHandler* m_pMainRBO;
 	
 	int m_iNumTotalShadows; // total number of shadowmaps made in this frame
 
@@ -278,7 +278,6 @@ public:
 	Vector m_vCurSpotForward;
 
 	cvar_t* m_pCvarSpeeds;
-	cvar_t* m_pCvarDetailTextures;
 	cvar_t* m_pCvarDynamic;
 	cvar_t* m_pCvarDrawWorld;
 	cvar_t* m_pCvarLightStyles;
@@ -289,6 +288,7 @@ public:
 	cvar_t* m_pCvar3DSkybox;
 	cvar_t* m_pCvarSunShadowsQuality;
 	cvar_t* m_pCvarBlurShadows;
+	cvar_t* m_pCvarBlacknwhite;
 
 
 	cvar_t* lightgamma;
@@ -341,9 +341,6 @@ public:
 	char m_szSkyName[64];
 	char m_szMapName[64];
 
-	detailtexentry_t m_pDetailTextures[MAX_DETAIL_TEXTURES];
-	int m_iNumDetailTextures;
-
 	texture_t m_pNormalTextureList[MAX_MAP_TEXTURES];
 	int m_iNumTextures;
 
@@ -353,6 +350,7 @@ public:
 	GL_ShaderProgram *m_DecalShader;
 	GL_ShaderProgram *m_SimpleSkyboxShader;
 	GL_ShaderProgram *m_FilterShader;
+	GL_ShaderProgram *m_BlacknwhiteShader;
 
 	enum worldshader_uniforms
 	{
@@ -373,9 +371,6 @@ public:
 		world_scrollingpolys,
 		world_specular,
 		world_fltime,
-
-		world_detailtexture,
-		world_dt_opacity,
 
 		world_alphatest,
 

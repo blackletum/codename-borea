@@ -837,7 +837,30 @@ void R_PolyBlend()
 	glEnable(GL_TEXTURE_2D);
 }
 
-extern cvar_t* cl_first_person_uses_world_model;
+void DrawFramebufferToScreen()
+{
+	if (!gBSPRenderer.m_pCvarBlacknwhite->value)
+		return;
+
+	glClear(GL_DEPTH_BUFFER_BIT); //clear depth info of framebuffer before switching to main one
+
+	GL_FBOHandler::SetMainGameFBO(0);
+	GL_FBOHandler::ResetToMainFBO();
+
+	gBSPRenderer.m_BlacknwhiteShader->Bind();
+	gBSPRenderer.m_pScreenQuadVAO->BindVAO();
+
+	gBSPRenderer.BindGLTexture(GL_TEXTURE0, gBSPRenderer.m_pMainFBOTexture->GetTextureID());
+
+	g_GlobalGLState.SetBlend(false);
+	g_GlobalGLState.SetCullFace(false);
+	g_GlobalGLState.SetDepthTest(false);
+
+	glDrawArrays(GL_TRIANGLES, gBSPRenderer.quad_FullScreen, 6);
+
+	GL_ShaderProgram::ResetShaderBind();
+	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
+}
 
 /*
 =================
@@ -851,6 +874,15 @@ void R_DrawNormalTriangles(void)
 
 	R_DrawMultiViews(); //shadowmaps, water povs, mirrors, etc
 	
+	if (gBSPRenderer.m_pCvarBlacknwhite->value) //salsatobias: custom black 'n white filter
+	{
+		GL_FBOHandler::SetMainGameFBO(gBSPRenderer.m_pMainFBO->GetID());
+		GL_FBOHandler::ResetToMainFBO();
+		gBSPRenderer.m_pMainFBO->Bind(GL_FBOHandler::Framebuffer);
+		gBSPRenderer.m_pMainFBO->FramebufferTexture2D(GL_FBOHandler::Framebuffer,
+			GL_FBOHandler::ColorAttachment, GL_TEXTURE_2D, gBSPRenderer.m_pMainFBOTexture->GetTextureID(), 0);
+	}
+
 	R_DrawMainView();
 
 	//just for debugging certain textures
@@ -864,6 +896,11 @@ void R_DrawNormalTriangles(void)
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 
 	R_PolyBlend(); // restore goldsrc's ugly screen fade code
+
+
+
+	//salsatobias: custom black 'n white filter
+	DrawFramebufferToScreen();
 }
 
 void RenderersDumpInfo(void)
@@ -877,7 +914,6 @@ void RenderersDumpInfo(void)
 	gEngfuncs.Con_Printf("Number of triangles: %i.\n", gBSPRenderer.m_iTotalTriCount);
 	gEngfuncs.Con_Printf("Number of vertexes: %i.\n", gBSPRenderer.m_iTotalVertCount);
 	gEngfuncs.Con_Printf("Number of client side entities: %i.\n", gPropManager.m_pEntities.size());
-	gEngfuncs.Con_Printf("Number of detail textures: %i.\n", gBSPRenderer.m_iNumDetailTextures);
 	gEngfuncs.Con_Printf("Number of OpenGL Buffers: %i.\n", GL_BufferHandler::GetNumBuffers());
 	gEngfuncs.Con_Printf("Approximated total size of buffers in kb: %f.\n", GL_BufferHandler::GetTotalMemorySize() * 0.001);
 	gEngfuncs.Con_Printf("Number of OpenGL FrameBuffers: %i.\n", GL_FBOHandler::GetNumFrameBuffers());

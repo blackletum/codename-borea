@@ -651,7 +651,8 @@ typedef struct clientmsurface_s
 
 } clientmsurface_t;
 
-typedef struct clientmnode_t
+//salsatobias: shut up compiler
+/*typedef*/ struct clientmnode_t
 {
 	// common with leaf
 	int contents; // 0, to differentiate from leafs

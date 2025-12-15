@@ -87,6 +87,7 @@ static GLuint num_multidraws;
 #include "glshaders/skybox_glsl.h"
 
 #include "glshaders/gaussianblur_glsl.h"
+#include "glshaders/blacknwhite_glsl.h"
 
 //===========================================
 // GLSL SHADER END
@@ -218,7 +219,6 @@ void CBSPRenderer::Init(void)
 	m_pCvarDrawWorld = CVAR_CREATE("r_drawbsp", "1", FCVAR_ARCHIVE);
 	m_pCvarLightStyles = CVAR_CREATE("r_lightstyles", "1", FCVAR_ARCHIVE);
 	m_pCvarSpeeds = CVAR_CREATE("r_trinity_speeds", "0", 0);
-	m_pCvarDetailTextures = gEngfuncs.pfnGetCvarPointer("r_detailtextures");
 	m_pCvarWireFrame = CVAR_CREATE("r_wireframe", "0", 0);
 	m_pCvarDynamic = CVAR_CREATE("r_dynlights", "1", FCVAR_ARCHIVE);
 	// if off, then use blobby shadows. (for now theres no blobby shadows)
@@ -229,6 +229,7 @@ void CBSPRenderer::Init(void)
 	m_pCvarSunShadowsQuality = CVAR_CREATE("r_sunshadows_quality", "1", FCVAR_ARCHIVE); //brushes have some problems with sun shadows currently so make them disableable (yes it seems like thats a real word)
 	m_pCvarBlurShadows = CVAR_CREATE("r_blur_shadows", "1", FCVAR_ARCHIVE);
 
+	m_pCvarBlacknwhite = CVAR_CREATE("r_filter_blacknwhite", "0", FCVAR_ARCHIVE);
 
 
 	lightgamma = gEngfuncs.pfnGetCvarPointer("lightgamma");
@@ -252,6 +253,8 @@ void CBSPRenderer::Init(void)
 	m_SimpleSkyboxShader = new GL_ShaderProgram(glsl_skybox_vp, glsl_skybox_fp);
 
 	m_FilterShader = new GL_ShaderProgram(glsl_gaussianblur_vp, glsl_gaussianblur_fp);
+
+	m_BlacknwhiteShader = new GL_ShaderProgram(glsl_blacknwhite_vp, glsl_blacknwhite_fp);
 
 	m_WorldShader_locs[world_projectionmatrix] = m_WorldShader->GetUniformLoc("projectionmatrix");
 	m_WorldShader_locs[world_viewmatrix] = m_WorldShader->GetUniformLoc("viewmatrix");
@@ -297,8 +300,6 @@ void CBSPRenderer::Init(void)
 	m_WorldShader_locs[world_scrollingpolys] = m_WorldShader->GetUniformLoc("scrollingpolys");
 	m_WorldShader_locs[world_specular] = m_WorldShader->GetUniformLoc("specular");
 	m_WorldShader_locs[world_fltime] = m_WorldShader->GetUniformLoc("fltime");
-	m_WorldShader_locs[world_detailtexture] = m_WorldShader->GetUniformLoc("detailtexture");
-	m_WorldShader_locs[world_dt_opacity] = m_WorldShader->GetUniformLoc("dt_opacity");
 	m_WorldShader_locs[world_alphatest] = m_WorldShader->GetUniformLoc("alphatest");
 
 
@@ -318,7 +319,6 @@ void CBSPRenderer::Init(void)
 	m_WorldShader->Bind();
 	m_WorldShader->Uniform1i(m_WorldShader->GetUniformLoc("lightmap_texture"), LIGHTMAP_TEXUNIT - GL_TEXTURE0);
 	m_WorldShader->Uniform1i(m_WorldShader->GetUniformLoc("base_texture"), SURFTEXTURE_TEXUNIT - GL_TEXTURE0);
-	m_WorldShader->Uniform1i(m_WorldShader->GetUniformLoc("detail_texture"), SURF_DETAILTEXTURE_TEXUNIT - GL_TEXTURE0);
 	m_WorldShader->Uniform1i(m_WorldShader->GetUniformLoc("spotlight_texture"), SPOTLIGHT_TEXUNIT - GL_TEXTURE0);
 	m_WorldShader->Uniform1i(m_WorldShader->GetUniformLoc("shadow_texture"), SHADOWMAP_TEXUNIT - GL_TEXTURE0);
 	m_WorldShader->Uniform1i(m_WorldShader->GetUniformLoc("cubemap_texture"), CUBEMAPSHADOW_TEXUNIT - GL_TEXTURE0);
@@ -338,6 +338,9 @@ void CBSPRenderer::Init(void)
 
 	m_FilterShader->Uniform1i(m_FilterShader->GetUniformLoc("flipped"), 0);
 
+	m_BlacknwhiteShader->Bind();
+	m_BlacknwhiteShader->Uniform1i(m_BlacknwhiteShader->GetUniformLoc("texture0"), 0);
+	m_BlacknwhiteShader->Uniform1i(m_BlacknwhiteShader->GetUniformLoc("flipped"), 0);
 
 
 
@@ -504,10 +507,36 @@ void CBSPRenderer::VidInit(void)
 
 	m_pSunShadowMap = GL_ShadowMap::AllocateShadowMap(GL_TextureHandler::_2DTexture_Storage, GL_R16F, 3184, 3184, 0, GL_RED, GL_FLOAT, false);
 
+	if (m_pMainFBOTexture)
+		delete m_pMainFBOTexture;
+
+	GL_TextureHandler::gl_texturecreationinfo_t mainFBOTextureInfo =
+	{
+			std::string(), GL_TextureHandler::_2DTexture, GL_RGB8, ScreenWidth, ScreenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE
+	};
+
+	m_pMainFBOTexture = new GL_TextureHandler(&mainFBOTextureInfo);
+
+	if (m_pMainFBO)
+		delete m_pMainFBO;
+
+	m_pMainFBO = new GL_FBOHandler();
+
+	if (m_pMainRBO)
+		delete m_pMainRBO;
+
+	m_pMainRBO = new GL_RBOHandler();
+	
+
+	m_pMainFBO->Bind(GL_FBOHandler::Framebuffer);
+	m_pMainRBO->Bind();
+	m_pMainRBO->RenderBufferStorage(GL_DEPTH_COMPONENT16, ScreenWidth, ScreenHeight);
+	m_pMainFBO->FramebufferRenderbuffer(GL_FBOHandler::Framebuffer, GL_FBOHandler::DepthAttachment, m_pMainRBO);
+
+	GL_FBOHandler::ResetToMainFBO();
 
 	// Clear all lightstyles.
 	memset(m_iLightStyleValue, 0, sizeof(m_iLightStyleValue));
-	memset(m_pDetailTextures, 0, sizeof(m_pDetailTextures));
 	m_pDecalGroups.clear();
 	memset(m_pNormalTextureList, 0, sizeof(m_pNormalTextureList));
 	memset(&m_pFlashlightTextures, 0, sizeof(m_pFlashlightTextures));
@@ -532,7 +561,6 @@ void CBSPRenderer::VidInit(void)
 	m_pFirstELight = gEngfuncs.pEfxAPI->CL_AllocElight(0);
 	m_pFirstDLight = gEngfuncs.pEfxAPI->CL_AllocDlight(0);
 	m_fSkySpeed = NULL;
-	m_iNumDetailTextures = NULL;
 	m_iFrameCount = NULL;
 	m_iNumTextures = NULL;
 	m_bMirroring = false;
@@ -1120,8 +1148,6 @@ void CBSPRenderer::SetupRenderer(void)
 	CreateTextures();
 
 	UploadLightmaps();
-	// stbi_write_png("lightmap.png", 1024, 1024, 3, m_pEngineLightmaps, 1024 * 3);
-	LoadDetailTextures();
 	GenerateVertexArray();
 
 	InitSky();
@@ -1378,13 +1404,6 @@ void CBSPRenderer::GenerateVertexArray(void)
 			}
 		}
 
-		detailtexentry_t* dtex = NULL;
-		if (m_pSurfaces[ext->index].regtexture)
-		{
-			if (m_pSurfaces[ext->index].regtexture->offsets[3])
-				dtex = &m_pDetailTextures[m_pSurfaces[ext->index].regtexture->offsets[2]];
-		}
-
 		int column = surfaces[i].lightmaptexturenum % LIGHTMAP_NUMROWS;
 		int row = (surfaces[i].lightmaptexturenum / LIGHTMAP_NUMROWS) % LIGHTMAP_NUMCOLUMNS;
 
@@ -1407,12 +1426,6 @@ void CBSPRenderer::GenerateVertexArray(void)
 				pVertexes[j].normal[0] = ext->normal[0];
 				pVertexes[j].normal[1] = ext->normal[1];
 				pVertexes[j].normal[2] = ext->normal[2];
-
-				if (dtex)
-				{
-					pVertexes[j].detailtexcoord[0] = v[3] * dtex->xscale;
-					pVertexes[j].detailtexcoord[1] = v[4] * dtex->yscale;
-				}
 			}
 
 			memcpy(&m_pBufferData[iCurVert], &pVertexes[0], sizeof(brushvertex_t));
@@ -1437,12 +1450,6 @@ void CBSPRenderer::GenerateVertexArray(void)
 				pVertexes[2].normal[0] = ext->normal[0];
 				pVertexes[2].normal[1] = ext->normal[1];
 				pVertexes[2].normal[2] = ext->normal[2];
-
-				if (dtex)
-				{
-					pVertexes[2].detailtexcoord[0] = v[3] * dtex->xscale;
-					pVertexes[2].detailtexcoord[1] = v[4] * dtex->yscale;
-				}
 
 				memcpy(&m_pBufferData[iCurVert], &pVertexes[0], sizeof(brushvertex_t));
 				iCurVert++;
@@ -1542,8 +1549,8 @@ void CBSPRenderer::GenerateVertexArray(void)
 				pVertexes[j].normal[1] = ext->normal[1];
 				pVertexes[j].normal[2] = ext->normal[2];
 
-				pVertexes[j].detailtexcoord[0] = v[3];
-				pVertexes[j].detailtexcoord[1] = v[4];
+				pVertexes[j].speculartexcoord[0] = v[3];
+				pVertexes[j].speculartexcoord[1] = v[4];
 			}
 
 			if(specular)
@@ -1575,8 +1582,8 @@ void CBSPRenderer::GenerateVertexArray(void)
 				pVertexes[2].normal[1] = ext->normal[1];
 				pVertexes[2].normal[2] = ext->normal[2];
 
-				pVertexes[2].detailtexcoord[0] = v[3];
-				pVertexes[2].detailtexcoord[1] = v[4];
+				pVertexes[2].speculartexcoord[0] = v[3];
+				pVertexes[2].speculartexcoord[1] = v[4];
 
 				if (specular)
 				{
@@ -1618,8 +1625,8 @@ void CBSPRenderer::GenerateVertexArray(void)
 	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Normal);
 	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, normal));
 
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Detail_TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Detail_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, detailtexcoord));
+	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Specular_TexCoord);
+	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Specular_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, speculartexcoord));
 
 	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::LightMap_TexCoord);
 	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::LightMap_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, lightmaptexcoord));
@@ -2069,8 +2076,6 @@ void CBSPRenderer::RenderFirstPass()
 
 	BindGLTexture(LIGHTMAP_TEXUNIT, m_iEngineLightmapIndex);
 
-	m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 0);
-
 	m_WorldShader->Uniform1i(m_WorldShader_locs[world_lightmap_pass], 1);
 
 	m_WorldShader->Uniform1i(m_WorldShader_locs[world_texture_pass], 0);
@@ -2087,9 +2092,7 @@ void CBSPRenderer::RenderFirstPass()
 
 		auto alphatest = pTexture->name[0] == '{';
 
-		auto detailtexture = pTexture->offsets[3] && m_pCvarDetailTextures->value >= 1;
-
-		if (specular || detailtexture || alphatest || !psurface)
+		if (specular || alphatest || !psurface)
 			continue;
 
 		// Nothing to draw
@@ -2128,8 +2131,7 @@ void CBSPRenderer::RenderFirstPass()
 		auto specular = pTexture->texture_flag & TEXTURE_SPECULAR;
 	
 		auto alphatest = pTexture->name[0] == '{';
-	
-		auto detailtexture = pTexture->offsets[3] && m_pCvarDetailTextures->value >= 1;
+
 	
 		if (specular || !psurface)
 			continue;
@@ -2138,16 +2140,7 @@ void CBSPRenderer::RenderFirstPass()
 		if (!psurface)
 			continue;
 	
-		if (detailtexture)
-		{
-			BindGLTexture(SURFTEXTURE_TEXUNIT, pTexture->gl_texturenum);
-			BindGLTexture(SURF_DETAILTEXTURE_TEXUNIT, pTexture->offsets[3]);
-	
-	
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 1);
-			m_WorldShader->Uniform1f(m_WorldShader_locs[world_dt_opacity], m_pDetailTextures[pTexture->offsets[2]].opacity);
-		}
-		else if (alphatest)
+		if (alphatest)
 		{
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_alphatest], 1);
 			BindGLTexture(SURFTEXTURE_TEXUNIT, pTexture->gl_texturenum);
@@ -2182,9 +2175,7 @@ void CBSPRenderer::RenderFirstPass()
 	
 		glMultiDrawArrays(GL_TRIANGLES, (GLint*)multidraw_startverts, (GLint*)multidraw_numverts, num_multidraws);
 		num_multidraws = 0;
-	
-		if (pTexture->offsets[3] && m_pCvarDetailTextures->value >= 1)
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 0);
+
 
 		if (alphatest)
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_alphatest], 0);
@@ -2227,7 +2218,6 @@ void CBSPRenderer::RenderFinalPasses()
 		BindGLTexture(SURFTEXTURE_TEXUNIT, pTexture->gl_texturenum);
 
 		auto scrollingpoly = pTexture->texture_flag & TEXTURE_SCROLL;
-		auto detailtexture = pTexture->offsets[3] && m_pCvarDetailTextures->value >= 1;
 
 		// bacontsu - fake specular
 		auto specular = pTexture->texture_flag & TEXTURE_SPECULAR;
@@ -2241,13 +2231,6 @@ void CBSPRenderer::RenderFinalPasses()
 			g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 1);
 
-		}
-		else if (detailtexture)
-		{
-			BindGLTexture(SURF_DETAILTEXTURE_TEXUNIT, pTexture->offsets[3]);
-
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 1);
-			m_WorldShader->Uniform1f(m_WorldShader_locs[world_dt_opacity], m_pDetailTextures[pTexture->offsets[2]].opacity);
 		}
 
 		while (psurface)
@@ -2286,10 +2269,6 @@ void CBSPRenderer::RenderFinalPasses()
 		{
 			g_GlobalGLState.SetBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 			m_WorldShader->Uniform1i(m_WorldShader_locs[world_specular], 0);
-		}
-		else if (detailtexture)
-		{
-			m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 0);
 		}
 	}
 
@@ -2622,7 +2601,6 @@ void CBSPRenderer::DrawBrushModel(cl_entity_t* pEntity, bool bStatic)
 				if (!psurface)
 					continue;
 
-				m_WorldShader->Uniform1i(m_WorldShader_locs[world_detailtexture], 0);
 				BindGLTexture(SURFTEXTURE_TEXUNIT, pTexture->gl_texturenum);
 
 				auto scrollingpoly = pTexture->texture_flag & TEXTURE_SCROLL;
@@ -2974,160 +2952,6 @@ texture_t* CBSPRenderer::TextureAnimation(texture_t* base, int frame)
 
 	return base;
 }
-
-/*
-====================
-LoadDetailTexture
-
-====================
-*/
-cl_texture_t* CBSPRenderer::LoadDetailTexture(char* texname)
-{
-	// load the texture file
-	char szPath[256];
-	sprintf(szPath, "gfx/textures/details/%s.dds", texname);
-	cl_texture_t* pTexture = gTextureLoader.LoadTexture(szPath);
-
-	if (!pTexture)
-		return 0;
-
-	return pTexture;
-};
-
-/*
-====================
-ParseDetailTextureFile
-
-====================
-*/
-void CBSPRenderer::ParseDetailTextureFile(void)
-{
-	char szLevelName[256];
-	m_iNumDetailTextures = 0;
-
-	strcpy(szLevelName, gEngfuncs.pfnGetLevelName());
-
-	if (strlen(szLevelName) == 0)
-		return;
-
-	szLevelName[strlen(szLevelName) - 4] = 0;
-	strcat(szLevelName, "_detail.txt");
-
-	char* pfile = (char*)gEngfuncs.COM_LoadFile(szLevelName, 5, NULL);
-	if (!pfile)
-	{
-		gEngfuncs.Con_Printf("BSP Renderer: Failed to load detail texture file for %s\n", szLevelName);
-		return;
-	}
-
-	char* ptext = pfile;
-	while (1)
-	{
-		char temp[256];
-		char texture[256];
-		char detailtexture[256];
-		char sz_xscale[64];
-		char sz_yscale[64];
-		char sz_opacity[64];
-
-		if (m_iNumDetailTextures >= MAX_DETAIL_TEXTURES)
-		{
-			gEngfuncs.Con_Printf("BSP Renderer: Too many entries in detail texture file %s\n", szLevelName);
-			break;
-		}
-
-		ptext = gEngfuncs.COM_ParseFile(ptext, texture);
-		if (!ptext)
-			break;
-
-		if (texture[0] == '{')
-		{
-			ptext = gEngfuncs.COM_ParseFile(ptext, temp);
-			strcat(texture, temp);
-		}
-
-		if (!ptext)
-			break;
-
-		ptext = gEngfuncs.COM_ParseFile(ptext, detailtexture);
-		if (!ptext)
-			break;
-
-		ptext = gEngfuncs.COM_ParseFile(ptext, sz_xscale);
-		if (!ptext)
-			break;
-
-		ptext = gEngfuncs.COM_ParseFile(ptext, sz_yscale);
-		if (!ptext)
-			break;
-
-		ptext = gEngfuncs.COM_ParseFile(ptext, sz_opacity);
-		if (!ptext)
-			strcpy(sz_opacity, "1");
-
-		float i_xscale = atof(sz_xscale);
-		float i_yscale = atof(sz_yscale);
-		float i_opacity = atof(sz_opacity);
-
-		if (strlen(texture) > 32 || strlen(detailtexture) > 32)
-		{
-			gEngfuncs.Con_Printf("BSP Renderer: Error in detail texture file %s: token too large\n", szLevelName);
-			gEngfuncs.Con_Printf("(entry %d: %s - %s)\n", m_iNumDetailTextures, texture, detailtexture);
-			continue;
-		}
-
-		cl_texture_t* pTexture = LoadDetailTexture(detailtexture);
-
-		if (!pTexture)
-			continue;
-
-		strLower(texture);
-		strcpy(m_pDetailTextures[m_iNumDetailTextures].texname, texture);
-		strcpy(m_pDetailTextures[m_iNumDetailTextures].detailtexname, detailtexture);
-		m_pDetailTextures[m_iNumDetailTextures].xscale = i_xscale;
-		m_pDetailTextures[m_iNumDetailTextures].yscale = i_yscale;
-		m_pDetailTextures[m_iNumDetailTextures].opacity = i_opacity;
-		m_pDetailTextures[m_iNumDetailTextures].texindex = pTexture->iIndex;
-		m_iNumDetailTextures++;
-	}
-	gEngfuncs.COM_FreeFile(pfile);
-};
-
-/*
-====================
-LoadDetailTextures
-
-====================
-*/
-void CBSPRenderer::LoadDetailTextures(void)
-{
-	ParseDetailTextureFile();
-
-	texture_t* tex = m_pNormalTextureList;
-	for (int i = 0; i < m_iNumTextures; i++)
-	{
-		if (tex[i].name[0] == 0)
-			continue;
-
-		char szName[16];
-		strcpy(szName, tex[i].name);
-		strLower(szName);
-
-		int j = 0;
-		for (; j < m_iNumDetailTextures; j++)
-		{
-			if (!strcmp(m_pDetailTextures[j].texname, szName))
-				break;
-		}
-
-		// Found detail texture
-		if (j != m_iNumDetailTextures)
-		{
-			tex[i].offsets[2] = j;
-			tex[i].offsets[3] = m_pDetailTextures[j].texindex;
-		}
-	}
-};
 
 /*
 ====================
@@ -5661,20 +5485,21 @@ void CBSPRenderer::Generate_Spotlight_Shadow(void)
 
 	m_vViewAngles = m_pCurrentDynLight->angles;
 	m_vRenderOrigin = m_pCurrentDynLight->origin;
-
-
-	clientmleaf_t* spotlight_leaf = Mod_PointInLeaf(m_vRenderOrigin);
-
-	R_MarkLeaves(spotlight_leaf);
-
-	if ((m_pCurrentDynLight->flags & LIGHT_BRUSH_SHADOW) || (m_pCurrentDynLight->flags & LIGHT_WORLD_SHADOW))
-		DrawWorldSolid();
 	
 	if(m_pCurrentDynLight->flags & LIGHT_STUDIOMDL_SHADOW)
 	{
 		g_StudioRenderer.StudioDrawModelsSolid();
 
 		gPropManager.RenderPropsSolid();
+	}
+
+	if ((m_pCurrentDynLight->flags & LIGHT_BRUSH_SHADOW) || (m_pCurrentDynLight->flags & LIGHT_WORLD_SHADOW))
+	{
+		clientmleaf_t* spotlight_leaf = Mod_PointInLeaf(m_vRenderOrigin);
+
+		R_MarkLeaves(spotlight_leaf);
+
+		DrawWorldSolid();
 	}
 
 	r_oldviewleaf = nullptr;

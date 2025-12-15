@@ -223,7 +223,7 @@ public:
 		Normal,
 		TexCoord,
 		LightMap_TexCoord, //bsp exclusive
-		Detail_TexCoord, //bsp exclusive
+		Specular_TexCoord, //bsp exclusive (salsatobias: was detailtexcoord)
 		Color,
 		StudioMDL_BoneID, //studiomdl exclusive
 	};

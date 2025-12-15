@@ -123,7 +123,7 @@ const std::string glsl_engine_defines_vertex = R"(
 	in vec3 aNormal;
 	in vec2 aTexCoord;
 	in vec2 aTexCoordLM;
-	in vec2 aTexCoordDetail;
+	in vec2 aTexCoordSpecular; //(salsatobias: was aTexCoordDetail)
 	in vec4 aColor;
 	in int aBoneID;
 
@@ -351,7 +351,7 @@ void GL_ShaderProgram::ShaderPreLink()
 	glBindAttribLocation(this->m_uiProgramIndex, GL_ShaderProgram::Normal, "aNormal");
 	glBindAttribLocation(this->m_uiProgramIndex, GL_ShaderProgram::TexCoord, "aTexCoord");
 	glBindAttribLocation(this->m_uiProgramIndex, GL_ShaderProgram::LightMap_TexCoord, "aTexCoordLM");
-	glBindAttribLocation(this->m_uiProgramIndex, GL_ShaderProgram::Detail_TexCoord, "aTexCoordDetail");
+	glBindAttribLocation(this->m_uiProgramIndex, GL_ShaderProgram::Specular_TexCoord, "aTexCoordSpecular");
 	glBindAttribLocation(this->m_uiProgramIndex, GL_ShaderProgram::Color, "aColor");
 	glBindAttribLocation(this->m_uiProgramIndex, GL_ShaderProgram::StudioMDL_BoneID, "aBoneID");
 }

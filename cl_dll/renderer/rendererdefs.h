@@ -291,7 +291,6 @@ struct cl_particle_t
 #define MAX_STYLESTRING 64
 #define MAX_DYNLIGHTS 64
 #define MAX_MAP_DETAILOBJECTS 512
-#define MAX_DETAIL_TEXTURES 1024
 #define MAX_MAP_LEAFS 65534
 #define DEPTHMAP_RESOLUTION 256
 #define MAX_MAP_TEXTURES 512
@@ -372,7 +371,7 @@ struct brushvertex_t
 
 	float fogcoord;
 	float texcoord[2];
-	float detailtexcoord[2];
+	float speculartexcoord[2];
 	float lightmaptexcoord[2];
 
 	byte pad[12];
@@ -388,16 +387,6 @@ struct brushface_t
 	Vector s_tangent;
 	Vector t_tangent;
 };
-
-typedef struct detailtexentry_s
-{
-	char texname[32];
-	char detailtexname[32];
-	int texindex;
-	float xscale;
-	float yscale;
-	float opacity; //new
-} detailtexentry_t;
 
 struct decalgroupentry_t
 {

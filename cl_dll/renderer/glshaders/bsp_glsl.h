@@ -28,12 +28,10 @@ char glsl330_world_vp[] = R"(
 	uniform bool waterpolys;
 	uniform bool scrollingpolys;
 	uniform bool specular;
-	uniform bool detailtexture;
 
 
 	out vec2 frag_texcoord_lightmap;
 	out vec2 frag_texcoord_texture;
-	out vec2 frag_texcoord_detailtexture;
 	out vec4 projTexCoord;
 	out vec3 fragPos;
 	out vec3 fragNormal;
@@ -80,25 +78,24 @@ char glsl330_world_vp[] = R"(
 			speed *= -1;
 
 		frag_texcoord_texture = vec2(aTexCoord.x + speed, aTexCoord.y);
-		frag_texcoord_detailtexture = frag_texcoord_texture;
 	}
 
 	void vert_HandleSpecularPolyUV()
 	{
 		if (aNormal.x == 1) //PLANE_X
 		{
-			frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.y * aTexCoord.x);
-			frag_texcoord_texture.y = aTexCoordDetail.y + (renderorigin.z * aTexCoord.y);
+			frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.y * aTexCoord.x);
+			frag_texcoord_texture.y = aTexCoordSpecular.y + (renderorigin.z * aTexCoord.y);
 		}
 		else if (aNormal.y == 1) //PLANE_Y
 		{
-			frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.x * aTexCoord.x);
-			frag_texcoord_texture.y = aTexCoordDetail.y + (renderorigin.z * aTexCoord.y);
+			frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.x * aTexCoord.x);
+			frag_texcoord_texture.y = aTexCoordSpecular.y + (renderorigin.z * aTexCoord.y);
 		}
 		else if (aNormal.z == 1) //PLANE_Z
 		{
-			frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.x * aTexCoord.x);
-			frag_texcoord_texture.y = aTexCoordDetail.y + (renderorigin.y * aTexCoord.y);
+			frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.x * aTexCoord.x);
+			frag_texcoord_texture.y = aTexCoordSpecular.y + (renderorigin.y * aTexCoord.y);
 		}
 		else
 		{
@@ -106,27 +103,27 @@ char glsl330_world_vp[] = R"(
 			{
 				if (aNormal.x == aNormal.y) //45 degree matching plane
 				{
-					frag_texcoord_texture.x = aTexCoordDetail.x + (renderorigin.y * ((-aNormal.y) * aTexCoord.x)) - (renderorigin.x * ((-aNormal.x) * aTexCoord.x));
+					frag_texcoord_texture.x = aTexCoordSpecular.x + (renderorigin.y * ((-aNormal.y) * aTexCoord.x)) - (renderorigin.x * ((-aNormal.x) * aTexCoord.x));
 				}
 				else if ( abs(aNormal.x) == abs(aNormal.y) ) //45 degree matching plane but ones negative
 				{
-					frag_texcoord_texture.x = aTexCoordDetail.x + (renderorigin.y * ((aNormal.y) * aTexCoord.x)) - (renderorigin.x * ((aNormal.x) * aTexCoord.x));
+					frag_texcoord_texture.x = aTexCoordSpecular.x + (renderorigin.y * ((aNormal.y) * aTexCoord.x)) - (renderorigin.x * ((aNormal.x) * aTexCoord.x));
 				}
 				else
 				{
 					if (abs(aNormal.y) > abs(aNormal.x))
-						frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.x * aTexCoord.x);
+						frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.x * aTexCoord.x);
 					else
-						frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.y * aTexCoord.x);
+						frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.y * aTexCoord.x);
 				}
-				frag_texcoord_texture.y = aTexCoordDetail.y + (renderorigin.z * aTexCoord.y);
+				frag_texcoord_texture.y = aTexCoordSpecular.y + (renderorigin.z * aTexCoord.y);
 			}
 			else //slanted walls
 			{
 				if (abs(aNormal.z) > abs(aNormal.x) && abs(aNormal.z) > abs(aNormal.x)) //slanted wall but less than 45 upright
 				{
-					frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.x * aTexCoord.x);
-					frag_texcoord_texture.y = aTexCoordDetail.y + (renderorigin.y * aTexCoord.y);
+					frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.x * aTexCoord.x);
+					frag_texcoord_texture.y = aTexCoordSpecular.y + (renderorigin.y * aTexCoord.y);
 
 					if (aNormal.x > 0 && aNormal.y > 0)
 					{
@@ -160,11 +157,11 @@ char glsl330_world_vp[] = R"(
 				}
 				else if (abs(aNormal.z) < abs(aNormal.x) && abs(aNormal.z) < abs(aNormal.y))
 				{
-					frag_texcoord_texture.y = aTexCoordDetail.y;
+					frag_texcoord_texture.y = aTexCoordSpecular.y;
 
 					if (aNormal.x > 0 && aNormal.y > 0 && aNormal.z > 0)
 					{
-						frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.x * aTexCoord.x);
+						frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.x * aTexCoord.x);
 
 						frag_texcoord_texture.x += renderorigin.y * aTexCoord.x;
 						frag_texcoord_texture.x += renderorigin.z * (aTexCoord.x * 0.5);
@@ -172,7 +169,7 @@ char glsl330_world_vp[] = R"(
 					}
 					else if (aNormal.x > 0 && aNormal.y > 0 && aNormal.z < 0)
 					{
-						frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.y * aTexCoord.x);
+						frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.y * aTexCoord.x);
 
 						frag_texcoord_texture.x += renderorigin.x * aTexCoord.x;
 						frag_texcoord_texture.x -= renderorigin.z * (aTexCoord.x * 0.5);
@@ -180,7 +177,7 @@ char glsl330_world_vp[] = R"(
 					}
 					else
 					{
-						frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.y * aTexCoord.x);
+						frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.y * aTexCoord.x);
 
 						frag_texcoord_texture.x -= renderorigin.x * aTexCoord.x;
 						frag_texcoord_texture.x -= renderorigin.z * (aTexCoord.x * 0.5);
@@ -189,22 +186,22 @@ char glsl330_world_vp[] = R"(
 				}
 				else if (abs(aNormal.x) > 0)
 				{
-					frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.y * aTexCoord.x);
+					frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.y * aTexCoord.x);
 
 					if (aNormal.z > 0)
-						frag_texcoord_texture.y = aTexCoordDetail.y - (renderorigin.x * aTexCoord.x);
+						frag_texcoord_texture.y = aTexCoordSpecular.y - (renderorigin.x * aTexCoord.x);
 					else
-						frag_texcoord_texture.y = aTexCoordDetail.y + (renderorigin.x * aTexCoord.x);
+						frag_texcoord_texture.y = aTexCoordSpecular.y + (renderorigin.x * aTexCoord.x);
 					frag_texcoord_texture.y += renderorigin.z * aTexCoord.x;
 				}
 				else if (abs(aNormal.y) > 0)
 				{
-					frag_texcoord_texture.x = aTexCoordDetail.x - (renderorigin.x * aTexCoord.x);
+					frag_texcoord_texture.x = aTexCoordSpecular.x - (renderorigin.x * aTexCoord.x);
 
 					if (aNormal.z > 0)
-						frag_texcoord_texture.y = aTexCoordDetail.y - (renderorigin.y * aTexCoord.x);
+						frag_texcoord_texture.y = aTexCoordSpecular.y - (renderorigin.y * aTexCoord.x);
 					else
-						frag_texcoord_texture.y = aTexCoordDetail.y + (renderorigin.y * aTexCoord.x);
+						frag_texcoord_texture.y = aTexCoordSpecular.y + (renderorigin.y * aTexCoord.x);
 					frag_texcoord_texture.y += renderorigin.z * aTexCoord.x;
 				}
 			}
@@ -230,7 +227,6 @@ char glsl330_world_vp[] = R"(
 		else
 		{
 			frag_texcoord_texture = aTexCoord;
-			frag_texcoord_detailtexture = aTexCoordDetail;
 			vert_position = aPosition;
 		}
 
@@ -262,7 +258,6 @@ const char glsl330_world_fp[] = R"(
 
 	in vec2 frag_texcoord_lightmap;
 	in vec2 frag_texcoord_texture;
-	in vec2 frag_texcoord_detailtexture;
 	in vec3 frag_normal;
 	in vec4 projTexCoord;
 	in vec3 fragPos;
@@ -270,7 +265,6 @@ const char glsl330_world_fp[] = R"(
 
 	uniform sampler2D lightmap_texture;
 	uniform sampler2D base_texture;
-	uniform sampler2D detail_texture;
 	uniform sampler2D spotlight_texture;
 	uniform sampler2D shadow_texture;
 	uniform samplerCube cubemap_texture;
@@ -296,7 +290,6 @@ const char glsl330_world_fp[] = R"(
 	uniform bool waterpolys;
 	uniform bool scrollingpolys;
 
-	uniform bool detailtexture;
 	uniform float dt_opacity;
 
 	uniform bool alphatest;
@@ -573,11 +566,6 @@ const char glsl330_world_fp[] = R"(
 			basetex_pixel.rgb = mix(basetex_pixel.rgb, fogcolor, 1.0 - GetFogFactor() );
 		}
 
-		if(detailtexture)
-		{
-			lightmap_pixel.rgb *= pow(texture(detail_texture, frag_texcoord_detailtexture).rgb, vec3(dt_opacity));
-		}
-
 		gl_FragColor = (basetex_pixel * lightmap_pixel) * 2;
 		gl_FragColor.a = basetex_pixel.a;
 
@@ -637,11 +625,6 @@ const char glsl330_world_fp[] = R"(
 		if(fog_active)
 		{
 			lightmap_pixel.rgb = mix( lightmap_pixel.rgb, fogcolor, 1.0 - GetFogFactor() );
-		}
-
-		if(detailtexture)
-		{
-			lightmap_pixel.rgb *= pow(texture(detail_texture, frag_texcoord_detailtexture).rgb, vec3(dt_opacity));
 		}
 
 		gl_FragColor = vec4(lightmap_pixel.rgb, lightmap_pixel.a * float(renderamt) / 255);

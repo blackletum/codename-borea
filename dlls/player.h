@@ -249,7 +249,7 @@ public:
 	int m_iUseEnt;
 
 	// sliding
-	BOOL m_bIsSliding;
+	int m_iSlidingStage;
 	Vector m_vecSlidingDir;
 	float m_flSlidingMultiplier;
 	float m_flSlidingTimer;
