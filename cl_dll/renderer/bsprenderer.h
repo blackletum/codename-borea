@@ -288,7 +288,9 @@ public:
 	cvar_t* m_pCvar3DSkybox;
 	cvar_t* m_pCvarSunShadowsQuality;
 	cvar_t* m_pCvarBlurShadows;
+
 	cvar_t* m_pCvarBlacknwhite;
+	cvar_t* m_pCvarFilmGrainStrength;
 
 
 	cvar_t* lightgamma;

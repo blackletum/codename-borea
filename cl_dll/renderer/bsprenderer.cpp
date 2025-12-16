@@ -230,6 +230,7 @@ void CBSPRenderer::Init(void)
 	m_pCvarBlurShadows = CVAR_CREATE("r_blur_shadows", "1", FCVAR_ARCHIVE);
 
 	m_pCvarBlacknwhite = CVAR_CREATE("r_filter_blacknwhite", "0", FCVAR_ARCHIVE);
+	m_pCvarFilmGrainStrength = CVAR_CREATE("r_filter_filmgrain_strength", "15", FCVAR_ARCHIVE);
 
 
 	lightgamma = gEngfuncs.pfnGetCvarPointer("lightgamma");

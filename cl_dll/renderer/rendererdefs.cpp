@@ -848,6 +848,8 @@ void DrawFramebufferToScreen()
 	GL_FBOHandler::ResetToMainFBO();
 
 	gBSPRenderer.m_BlacknwhiteShader->Bind();
+	gBSPRenderer.m_BlacknwhiteShader->Uniform1f(gBSPRenderer.m_BlacknwhiteShader->GetUniformLoc("time"), gEngfuncs.GetAbsoluteTime());
+	gBSPRenderer.m_BlacknwhiteShader->Uniform1i(gBSPRenderer.m_BlacknwhiteShader->GetUniformLoc("grain_strength"), gBSPRenderer.m_pCvarFilmGrainStrength->value);
 	gBSPRenderer.m_pScreenQuadVAO->BindVAO();
 
 	gBSPRenderer.BindGLTexture(GL_TEXTURE0, gBSPRenderer.m_pMainFBOTexture->GetTextureID());
