@@ -85,6 +85,8 @@ state bit 2 is edge triggered on the down to up transition
 ===============================================================================
 */
 
+bool bSprintButton = false;
+bool bDuckButton = false;
 
 kbutton_t	in_mlook;
 kbutton_t	in_klook;
@@ -125,6 +127,62 @@ typedef struct kblist_s
 } kblist_t;
 
 kblist_t *g_kbkeys = nullptr;
+
+/*
+===============
+CL_KeyState
+
+Returns 0.25 if a key was pressed and released during the frame,
+0.5 if it was pressed and held
+0 if held then released, and
+1.0 if held for the entire time
+===============
+*/
+float CL_KeyState( kbutton_t *key )
+{
+	float		val = 0.0;
+	int			impulsedown, impulseup, down;
+
+	impulsedown = key->state & 2;
+	impulseup = key->state & 4;
+	down = key->state & 1;
+
+	if( impulsedown && !impulseup )
+	{
+		// pressed and held this frame?
+		val = down ? 0.5 : 0.0;
+	}
+
+	if( impulseup && !impulsedown )
+	{
+		// released this frame?
+		val = down ? 0.0 : 0.0;
+	}
+
+	if( !impulsedown && !impulseup )
+	{
+		// held the entire frame?
+		val = down ? 1.0 : 0.0;
+	}
+
+	if( impulsedown && impulseup )
+	{
+		if( down )
+		{
+			// released and re-pressed this frame
+			val = 0.75;
+		}
+		else
+		{
+			// pressed and released this frame
+			val = 0.25;
+		}
+	}
+
+	// clear impulses
+	key->state &= 1;
+	return val;
+}
 
 /*
 ============
@@ -483,27 +541,25 @@ void IN_JumpUp () {KeyUp(&in_jump);}
 void IN_SpeedDown()
 { 
 	if( gEngfuncs.GetLocalPlayer()->curstate.usehull == 1 ) // duck pose
+	{
 		KeyUp( &in_speed );
+		bSprintButton = false;
+	}
 	else
 	{
-		if( in_speed.state & 1 )
-			KeyUp( &in_speed );
-		else
-			KeyDown( &in_speed );
+		bSprintButton = !bSprintButton;
 	}
 	gHUD.m_Spectator.HandleButtonsDown( IN_RUN );
 }
-void IN_SpeedUp() {}// KeyUp( &in_speed ); }
+void IN_SpeedUp() { KeyUp( &in_speed ); }
 void IN_DuckDown()
 {
-	if (in_duck.state & 1)
-		KeyUp(&in_duck);
-	else
-		KeyDown(&in_duck);
+	KeyDown(&in_duck);
+	bDuckButton = !bDuckButton;
 	gHUD.m_Spectator.HandleButtonsDown( IN_DUCK );
 
 }
-void IN_DuckUp() {}//KeyUp(&in_duck);}
+void IN_DuckUp() { KeyUp(&in_duck);}
 void IN_ReloadDown() {KeyDown(&in_reload);}
 void IN_ReloadUp() {KeyUp(&in_reload);}
 void IN_Alt1Down() {KeyDown(&in_alt1);}
@@ -622,62 +678,6 @@ void IN_LeanLeftDown()
 void IN_LeanLeftUp()
 {
 	KeyUp(&in_leanleft);
-}
-
-/*
-===============
-CL_KeyState
-
-Returns 0.25 if a key was pressed and released during the frame,
-0.5 if it was pressed and held
-0 if held then released, and
-1.0 if held for the entire time
-===============
-*/
-float CL_KeyState (kbutton_t *key)
-{
-	float		val = 0.0;
-	int			impulsedown, impulseup, down;
-	
-	impulsedown = key->state & 2;
-	impulseup	= key->state & 4;
-	down		= key->state & 1;
-	
-	if ( impulsedown && !impulseup )
-	{
-		// pressed and held this frame?
-		val = down ? 0.5 : 0.0;
-	}
-
-	if ( impulseup && !impulsedown )
-	{
-		// released this frame?
-		val = down ? 0.0 : 0.0;
-	}
-
-	if ( !impulsedown && !impulseup )
-	{
-		// held the entire frame?
-		val = down ? 1.0 : 0.0;
-	}
-
-	if ( impulsedown && impulseup )
-	{
-		if ( down )
-		{
-			// released and re-pressed this frame
-			val = 0.75;	
-		}
-		else
-		{
-			// pressed and released this frame
-			val = 0.25;	
-		}
-	}
-
-	// clear impulses
-	key->state &= 1;		
-	return val;
 }
 
 /*
@@ -892,10 +892,13 @@ int CL_ButtonBits( int bResetState )
 		bits |= IN_ATTACK;
 	}
 	
-	if (in_duck.state & 3)
+	if (in_duck.state & 3 || bDuckButton)
 	{
-		if (CL_IsDead())
-			KeyUp(&in_duck);
+		if( CL_IsDead() )
+		{
+			KeyUp( &in_duck );
+			bDuckButton = false;
+		}
 		else
 			bits |= IN_DUCK;
 	}
@@ -965,7 +968,7 @@ int CL_ButtonBits( int bResetState )
 		bits |= IN_SCORE;
 	}
 
-	if (in_speed.state & 3)
+	if (in_speed.state & 3 || bSprintButton)
 	{
 		//gEngfuncs.Con_Printf("shift pressed!");
 		bits |= IN_RUN;
@@ -987,6 +990,18 @@ int CL_ButtonBits( int bResetState )
 	if ( CL_IsDead() || gHUD.m_iIntermission )
 	{
 		bits |= IN_SCORE;
+	}
+
+	if( !(bits & IN_FORWARD) && !(bits & IN_BACK) && !(bits & IN_MOVELEFT) && !(bits & IN_MOVERIGHT) )
+	{
+		bSprintButton = false;
+		bits &= ~IN_RUN;
+	}
+
+	if( bits & IN_DUCK )
+	{
+		bSprintButton = false;
+		bits &= ~IN_RUN;
 	}
 
 	if ( bResetState )
@@ -1136,6 +1151,9 @@ void InitInput ()
 	KB_Init();
 	// Initialize view system
 	V_Init();
+
+	bDuckButton = false;
+	bSprintButton = false;
 }
 
 /*
