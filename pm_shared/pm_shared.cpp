@@ -941,11 +941,12 @@ void PM_CatagorizeTextureType()
 		return;
 
 	// strip leading '-0' or '+0~' or '{' or '!'
-	if (*pTextureName == '-' || *pTextureName == '+')
-		pTextureName += 2;
-
-	if (*pTextureName == '{' || *pTextureName == '!' || *pTextureName == '~' || *pTextureName == ' ')
-		pTextureName++;
+	// salsatobias: unless materials.txt is parsed the same way, this is incorrect
+	//if (*pTextureName == '-' || *pTextureName == '+')
+	//	pTextureName += 2;
+	//
+	//if (*pTextureName == '{' || *pTextureName == '!' || *pTextureName == '~' || *pTextureName == ' ')
+	//	pTextureName++;
 	// '}}'
 	
 	strcpy( pmove->sztexturename, pTextureName);

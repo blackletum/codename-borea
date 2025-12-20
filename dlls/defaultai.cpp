@@ -32,7 +32,7 @@ Task_t	tlFail[] =
 {
 	{ TASK_STOP_MOVING,			0				},
 	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
-	{ TASK_WAIT,				(float)2		},
+	{ TASK_WAIT,				(float)0.5		},
 	{ TASK_WAIT_PVS,			(float)0		},
 };
 
