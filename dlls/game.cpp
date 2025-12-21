@@ -1487,6 +1487,7 @@ void GameDLLInit()
 
 	SERVER_COMMAND( "exec skill.cfg\n" );
 	SERVER_COMMAND( "exec skillopfor.cfg\n" );
-	SERVER_COMMAND( "exec config.cfg\n" ); //salsa: because server cvars dont seem to save, hope this wont break nuthin
+
+	SERVER_COMMAND( "exec server_default.cfg\n" );
 }
 

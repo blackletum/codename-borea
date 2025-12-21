@@ -38,6 +38,7 @@
 #include "triangleapi.h"
 #include "vgui_TeamFortressViewport.h"
 #include "filesystem_utils.h"
+#include <filesystem> //std::filesystem
 
 // RENDERERS START
 #include "../renderer/rendererdefs.h"
@@ -609,10 +610,6 @@ void DLLEXPORT HUD_Init()
 
 	gHUD.Init();
 	Scheme_Init();
-
-	//SALSATOBIAS: ugly but just set them to lowest values on startup, atleast until we have a good default value
-	gEngfuncs.Cvar_SetValue("texgamma", 1.0);
-	gEngfuncs.Cvar_SetValue("lightgamma", 1.0);
 }
 
 /*
@@ -999,6 +996,24 @@ int DLLEXPORT HUD_GetStudioModelInterface(int version, struct r_studio_interface
 
 	// Initialize local variables, etc.
 	g_StudioRenderer.Init();
+
+	gEngfuncs.pfnClientCmd("exec default.cfg\n");
+	gEngfuncs.pfnClientCmd("exec spirinity_default.cfg\n");
+	std::string configpath = gEngfuncs.pfnGetGameDirectory();
+	configpath += '/';
+	configpath += "config.cfg";
+	if(std::filesystem::exists(configpath.c_str())) //path relative to hl.exe
+	{
+		gEngfuncs.pfnClientCmd("exec config.cfg\n");
+	}
+	else
+	{
+		//salsatobias: make empty config file. 
+		//	important because goldsrc executes it after sys_initgame and we dont want to execute valve/config.cfg
+		// 
+		//	this path is relative to mod folder
+		g_pFileSystem->Close(g_pFileSystem->Open("config.cfg", "w", "GAMECONFIG"));
+	}
 
 	// Success
 	return 1;
