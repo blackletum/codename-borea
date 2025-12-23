@@ -351,11 +351,11 @@ BOOL CHGrunt :: FOkToSpeak()
 
 	if ( pev->spawnflags & SF_MONSTER_GAG )
 	{
-		if ( m_MonsterState != MONSTERSTATE_COMBAT )
-		{
-			// no talking outside of combat if gagged.
+	//	if ( m_MonsterState != MONSTERSTATE_COMBAT )
+	//	{
+			// no talking outside of combat if gagged. // Aynekko - no talking whenever
 			return FALSE;
-		}
+	//	}
 	}
 
 	// if player is not in pvs, don't speak
@@ -920,10 +920,13 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 	{
 		case HGRUNT_AE_VICTORYDANCE:
 		{
-			if (FClassnameIs(pev, "monster_thug_pipe") || FClassnameIs(pev, "monster_thug_wrench") || FClassnameIs(pev, "monster_thug_crowbar"))
-				SENTENCEG_PlayRndSz(ENT(pev), "THU_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch);
-			else
-				SENTENCEG_PlayRndSz( ENT( pev ), "GANG_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch );
+			if( !(pev->spawnflags & SF_MONSTER_GAG) )
+			{
+				if( FClassnameIs( pev, "monster_thug_pipe" ) || FClassnameIs( pev, "monster_thug_wrench" ) || FClassnameIs( pev, "monster_thug_crowbar" ) )
+					SENTENCEG_PlayRndSz( ENT( pev ), "THU_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch );
+				else
+					SENTENCEG_PlayRndSz( ENT( pev ), "GANG_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch );
+			}
 
 			JustSpoke();
 		}
@@ -3003,7 +3006,8 @@ void CMonsterThugPipe::SpeakSentence()
 
 void CMonsterThugPipe::OnCatchFire( void )
 {
-	PlaySentence( "THU_BURN", 7, VOL_NORM, ATTN_NORM );
+	if( !(pev->spawnflags & SF_MONSTER_GAG) )
+		PlaySentence( "THU_BURN", 7, VOL_NORM, ATTN_NORM );
 	m_flNextPainTime = gpGlobals->time + 7; // don't play regular pain sounds
 }
 
@@ -3067,8 +3071,11 @@ void CMonsterThugPipe::StartTask( Task_t *pTask )
 	// Aynekko: this task happens when the thug starts to go back after investigating noise - play specified sentence
 	// but make sure we are in the correct schedule!
 	case TASK_GET_PATH_TO_LASTPOSITION:
-		if( m_pSchedule && FStrEq( m_pSchedule->pName, "InvestigateSound" ) )
-			PlaySentence( "THU_LOST", 3, VOL_NORM, ATTN_NORM );
+		if( !(pev->spawnflags & SF_MONSTER_GAG) )
+		{
+			if( m_pSchedule && FStrEq( m_pSchedule->pName, "InvestigateSound" ) )
+				PlaySentence( "THU_LOST", 3, VOL_NORM, ATTN_NORM );
+		}
 		CSquadMonster::StartTask( pTask );
 		break;
 
@@ -3110,6 +3117,9 @@ void CMonsterThugPipe::RunTask( Task_t *pTask )
 //=========================================================
 void CMonsterThugPipe::PainSound()
 {
+	if( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+
 	if( gpGlobals->time > m_flNextPainTime )
 	{
 		char sentence_name[16];
@@ -3165,6 +3175,9 @@ void CMonsterThugPipe::Killed( entvars_t *pevAttacker, int iGib )
 //=========================================================
 void CMonsterThugPipe::DeathSound()
 {
+	if( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+
 	char sentence_name[16];
 	sentence_name[0] = '\0';
 
@@ -3357,7 +3370,7 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 	{
 	case MONSTERSTATE_IDLE:
 	{
-		if( gpGlobals->time > next_idle_sentence_time )
+		if( !(pev->spawnflags & SF_MONSTER_GAG) && gpGlobals->time > next_idle_sentence_time )
 		{
 			PlaySentence( "THU_IDLE", 3, VOL_NORM, ATTN_NORM );
 			JustSpoke();
@@ -3821,7 +3834,8 @@ void CMonsterGangster::SpeakSentence()
 
 void CMonsterGangster::OnCatchFire( void )
 {
-	PlaySentence( "GANG_BURN", 3, VOL_NORM, ATTN_NORM );
+	if( !(pev->spawnflags & SF_MONSTER_GAG) )
+		PlaySentence( "GANG_BURN", 3, VOL_NORM, ATTN_NORM );
 	m_flNextPainTime = gpGlobals->time + 7; // don't play regular pain sounds
 }
 
@@ -3870,8 +3884,11 @@ void CMonsterGangster::StartTask( Task_t *pTask )
 		// Aynekko: this task happens when the thug starts to go back after investigating noise - play specified sentence
 		// but make sure we are in the correct schedule!
 	case TASK_GET_PATH_TO_LASTPOSITION:
-		if( m_pSchedule && FStrEq( m_pSchedule->pName, "InvestigateSound" ) )
-			PlaySentence( "GANG_LOST", 3, VOL_NORM, ATTN_NORM );
+		if( !(pev->spawnflags & SF_MONSTER_GAG) )
+		{
+			if( m_pSchedule && FStrEq( m_pSchedule->pName, "InvestigateSound" ) )
+				PlaySentence( "GANG_LOST", 3, VOL_NORM, ATTN_NORM );
+		}
 		CSquadMonster::StartTask( pTask );
 		break;
 
@@ -3913,6 +3930,9 @@ void CMonsterGangster::RunTask( Task_t *pTask )
 //=========================================================
 void CMonsterGangster::PainSound()
 {
+	if( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+	
 	if( gpGlobals->time > m_flNextPainTime )
 	{
 		char sentence_name[16];
@@ -3968,6 +3988,9 @@ void CMonsterGangster::Killed( entvars_t *pevAttacker, int iGib )
 //=========================================================
 void CMonsterGangster::DeathSound()
 {
+	if( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+
 	char sentence_name[16];
 	sentence_name[0] = '\0';
 
@@ -4161,7 +4184,7 @@ Schedule_t *CMonsterGangster::GetSchedule()
 	{
 	case MONSTERSTATE_IDLE:
 	{
-		if( gpGlobals->time > next_idle_sentence_time )
+		if( !(pev->spawnflags & SF_MONSTER_GAG) && gpGlobals->time > next_idle_sentence_time )
 		{
 			PlaySentence( "GANG_IDLE", 3, VOL_NORM, ATTN_NORM );
 			JustSpoke();
@@ -4519,8 +4542,11 @@ void CMonsterGangster::HandleAnimEvent( MonsterEvent_t *pEvent )
 	{
 	case HGRUNT_AE_VICTORYDANCE:
 	{
-		SENTENCEG_PlayRndSz( ENT( pev ), "GANG_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch );
-		JustSpoke();
+		if( !(pev->spawnflags & SF_MONSTER_GAG) )
+		{
+			SENTENCEG_PlayRndSz( ENT( pev ), "GANG_WIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch );
+			JustSpoke();
+		}
 	}
 	break;
 	case HGRUNT_AE_DROP_GUN:
