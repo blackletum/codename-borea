@@ -1344,15 +1344,23 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 				}
 			
 				// ALERT( at_console, "hit %s\n", STRING( pEntity->pev->classname ) );
+				const Vector vecDir = (tr.vecEndPos - vecSrc).Normalize();
 				if (tr.flFraction != 1.0)
 				{
 					ClearMultiDamage( );
-					pEntity->TraceAttack( pevInflictor, flAdjustedDamage, (tr.vecEndPos - vecSrc).Normalize( ), &tr, bitsDamageType );
+					pEntity->TraceAttack( pevInflictor, flAdjustedDamage, vecDir, &tr, bitsDamageType );
 					ApplyMultiDamage( pevInflictor, pevAttacker );
 				}
 				else
 				{
 					pEntity->TakeDamage ( pevInflictor, pevAttacker, flAdjustedDamage, bitsDamageType );
+				}
+
+				if( !pEntity->IsBSPModel() && pEntity->pev->flags & FL_MONSTER ) // aynekko: throw NPCs from the bombs
+				{
+					pEntity->pev->velocity.x = vecDir.x * 300.0f;
+					pEntity->pev->velocity.y = vecDir.y * 300.0f;
+					pEntity->pev->velocity.z = 250.0f;
 				}
 
 				if (pEntity->IsPlayer())
