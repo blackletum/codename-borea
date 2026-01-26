@@ -1,10 +1,3 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
-
 #include "GL_StateHandler.h"
 
 GL_StateHandler g_GlobalGLState;
@@ -29,10 +22,10 @@ void GL_StateHandler::ResetStates()
 
 void GL_StateHandler::SetBlend(const bool benable)
 {
-	if (m_bBlend == benable)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetBlend !\n");
-	}
+	//if (m_bBlend == benable)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetBlend !\n");
+	//}
 
 	if (benable)
 	{
@@ -48,10 +41,10 @@ void GL_StateHandler::SetBlend(const bool benable)
 
 void GL_StateHandler::SetBlendFunc(const int src, const int dst)
 {
-	if (m_iBlendSrc == src && m_iBlendDst == dst)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetBlendFunc !\n");
-	}
+	//if (m_iBlendSrc == src && m_iBlendDst == dst)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetBlendFunc !\n");
+	//}
 
 	m_iBlendSrc = src;
 	m_iBlendDst = dst;
@@ -61,10 +54,10 @@ void GL_StateHandler::SetBlendFunc(const int src, const int dst)
 
 void GL_StateHandler::SetAlphaTest(const bool benable)
 {
-	if (m_bAlphaTest == benable)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetAlphaTest !\n");
-	}
+	//if (m_bAlphaTest == benable)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetAlphaTest !\n");
+	//}
 
 	if (benable)
 	{
@@ -79,10 +72,10 @@ void GL_StateHandler::SetAlphaTest(const bool benable)
 }
 void GL_StateHandler::SetAlphaFunc(const int func, const float threshold)
 {
-	if (m_iAlphaFunc == func && m_iAlphaThreshold == threshold)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetAlphaFunc !\n");
-	}
+	//if (m_iAlphaFunc == func && m_iAlphaThreshold == threshold)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetAlphaFunc !\n");
+	//}
 
 	m_iAlphaFunc = func;
 	m_iAlphaThreshold = threshold;
@@ -92,10 +85,10 @@ void GL_StateHandler::SetAlphaFunc(const int func, const float threshold)
 
 void GL_StateHandler::SetCullFace(const bool benable)
 {
-	if (m_bCullFace == benable)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetCullFace !\n");
-	}
+	//if (m_bCullFace == benable)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetCullFace !\n");
+	//}
 
 	if (benable)
 	{
@@ -111,10 +104,10 @@ void GL_StateHandler::SetCullFace(const bool benable)
 
 void GL_StateHandler::SetDepthTest(const bool benable)
 {
-	if (m_bDepthTest == benable)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetDepthTest !\n");
-	}
+	//if (m_bDepthTest == benable)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetDepthTest !\n");
+	//}
 
 	if (benable)
 	{
@@ -130,10 +123,10 @@ void GL_StateHandler::SetDepthTest(const bool benable)
 
 void GL_StateHandler::SetDepthFunc(const int func)
 {
-	if (m_iDepthFunc == func)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetDepthFunc !\n");
-	}
+	//if (m_iDepthFunc == func)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetDepthFunc !\n");
+	//}
 
 	m_iDepthFunc = func;
 
@@ -142,10 +135,10 @@ void GL_StateHandler::SetDepthFunc(const int func)
 
 void GL_StateHandler::SetDepthWrite(const bool benable)
 {
-	if (m_bDepthMask == benable)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetDepthWrite !\n");
-	}
+	//if (m_bDepthMask == benable)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetDepthWrite !\n");
+	//}
 
 	if (benable)
 		glDepthMask(GL_TRUE);
@@ -155,10 +148,10 @@ void GL_StateHandler::SetDepthWrite(const bool benable)
 
 void GL_StateHandler::SetPolygonOffsetFill(const bool benable)
 {
-	if (m_bPolygonOffsetFill == benable)
-	{
-		gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetPolygonOffsetFill !\n");
-	}
+	//if (m_bPolygonOffsetFill == benable)
+	//{
+	//	gEngfuncs.Con_DPrintf("[OPENGL] performance warning: useless call to SetPolygonOffsetFill !\n");
+	//}
 
 	if (benable)
 	{

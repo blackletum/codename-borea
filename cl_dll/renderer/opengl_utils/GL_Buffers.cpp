@@ -1,11 +1,4 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
-
-#include "renderer/opengl_utils/GL_Buffers.h"
+#include "GL_Buffers.h"
 
 GLuint GL_BufferHandler::m_uiCurrentBoundArray = 0;
 GLuint GL_BufferHandler::m_uiCurrentBoundElementArray = 0;
@@ -18,6 +11,16 @@ GL_BufferHandler::GL_BufferHandler()
 {
 	glGenBuffers(1, &m_uiBufferIndex);
 	m_uiNumBuffers++;
+}
+GL_BufferHandler::GL_BufferHandler(vbo_targets target, vbo_usage usage, int bytesize)
+{
+	glGenBuffers(1, &m_uiBufferIndex);
+	m_uiNumBuffers++;
+
+	Bind(target);
+	BufferData(target, bytesize, nullptr, usage);
+
+	GL_BufferHandler::ResetBufferBinding(target);
 }
 GL_BufferHandler::~GL_BufferHandler()
 {

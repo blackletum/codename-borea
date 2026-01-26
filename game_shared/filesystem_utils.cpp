@@ -32,8 +32,8 @@
 #include <sys/stat.h>
 #endif
 
-#include "extdll.h"
-#include "util.h"
+#include "../dlls/extdll.h"
+#include "../dlls/util.h"
 
 #ifdef CLIENT_DLL
 #include "hud.h"
@@ -42,6 +42,7 @@
 #include "interface.h"
 
 #include "filesystem_utils.h"
+
 
 static CSysModule* g_pFileSystemModule = nullptr;
 
@@ -264,7 +265,7 @@ std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileC
 		return {};
 	}
 
-	if (FSFile file{fileName, "rb", pathID}; file)
+	if (FSFile file{ fileName, "rb", pathID }; file)
 	{
 		const auto size = file.Size();
 
@@ -277,13 +278,17 @@ std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileC
 		if (format == FileContentFormat::Text)
 		{
 			//Null terminate it in case it's actually text.
-			buffer[size] = std::byte{'\0'};
+			buffer[size] = std::byte{ '\0' };
 		}
 
 		return buffer;
 	}
-
-	ALERT(at_console, "FileSystem_LoadFileIntoBuffer: couldn't open file \"%s\" for reading\n", fileName);
+#ifndef CLIENT_DLL
+	ALERT(at_console,
+#else
+	gEngfuncs.Con_DPrintf(
+#endif
+		"FileSystem_LoadFileIntoBuffer: couldn't open file \"%s\" for reading\n", fileName);
 	return {};
 }
 
@@ -300,33 +305,43 @@ bool FileSystem_WriteTextToFile(const char* fileName, const char* text, const ch
 
 	if (length > static_cast<std::size_t>(std::numeric_limits<int>::max()))
 	{
-		ALERT(at_console, "FileSystem_WriteTextToFile: text too long\n");
+#ifndef CLIENT_DLL
+		ALERT(at_console,
+#else
+		gEngfuncs.Con_DPrintf(
+#endif 
+			"FileSystem_WriteTextToFile: text too long\n");
 		return false;
 	}
 
-	if (FSFile file{fileName, "w", pathID}; file)
+	if (FSFile file{ fileName, "w", pathID }; file)
 	{
 		file.Write(text, length);
 
 		return true;
 	}
 
-	ALERT(at_console, "FileSystem_WriteTextToFile: couldn't open file \"%s\" for writing\n", fileName);
+#ifndef CLIENT_DLL
+	ALERT(at_console,
+#else
+	gEngfuncs.Con_DPrintf(
+#endif 
+		"FileSystem_WriteTextToFile: couldn't open file \"%s\" for writing\n", fileName);
 
 	return false;
 }
 
 constexpr const char* ValveGameDirectoryPrefixes[] =
-	{
-		"valve",
-		"gearbox",
-		"bshift",
-		"ricochet",
-		"dmc",
-		"cstrike",
-		"czero", // Also covers Deleted Scenes (czeror)
-		"dod",
-		"tfc"};
+{
+	"valve",
+	"gearbox",
+	"bshift",
+	"ricochet",
+	"dmc",
+	"cstrike",
+	"czero", // Also covers Deleted Scenes (czeror)
+	"dod",
+	"tfc" };
 
 bool UTIL_IsValveGameDirectory()
 {
@@ -341,4 +356,17 @@ bool UTIL_IsValveGameDirectory()
 	}
 
 	return false;
+}
+
+bool FS_IsFileWritable(IFileSystem* pFileSystem, char const* pFileName, const char* pPathID)
+{
+	// Work around the lack of IsFileWritable - Solokiller
+	FileHandle_t hFile = pFileSystem->Open(pFileName, "w", pPathID);
+
+	const bool bIsWritable = hFile != FILESYSTEM_INVALID_HANDLE;
+
+	if (hFile != FILESYSTEM_INVALID_HANDLE)
+		pFileSystem->Close(hFile);
+
+	return bIsWritable;
 }

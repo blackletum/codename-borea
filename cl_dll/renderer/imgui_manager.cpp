@@ -145,12 +145,13 @@ void LoadSubtitles()
 	char szTime[32];
 
 	int iSize = NULL;
-	char* pFile = (char*)gEngfuncs.COM_LoadFile("sound/subtitles.txt", 5, &iSize);
+	std::vector<std::byte> textfile = FileSystem_LoadFileIntoBuffer("sound/subtitles.txt", FileContentFormat::Text);
+	iSize = textfile.size();
+	char* pFile = (char*)textfile.data();
 
-	if (!pFile)
+	if (textfile.empty())
 	{
 		gEngfuncs.Con_Printf("Could not load sound/subtitles.txt!\n");
-		gEngfuncs.COM_FreeFile(pFile);
 		return;
 	}
 
@@ -295,8 +296,6 @@ void LoadSubtitles()
 		subtitles_vector_client.push_back(newsubtitle);
 
 	}
-
-	gEngfuncs.COM_FreeFile(pFile);
 
 }
 

@@ -529,7 +529,7 @@ void drawFrame(VideoData* data) {
     GL_ShaderProgram::ResetShaderBind();
 }
 
-void CVideoEngine::Init()
+void CVideoEngine::ClearVideo()
 {
     video_reader_close(&viddata);
     start_time = 0;
@@ -541,15 +541,17 @@ void CVideoEngine::Init()
     viddata.av_frame = nullptr;
     viddata.av_packet = nullptr;
     viddata.sws_scaler_ctx = nullptr;
+}
 
-    if(first_init)
-        InitFFMPEG();
-
+void CVideoEngine::Init()
+{
+    InitFFMPEG();
 }
 
 void CVideoEngine::VidInit()
 {
-    Init();
+    ClearVideo();
+
     videoended = true;
 
     if (m_pVideoTexture)
@@ -562,7 +564,7 @@ void CVideoEngine::VidInit()
 
 void CVideoEngine::LoadVideo(const char* video_path)
 {
-    Init();
+    ClearVideo();
 
     if (!strcmp(video_path, "STOP"))
     {
@@ -664,7 +666,7 @@ void CVideoEngine::DrawVideo(float flTime)
     {
         delete m_pVideoTexture;
         m_pVideoTexture = nullptr;
-        Init();
+        ClearVideo();
         return;
     }
 

@@ -1,6 +1,3 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "interface.h"
 
 #ifdef WIN32
@@ -21,18 +18,18 @@ void* GetModuleHandle(const char* name)
 	void* handle;
 
 
-	if (name == NULL)
+	if (name == nullptr)
 	{
 		// hmm, how can this be handled under linux....
 		// is it even needed?
-		return NULL;
+		return nullptr;
 	}
 
-	if ((handle = dlopen(name, RTLD_NOW)) == NULL)
+	if ((handle = dlopen(name, RTLD_NOW)) == nullptr)
 	{
-		//printf("Error:%s\n",dlerror());
-		// couldn't open this file
-		return NULL;
+		// printf("Error:%s\n",dlerror());
+		//  couldn't open this file
+		return nullptr;
 	}
 
 	// read "man dlopen" for details
@@ -46,10 +43,11 @@ void* GetModuleHandle(const char* name)
 // ------------------------------------------------------------------------------------ //
 // InterfaceReg.
 // ------------------------------------------------------------------------------------ //
-InterfaceReg* InterfaceReg::s_pInterfaceRegs = NULL;
+InterfaceReg* InterfaceReg::s_pInterfaceRegs = nullptr;
 
 
-InterfaceReg::InterfaceReg(InstantiateInterfaceFn fn, const char* pName) : m_pName(pName)
+InterfaceReg::InterfaceReg(InstantiateInterfaceFn fn, const char* pName)
+	: m_pName(pName)
 {
 	m_CreateFn = fn;
 	m_pNext = s_pInterfaceRegs;
@@ -61,7 +59,7 @@ InterfaceReg::InterfaceReg(InstantiateInterfaceFn fn, const char* pName) : m_pNa
 // ------------------------------------------------------------------------------------ //
 // CreateInterface.
 // ------------------------------------------------------------------------------------ //
-EXPORT_FUNCTION void* CreateInterface(const char* pName, int* pReturnCode)
+DLLEXPORT IBaseInterface* CreateInterface(const char* pName, int* pReturnCode)
 {
 	InterfaceReg* pCur;
 
@@ -81,12 +79,10 @@ EXPORT_FUNCTION void* CreateInterface(const char* pName, int* pReturnCode)
 	{
 		*pReturnCode = IFACE_FAILED;
 	}
-	return NULL;
+	return nullptr;
 }
 
-// BEN-NOTE: unifying this on all platforms
-#if 0
-//Local version of CreateInterface, marked static so that it is never merged with the version in other libraries
+// Local version of CreateInterface, marked static so that it is never merged with the version in other libraries
 static IBaseInterface* CreateInterfaceLocal(const char* pName, int* pReturnCode)
 {
 	InterfaceReg* pCur;
@@ -107,9 +103,8 @@ static IBaseInterface* CreateInterfaceLocal(const char* pName, int* pReturnCode)
 	{
 		*pReturnCode = IFACE_FAILED;
 	}
-	return NULL;
+	return nullptr;
 }
-#endif // 0
 
 //-----------------------------------------------------------------------------
 // Purpose: returns a pointer to a function, given a module
@@ -132,15 +127,15 @@ CSysModule* Sys_LoadModule(const char* pModuleName)
 #if defined(WIN32)
 	HMODULE hDLL = LoadLibrary(pModuleName);
 #else
-	HMODULE hDLL = NULL;
-	char szAbsoluteModuleName[1024];
-	szAbsoluteModuleName[0] = 0;
+	HMODULE hDLL = nullptr;
+
+	eastl::fixed_string<char, 1024> absoluteModuleName;
+
 	if (pModuleName[0] != '/')
 	{
 		char szCwd[1024];
-		char szAbsoluteModuleName[1024];
 
-		//Prevent loading from garbage paths if the path is too large for the buffer
+		// Prevent loading from garbage paths if the path is too large for the buffer
 		if (!getcwd(szCwd, sizeof(szCwd)))
 		{
 			exit(-1);
@@ -149,30 +144,29 @@ CSysModule* Sys_LoadModule(const char* pModuleName)
 		if (szCwd[strlen(szCwd) - 1] == '/')
 			szCwd[strlen(szCwd) - 1] = 0;
 
-		snprintf(szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s/%s", szCwd, pModuleName);
-
-		hDLL = dlopen(szAbsoluteModuleName, RTLD_NOW);
+		fmt::format_to(std::back_inserter(absoluteModuleName), "{}/{}", szCwd, pModuleName);
 	}
 	else
 	{
-		snprintf(szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s", pModuleName);
-		hDLL = dlopen(pModuleName, RTLD_NOW);
+		absoluteModuleName = pModuleName;
 	}
+
+	hDLL = dlopen(absoluteModuleName.c_str(), RTLD_NOW);
 #endif
 
 	if (!hDLL)
 	{
-		char str[512];
+		char str[1536];
 #if defined(WIN32)
 		snprintf(str, sizeof(str), "%s.dll", pModuleName);
 		hDLL = LoadLibrary(str);
 #elif defined(OSX)
 		printf("Error:%s\n", dlerror());
-		snprintf(str, sizeof(str), "%s.dylib", szAbsoluteModuleName);
+		snprintf(str, sizeof(str), "%s.dylib", absoluteModuleName.c_str());
 		hDLL = dlopen(str, RTLD_NOW);
 #else
 		printf("Error:%s\n", dlerror());
-		snprintf(str, sizeof(str), "%s.so", szAbsoluteModuleName);
+		snprintf(str, sizeof(str), "%s.so", absoluteModuleName.c_str());
 		hDLL = dlopen(str, RTLD_NOW);
 #endif
 	}
@@ -207,13 +201,13 @@ void Sys_UnloadModule(CSysModule* pModule)
 CreateInterfaceFn Sys_GetFactory(CSysModule* pModule)
 {
 	if (!pModule)
-		return NULL;
+		return nullptr;
 
 	HMODULE hDLL = reinterpret_cast<HMODULE>(pModule);
 
-	//This used to cause problems when compiling with GCC,
-	//but it is now allowed to convert between pointer-to-object to pointer-to-function
-	//See https://en.cppreference.com/w/cpp/language/reinterpret_cast for more information
+	// This used to cause problems when compiling with GCC,
+	// but it is now allowed to convert between pointer-to-object to pointer-to-function
+	// See https://en.cppreference.com/w/cpp/language/reinterpret_cast for more information
 	return reinterpret_cast<CreateInterfaceFn>(GetProcAddress(hDLL, CREATEINTERFACE_PROCNAME));
 }
 
@@ -223,10 +217,5 @@ CreateInterfaceFn Sys_GetFactory(CSysModule* pModule)
 //-----------------------------------------------------------------------------
 CreateInterfaceFn Sys_GetFactoryThis()
 {
-	// BEN-NOTE: unifying this on all platforms
-#if 0
 	return CreateInterfaceLocal;
-#else
-	return CreateInterface;
-#endif
 }

@@ -26,7 +26,7 @@ public:
 	GL_ShadowMap(gl_texturecreationinfo_t *texinfo, bool canuseblur);
 	~GL_ShadowMap();
 
-	void InitRendering(Vector cleancolor = Vector(0, 0, 0), GLsizei layer = 0);
+	void InitRendering(Vector cleancolor = vec3_origin, GLsizei layer = 0);
 	void FinishRendering();
 
 	__forceinline void SetPosition(Vector pos) { position = pos; }
@@ -38,7 +38,7 @@ public:
 
 	static GL_ShadowMap* AllocateShadowMap(GL_TextureType target, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, bool canuseblur = true);
 	static void DeAllocateShadowMap(GL_ShadowMap* pSM);
-	static void ClearAllShadowMaps() { m_vShadowMapList.clear(); };
+	static void ClearAllShadowMaps();
 
 private:
 	static void CheckFBO(GLsizei width, GLsizei height);
@@ -56,5 +56,5 @@ private:
 	static GL_FBOHandler* m_pMainShadowFBO;
 	static std::vector<GL_RBOHandler*> m_pShadowRBOs;
 
-	static std::vector<std::unique_ptr<GL_ShadowMap>> m_vShadowMapList;
+	static std::vector<GL_ShadowMap*> m_vShadowMapList;
 };

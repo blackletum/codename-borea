@@ -24,6 +24,7 @@
 #include "hud.h"
 #include "cl_util.h"
 #include <string.h>
+#include "filesystem_utils.h"
 
 HSPRITE_GOLDSRC LoadSprite(const char *pszName)
 {
@@ -42,11 +43,11 @@ HSPRITE_GOLDSRC LoadSprite(const char *pszName)
 
 void GetFallbackDir(char* falldir)
 {
-    char *pfile, *pfile2;
-    pfile = pfile2 = (char*)gEngfuncs.COM_LoadFile("liblist.gam", 5, NULL);
+    std::vector<std::byte> pfilebuffer = FileSystem_LoadFileIntoBuffer("liblist.gam", FileContentFormat::Text);
+    char *pfile = (char*)pfilebuffer.data();
     char token[1024];
 
-    if (pfile == nullptr)
+    if (pfilebuffer.empty())
     {
         return;
     }
@@ -60,9 +61,6 @@ void GetFallbackDir(char* falldir)
             break;
         }
     }
-
-    gEngfuncs.COM_FreeFile(pfile2);
-    pfile = pfile2 = nullptr;
 }
 
 //==========================

@@ -39,8 +39,10 @@ struct studiomdl_vertbufferdata_t
 {
 	Vector pos;
 	float texcoord[2];
-	short_3dvector normal;
 	unsigned int bonedata;
+	short_3dvector normal;
+	byte _padding[5]; //:(
+	GL_DECLARE_ATTRIBLIST();
 };
 
 class StudioMDL_Model
@@ -104,8 +106,6 @@ private:
 
 	std::vector<studiomdl_vertbufferdata_t> m_vTotalVerts;
 	std::vector<uint32_t> m_vTotalIndices;
-
-	static std::vector<StudioMDL_Model*> m_vCachedStudioModels;
 };
 
 

@@ -26,6 +26,11 @@ Written by Andrew Lucas
 #include "cvardef.h"
 #include "rendererdefs.h"
 
+//==============================
+//		TEXTURE LOADER DEFS
+//
+//==============================
+
 #define MAX_WADFILES 32
 
 #define DDS_MAGIC 0x20534444
@@ -36,6 +41,25 @@ Written by Andrew Lucas
 
 #define D3DFMT_DXT1 '1TXD' //  DXT1 compression texture format
 #define D3DFMT_DXT5 '5TXD' //  DXT5 compression texture format
+
+#define MAX_TGA_LOADER_TEXTURES 8192
+
+//==============================
+//		TEXTURE LOADER STRUCTS
+//
+//==============================
+struct cl_texture_t
+{
+	char szName[128];
+
+	GLuint iIndex;
+
+	int texflags;
+
+	int iBpp;
+	unsigned int iWidth;
+	unsigned int iHeight;
+};
 
 typedef struct
 {
@@ -58,7 +82,7 @@ typedef struct
 struct wadfile_t
 {
 	char wadname[64];
-	byte* wadfile;
+	std::vector<std::byte> wadfile;
 	wadinfo_t* info;
 
 	lumpinfo_t* lumps;

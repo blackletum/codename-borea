@@ -56,6 +56,20 @@ Transparency code by Neil "Jed" Jedrzejewski
 //
 //===========================================
 
+struct tempvert_struct_t
+{
+	Vector pos;
+	Vector tangent;
+	unsigned short width;
+	GL_DECLARE_ATTRIBLIST();
+};
+
+GL_BEGIN_ATTRIBLIST(tempvert_struct_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, tempvert_struct_t, pos)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, tempvert_struct_t, tangent)
+	GL_DEFINE_INTEGERATTRIB(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_SHORT, tempvert_struct_t, width)
+GL_END_ATTRIBLIST(tempvert_struct_t)
+
 CPropManager gPropManager;
 
 modeldata_t* AllocModelHeader()
@@ -113,7 +127,7 @@ void CPropManager::Reset(void)
 		{
 			auto header = header_.get();
 
-			if (header->pHdr)
+			if (header->pMdl)
 			{
 				for (int j = 0; j < header->pVBOHeader.numsubmodels; j++)
 					delete[] header->pVBOHeader.submodels[j].meshes;
@@ -723,11 +737,9 @@ void CPropManager::LoadEntVars(void)
 				m_pCurrentExtraData->lightorigin = propentity.origin;
 			}
 
-			g_StudioRenderer.m_bExternalEntity = true;
 			m_pEntities.emplace_back(propentity);
-			g_StudioRenderer.m_pCurrentEntity = &m_pEntities[m_pEntities.size() - 1];
-			g_StudioRenderer.m_pStudioHeader = m_pCurrentExtraData->pModelData->pHdr;
-			g_StudioRenderer.m_pCurrentStudioMDL = m_pCurrentExtraData->pModelData->pCacheModel;
+			g_StudioRenderer.SetCurrentEntity(&m_pEntities[m_pEntities.size() - 1], true);
+			g_StudioRenderer.SetCurrentMDL(m_pCurrentExtraData->pModelData->pMdl);
 
 			g_StudioRenderer.StudioSaveUniqueData(m_pCurrentExtraData);
 
@@ -811,17 +823,8 @@ void CPropManager::SetupVBO(void)
 		iIndexOffset += header->pVBOHeader.numindexes;
 	}
 
-	typedef struct tempvert_struct_t
-	{
-		Vector pos;
-		Vector tangent;
-		unsigned short width;
-	};
-
-	typedef struct temptri_struct_t
-	{
+	struct temptri_struct_t{
 		tempvert_struct_t vert[3];
-
 	};
 
 	std::vector<temptri_struct_t> cabletris;
@@ -901,14 +904,7 @@ void CPropManager::SetupVBO(void)
 	m_pCableVertsBuffer->Bind(GL_BufferHandler::ArrayBuffer);
 	m_pCableVertsBuffer->BufferData(GL_BufferHandler::ArrayBuffer, (cabletris.size() * 3) * sizeof(tempvert_struct_t), cabletris.data(), GL_BufferHandler::StaticDraw);
 
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(tempvert_struct_t), (void*)0);
-	
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Normal);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(tempvert_struct_t), (void*)offsetof(tempvert_struct_t, tangent));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID);
-	glVertexAttribIPointer(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_SHORT, sizeof(tempvert_struct_t), (void*)offsetof(tempvert_struct_t, width));
+	m_pCableVertsVAO->SetVertexAttributes(tempvert_struct_t::GetAttribLayout());
 
 	GL_VertexArrayObject::ResetVAOBinding();
 }
@@ -1066,9 +1062,7 @@ void CPropManager::RenderProps(bool bSkybox)
 	if (m_pCvarDrawClientEntities->value == 2)
 		g_GlobalGLState.SetDepthTest(false);
 
-	g_StudioRenderer.m_ModelShader->Bind();
-
-	g_StudioRenderer.m_bExternalEntity = true;
+	g_StudioRenderer.StudioSetupPropDraw(false);
 
 	cl_entity_t* ents = m_pEntities.data();
 
@@ -1095,13 +1089,13 @@ void CPropManager::RenderProps(bool bSkybox)
 		else if (pExtraInfo->prop_flags & PROPFLAG_BLIMP)
 			HandleBlimpProp(ents, pExtraData);
 
-		g_StudioRenderer.StudioDrawExternalEntity(ents, bSkybox);
+		g_StudioRenderer.StudioDrawPropEntity(ents, bSkybox);
 	}
 
 	if (m_pCvarDrawClientEntities->value == 2)
 		g_GlobalGLState.SetDepthTest(true);
 
-	g_StudioRenderer.m_bExternalEntity = true;
+	g_StudioRenderer.StudioFinishPropDraw(false);
 
 	GL_VertexArrayObject::ResetVAOBinding();
 }
@@ -1130,13 +1124,11 @@ bool CPropManager::LoadMDL(const char* name, cl_entity_t* pEntity, entity_t* pBS
 
 	modeldata_t* modelheader = AllocModelHeader();
 
-	modelheader->pHdr = (studiohdr_t*)pModel->cache.data;
+	modelheader->pMdl = pModel;
 	if (!pModel->entities)
 	{
 		pModel->entities = (char*)(new StudioMDL_Model(pModel));
 	}
-
-	modelheader->pCacheModel = (StudioMDL_Model*)pModel->entities;
 
 	strcpy(modelheader->name, name);
 
@@ -1153,11 +1145,8 @@ bool CPropManager::LoadMDL(const char* name, cl_entity_t* pEntity, entity_t* pBS
 	memset(pTempModel, 0, sizeof(model_t));
 	strcpy(pTempModel->name, name);
 
-	g_StudioRenderer.m_bExternalEntity = true;
-	g_StudioRenderer.m_pCurrentEntity = pTempEnt;
-	g_StudioRenderer.m_pStudioHeader = modelheader->pHdr;
-	g_StudioRenderer.m_pCurrentStudioMDL = (StudioMDL_Model*)pModel->entities;
-	g_StudioRenderer.m_pRenderModel = pTempModel;
+	g_StudioRenderer.SetCurrentEntity(pTempEnt, true);
+	g_StudioRenderer.SetCurrentMDL(modelheader->pMdl);
 
 	g_StudioRenderer.StudioSetUpTransform(0);
 	g_StudioRenderer.StudioSetupBones();
@@ -1359,25 +1348,7 @@ void CPropManager::RenderPropsSolid(void)
 
 	m_pStaticModelVAO->BindVAO();
 
-	g_StudioRenderer.m_ModelSolidShader->Bind();
-
-	g_StudioRenderer.m_dSolidModelData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
-
-	auto dynl = gBSPRenderer.m_pCurrentDynLight;
-	g_StudioRenderer.m_dSolidModelData.light_pos = glm::vec4(dynl->origin.x, dynl->origin.y, dynl->origin.z, dynl->radius);
-	g_StudioRenderer.m_dSolidModelData.int_values.x = 1;
-
-	g_StudioRenderer.m_ModelSolid_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-
-	g_StudioRenderer.m_bExternalEntity = true;
-
-
-	if (gBSPRenderer.m_bSunShadowMapPass)
-	{
-		// flip
-		g_StudioRenderer.m_ModelSolidShader->Uniform1i(g_StudioRenderer.m_ModelShaderSolidLocs[CStudioModelRenderer::mdlshadersolid_sunshadow], 1);
-		glCullFace(GL_BACK);
-	}
+	g_StudioRenderer.StudioSetupPropDraw(true);
 
 	cl_entity_t* ents = m_pEntities.data();
 
@@ -1401,18 +1372,10 @@ void CPropManager::RenderPropsSolid(void)
 		if (j == pExtraData->num_leafs)
 			continue;
 
-		g_StudioRenderer.StudioDrawExternalEntitySolid(ents);
+		g_StudioRenderer.StudioDrawPropModelSolid(ents);
 	}
 
-	if (gBSPRenderer.m_bSunShadowMapPass)
-	{
-		// flip
-		g_StudioRenderer.m_ModelSolidShader->Uniform1i(g_StudioRenderer.m_ModelShaderSolidLocs[CStudioModelRenderer::mdlshadersolid_sunshadow], 0);
-		glCullFace(GL_FRONT);
-	}
-
-	g_StudioRenderer.m_dSolidModelData.int_values.x = 0;
-	g_StudioRenderer.m_bExternalEntity = false;
+	g_StudioRenderer.StudioFinishPropDraw(true);
 
 	GL_VertexArrayObject::ResetVAOBinding();
 }

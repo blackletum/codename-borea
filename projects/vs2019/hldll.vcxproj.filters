@@ -43,12 +43,6 @@
     <Filter Include="Header Files\dlls\weapons">
       <UniqueIdentifier>{793b2d9a-ab13-4cf4-bf35-5f99e080e1b6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\dlls\ctf">
-      <UniqueIdentifier>{72e9e954-e014-46f2-ab3e-6c562ff15fcf}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\dlls\ctf">
-      <UniqueIdentifier>{a2593f6b-0415-4442-8232-2135c1979f29}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\common">
       <UniqueIdentifier>{42fd860c-8851-42ea-81e1-ffda08a6174d}</UniqueIdentifier>
     </Filter>
@@ -57,6 +51,15 @@
     </Filter>
     <Filter Include="Source Files\dlls\TLG_monsters">
       <UniqueIdentifier>{6f3a5e46-6677-44de-adfb-c27a3bf6f1b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\public">
+      <UniqueIdentifier>{2dc6f9e1-1919-4953-968c-463713260789}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\dlls\ctf">
+      <UniqueIdentifier>{8aacec8a-bde5-4033-8356-927ff845be57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\dlls\ctf">
+      <UniqueIdentifier>{e41589ec-e0d9-4617-a5b5-ec97dd5503be}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -285,48 +288,6 @@
     <ClCompile Include="..\..\dlls\item_generic.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\ctfplay_gamerules.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CItemCTF.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CItemSpawnCTF.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CItemAcceleratorCTF.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CTFSpawn.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CTFGoalBase.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CTFGoal.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CTFGoalFlag.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CItemBackpackCTF.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CItemLongJumpCTF.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CItemPortableHEVCTF.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CItemRegenerationCTF.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CTFDetect.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\dlls\ctf\CHUDIconTrigger.cpp">
-      <Filter>Source Files\dlls\ctf</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\dlls\coopplay_gamerules.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
@@ -395,6 +356,54 @@
     </ClCompile>
     <ClCompile Include="pointmessage.cpp">
       <Filter>Source Files\dlls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\game_shared\filesystem_utils.cpp">
+      <Filter>Source Files\game_shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\public\interface.cpp">
+      <Filter>Source Files\public</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CHUDIconTrigger.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CItemAcceleratorCTF.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CItemBackpackCTF.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CItemCTF.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CItemLongJumpCTF.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CItemPortableHEVCTF.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CItemRegenerationCTF.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CItemSpawnCTF.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CTFDetect.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CTFGoal.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CTFGoalBase.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CTFGoalFlag.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\ctfplay_gamerules.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dlls\ctf\CTFSpawn.cpp">
+      <Filter>Source Files\dlls\ctf</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -551,51 +560,6 @@
     <ClInclude Include="..\..\dlls\weapons\fists.h">
       <Filter>Header Files\dlls\weapons</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CItemAcceleratorCTF.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CItemBackpackCTF.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CItemCTF.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CItemLongJumpCTF.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CItemPortableHEVCTF.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CItemRegenerationCTF.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CTFGoal.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CTFGoalBase.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CTFGoalFlag.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\ctfplay_gamerules.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CTFDefs.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CItemSpawnCTF.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CTFSpawn.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CTFDetect.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\dlls\ctf\CHUDIconTrigger.h">
-      <Filter>Header Files\dlls\ctf</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\dlls\game.h">
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
@@ -733,6 +697,51 @@
     </ClInclude>
     <ClInclude Include="..\..\..\the_last_goodbye_fixing\pm_shared\pm_structs.h">
       <Filter>Header Files\pm_shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CHUDIconTrigger.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CItemAcceleratorCTF.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CItemBackpackCTF.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CItemCTF.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CItemLongJumpCTF.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CItemPortableHEVCTF.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CItemRegenerationCTF.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CItemSpawnCTF.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CTFDefs.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CTFDetect.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CTFGoal.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CTFGoalBase.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CTFGoalFlag.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\ctfplay_gamerules.h">
+      <Filter>Header Files\dlls\ctf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ctf\CTFSpawn.h">
+      <Filter>Header Files\dlls\ctf</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

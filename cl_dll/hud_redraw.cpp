@@ -21,8 +21,6 @@
 
 #include "vgui_TeamFortressViewport.h"
 #include "vgui_StatsMenuPanel.h"
-
-#include "postprocess.h"
 #include "blur.h"
 
 #include "com_model.h"
@@ -132,8 +130,6 @@ int CHud :: Redraw( float flTime, int intermission )
 	}
 	//RENDERERS START
 	gHUD.gBloomRenderer.Draw();
-	gPostProcess.ApplyPostEffects(); //PostProcessing
-	gHUD.gLensflare.Draw(flTime);
 	gBlur.DrawBlur();
 
 	if (m_bLensEffect) //this needs some cleaning up

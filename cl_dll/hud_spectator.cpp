@@ -25,6 +25,7 @@
 #include "event_api.h"
 #include "studio_util.h"
 #include "screenfade.h"
+#include "filesystem_utils.h"
 
 
 #pragma warning(disable: 4244)
@@ -1275,10 +1276,11 @@ bool CHudSpectator::ParseOverviewFile( )
 	levelname[strlen(levelname)-4] = 0;
 	
 	sprintf(filename, "overviews/%s.txt", levelname );
+	std::vector<std::byte> textfile = FileSystem_LoadFileIntoBuffer(filename, FileContentFormat::Text);
 
-	pfile = (char *)gEngfuncs.COM_LoadFile( filename, 5, nullptr);
+	pfile = (char *)textfile.data();
 
-	if (!pfile)
+	if (textfile.empty())
 	{
 		gEngfuncs.Con_DPrintf("Couldn't open file %s. Using default values for overiew mode.\n", filename );
 		return false;
@@ -1396,8 +1398,6 @@ bool CHudSpectator::ParseOverviewFile( )
 
 		}
 	}
-
-	gEngfuncs.COM_FreeFile( pfile );
 
 	m_mapZoom = m_OverviewData.zoom;
 	m_mapOrigin = m_OverviewData.origin;

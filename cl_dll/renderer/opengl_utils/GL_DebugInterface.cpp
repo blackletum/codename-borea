@@ -1,12 +1,9 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
-
-#include "GL_Buffers.h"
 #include "GL_DebugInterface.h"
+#include <string>
+#include "hud.h"
+#include "cvardef.h"
+
+cvar_t *gl_debuginfo;
 
 //
 // GL_ARB_debug_output
@@ -17,7 +14,9 @@ GL_DebugInterface g_IGLDebug;
 
 void GL_DebugInterface::Initialize()
 {
+	gl_debuginfo = gEngfuncs.pfnRegisterVariable("gl_debuginfo", "0", 0);
 	#ifdef _DEBUG
+
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
@@ -27,10 +26,11 @@ void GL_DebugInterface::Initialize()
 	#endif
 }
 
-extern bool bGoldsrcDrawing;
-
 void GL_DebugInterface::DebugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
+	if (gl_debuginfo->value < 1)
+		return;
+
 	std::string error_msg;
 	switch (type)
 	{
@@ -54,24 +54,21 @@ void GL_DebugInterface::DebugMessage(GLenum source, GLenum type, GLuint id, GLen
 		break;
 	}
 
-	if (bGoldsrcDrawing)
-		error_msg += "(GOLDSRC ERROR)";
-	else 
-		switch (severity)
-		{
-		case GL_DEBUG_SEVERITY_HIGH:
-			error_msg += "(SEVERE) ";
-			break;
-		case GL_DEBUG_SEVERITY_MEDIUM:
-			error_msg += "(KINDA SEVERE) ";
-			break;
-		case GL_DEBUG_SEVERITY_LOW:
-			error_msg += "(WARNING) ";
-			break;
-		}
+	switch (severity)
+	{
+	case GL_DEBUG_SEVERITY_HIGH:
+		error_msg += "(SEVERE) ";
+		break;
+	case GL_DEBUG_SEVERITY_MEDIUM:
+		error_msg += "(KINDA SEVERE) ";
+		break;
+	case GL_DEBUG_SEVERITY_LOW:
+		error_msg += "(WARNING) ";
+		break;
+	}
 
 	error_msg += message;
 	error_msg += '\n';
 
-	gEngfuncs.Con_DPrintf(error_msg.c_str());
+	gEngfuncs.Con_Printf(error_msg.c_str());
 }

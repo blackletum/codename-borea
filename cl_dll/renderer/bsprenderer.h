@@ -23,6 +23,7 @@ Extended and/or recoded by Andrew Lucas
 #include "cvardef.h"
 #include "textureloader.h"
 #include "rendererdefs.h"
+#include "opengl_utils/GL_VertexArrayObject.h"
 
 #include "BSPModel_Gen.h"
 
@@ -38,6 +39,54 @@ Extended and/or recoded by Andrew Lucas
 
 #include "stb_image_write.h"
 
+//==============================
+//		BSP RENDERER DEFS
+//
+//==============================
+#define MAX_DECALTEXTURES 128
+#define MAX_CUSTOMDECALS 4096
+#define MAX_STATICDECALS 1024
+#define MAX_GROUPENTRIES 64
+#define MAX_DECAL_MSG_CACHE 256
+#define MAX_DECAL_GROUPS 256
+#define MAX_LIGHTMAPS 256
+#define MAX_LIGHTSTYLES 64
+#define MAX_STYLESTRING 64
+#define MAX_DYNLIGHTS 64
+#define MAX_MAP_DETAILOBJECTS 512
+#define MAX_MAP_LEAFS 65534
+#define DEPTHMAP_RESOLUTION 256
+#define MAX_MAP_TEXTURES 512
+#define LIGHTMAP_RESOLUTION 1024
+
+#define BLOCK_SIZE 128
+
+#define LIGHTMAP_NUMCOLUMNS (LIGHTMAP_RESOLUTION / BLOCK_SIZE)
+#define LIGHTMAP_NUMROWS (LIGHTMAP_RESOLUTION / BLOCK_SIZE)
+#define MAX_SPOTLIGHT_TEXTURES 16
+
+#define MAX_GOLDSRC_DLIGHTS 32
+#define MAX_GOLDSRC_ELIGHTS 64
+
+#define SURF_PLANEBACK 2
+#define SURF_DRAWSKY 4
+#define SURF_DRAWSPRITE 8
+#define SURF_DRAWTURB 0x10
+#define SURF_DRAWTILED 0x20
+#define SURF_DRAWBACKGROUND 0x40
+#define SURF_UNDERWATER 0x80
+#define SURF_DONTWARP 0x100
+
+#define TEXTURE_SCROLL (1 << 0)
+#define TEXTURE_SPECULAR (1 << 1)
+
+#define BLOCKLIGHTS_SIZE (18 * 18)
+#define BACKFACE_EPSILON 0.01
+
+#define PLANE_X 0
+#define PLANE_Y 1
+#define PLANE_Z 2
+
 #define LIGHTMAP_TEXUNIT GL_TEXTURE0
 #define SURFTEXTURE_TEXUNIT GL_TEXTURE1
 #define SPOTLIGHT_TEXUNIT GL_TEXTURE2
@@ -50,12 +99,28 @@ Extended and/or recoded by Andrew Lucas
 #define SETVISBIT( vis, b )( void )	((b) >= 0 ? (byte)((vis)[(b) >> 3] |= (1 << ((b) & 7))) : (byte)false )
 #define CLEARVISBIT( vis, b )( void )	((b) >= 0 ? (byte)((vis)[(b) >> 3] &= ~(1 << ((b) & 7))) : (byte)false )
 
+#define LIGHT_STUDIOMDL_SHADOW 2 << 0	// cast shadows from studiomdl entities (renderfx = 1)
+#define LIGHT_BRUSH_SHADOW 2 << 1		// casts shadows from non-static brush entities (renderfx = 2)
+#define LIGHT_WORLD_SHADOW 2 << 2		// casts shadows from static world brushes (the entire world basically) (renderfx = 3)
+
+#define LIGHT_CLIENT_SUNSHADOW 2 << 2 // casts shadows from static world brushes (the entire world basically) (renderfx = 3)
+
+#define LIGHT_ONLYSHADOWS 2 << 3
+
+#define LIGHT_CASTSHADOWS (LIGHT_STUDIOMDL_SHADOW | LIGHT_BRUSH_SHADOW | LIGHT_WORLD_SHADOW)
+
+//========================================
+//			BSP RENDERER STRUCTS
+//
+//========================================
 
 struct DecalVert_t
 {
 	Vector pos;
 	float texcoord[2];
 	byte _padding[12];
+
+	GL_DECLARE_ATTRIBLIST();
 };
 
 struct skyvert_t
@@ -63,6 +128,140 @@ struct skyvert_t
 	Vector pos;
 	float texcoord[2];
 	byte _padding[12];
+
+	GL_DECLARE_ATTRIBLIST();
+};
+
+struct brushvertex_t
+{
+	Vector pos;
+	Vector normal;
+
+	float fogcoord;
+	float texcoord[2];
+	float speculartexcoord[2];
+	float lightmaptexcoord[2];
+
+	byte pad[12];
+
+	GL_DECLARE_ATTRIBLIST();
+};
+
+struct brushface_t
+{
+	int index;
+	int start_vertex;
+	int num_vertexes;
+
+	Vector normal;
+	Vector s_tangent;
+	Vector t_tangent;
+};
+
+struct decalgroupentry_t
+{
+	char szName[64];
+	int gl_texid;
+	int xsize, ysize;
+	struct decalgroup_t* group;
+};
+struct decalgroup_t
+{
+	char szName[64];
+	int iSize;
+	decalgroupentry_t entries[MAX_GROUPENTRIES];
+};
+
+typedef struct customdecalvert_s
+{
+	Vector position;
+	float texcoord[2];
+} customdecalvert_t;
+
+typedef struct customdecalpoly_s
+{
+	customdecalvert_t* pverts;
+	int numverts;
+
+	clientmsurface_t* surface;
+	cl_entity_t* entity;
+} customdecalpoly_t;
+
+typedef struct customdecal_s
+{
+	customdecalpoly_t* polys;
+	int inumpolys;
+
+	const decalgroupentry_t* texinfo;
+
+	Vector normal;
+	Vector position;
+	float life;
+} customdecal_t;
+
+struct decal_msg_cache
+{
+	Vector pos;
+	Vector normal;
+	char name[32];
+	int persistent;
+	int fromwad;
+	float angle;
+};
+
+struct clientsurfdata_t
+{
+	float cached_light[MAXLIGHTMAPS];
+
+	texture_t* regtexture;
+
+	int light_s;
+	int light_t;
+};
+
+typedef struct
+{
+	int length;
+	char map[MAX_STYLESTRING];
+} lightstyle_t;
+
+struct detailobject_t
+{
+	Vector mins;
+	Vector maxs;
+
+	int firstsurface;
+	int numsurfaces;
+
+	short leafnums[MAX_ENT_LEAFS * 2];
+	int numleafs;
+
+	int visframe;
+	int rendermode;
+};
+
+struct cl_dlight_t
+{
+	Vector origin;
+	Vector color;
+	Vector angles;
+
+	float radius;
+	float die;
+	float decay;
+	bool justspawned; //NEW!! for flashlights
+	int flags;
+	int key;
+
+	GL_ShadowMap* depth;
+	GL_ShadowMap* cubedepth; //cubemap shadowmap (for pointlights), probably should be made a separate entity.
+
+	int visframe;
+
+	// spotlight specific:
+	float cone_size;
+	FrustumCheck frustum;
+	int textureindex;
 };
 
 class GL_FBOHandler;

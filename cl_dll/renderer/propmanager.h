@@ -30,6 +30,112 @@ Transparency code by Neil "Jed" Jedrzejewski
 
 class GL_BufferHandler;
 class GL_VertexArrayObject;
+class StudioMDL_Model;
+struct studiohdr_t;
+struct decal_msg_cache;
+struct brushvertex_t;
+
+//========================================
+//			PROP MANAGER DEFINITIONS
+//
+//========================================
+#define MAX_POINTS 64
+
+//========================================
+//			PROP MANAGER STRUCTS
+//
+//========================================
+typedef struct epair_s
+{
+	struct epair_s* next;
+	char* key;
+	char* value;
+} epair_t;
+
+typedef struct
+{
+	Vector origin;
+	int firstbrush;
+	int numbrushes;
+	epair_t* epairs;
+} entity_t;
+
+struct vbomesh_t
+{
+	int start_vertex;
+	int num_vertexes;
+};
+
+struct vbosubmodel_t
+{
+	vbomesh_t* meshes;
+	int nummeshes;
+};
+
+struct vboheader_t
+{
+	brushvertex_t* pBufferData;
+	int numverts;
+
+	unsigned int* indexes;
+	int numindexes;
+
+	vbosubmodel_t* submodels;
+	int numsubmodels;
+};
+
+struct modeldata_t
+{
+	char name[256];
+
+	model_t* pMdl;
+	vboheader_t pVBOHeader;
+};
+
+struct entextradata_t
+{
+	Vector absmax;
+	Vector absmin;
+	Vector lightorigin;
+
+	int num_leafs;
+	short leafnums[MAX_ENT_LEAFS];
+	//float pbones[MAXSTUDIOBONES][3][4]; unusued
+
+	modeldata_t* pModelData;
+
+	glm::mat4 modelmatrix;
+};
+
+#define PROPFLAG_FOLIAGE (1 << 0)
+#define PROPFLAG_BLIMP (1 << 1)
+
+struct entextrainfo_t
+{
+	int surfindex;
+	int prop_flags;
+	int lightstyles[4];
+	Vector prevpos;
+
+	lighting_ext pLighting;
+	cl_entity_t* pEntity;
+	entextradata_t* pExtraData; // only used by CL ents
+};
+
+struct cabledata_t
+{
+	int iwidth;
+	int isegments;
+
+	Vector vmins;
+	Vector vmaxs;
+
+	Vector vpoints[MAX_POINTS];
+	int inumpoints;
+
+	int num_leafs;
+	short leafnums[MAX_ENT_LEAFS];
+};
 
 class CPropManager
 {

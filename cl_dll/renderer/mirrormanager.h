@@ -32,6 +32,32 @@ class GL_FBOHandler;
 class GL_RBOHandler;
 class GL_ShaderProgram;
 
+//==================================================
+//				MIRROR MANAGER DEFS
+//
+//==================================================
+#define MAX_MIRRORS 32
+#define MIRROR_RESOLUTION 1024
+
+//==================================================
+//				MIRROR MANAGER STRUCTS
+//
+//==================================================
+struct cl_mirror_t
+{
+	cl_entity_t* entity;
+
+	Vector mins;
+	Vector maxs;
+
+	Vector origin;
+	msurface_t* surface;
+
+	bool draw;
+
+	GL_TextureHandler* texture;
+};
+
 /*
 ====================
 CMirrorManager

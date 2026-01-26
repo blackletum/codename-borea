@@ -6,11 +6,9 @@
 #include "UserMessages.h"
 #include <string>
 
-/*
-#if defined (CLIENT_DLL) && !defined (CDLL_DLL_H)
+#if defined (CLIENT_DLL)
 #include <cl_dll.h>
 #endif
-*/
 
 namespace FranUtils
 {

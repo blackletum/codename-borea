@@ -58,6 +58,12 @@ CParticleEngine gParticleEngine;
 //
 //===========================================
 
+GL_BEGIN_ATTRIBLIST(ParticleVertex)
+		GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos,		3,	GL_FLOAT,			ParticleVertex, pos)
+		GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord,			2,	GL_FLOAT,			ParticleVertex, uv)
+		GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Color,	4,	GL_UNSIGNED_BYTE,	ParticleVertex, color)
+GL_END_ATTRIBLIST(ParticleVertex)
+
 /*
 ====================
 Init
@@ -85,14 +91,7 @@ void CParticleEngine::Init()
 	//9600000 bytes = 9.6 mb
 	m_pQuadBuffer->BufferData(GL_BufferHandler::ArrayBuffer, sizeof(ParticleQuad) * 100000, nullptr, GL_BufferHandler::DynamicDraw);
 	
-	
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleVertex), (void*)offsetof(ParticleVertex, pos));
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleVertex), (void*)offsetof(ParticleVertex, uv));
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Color, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ParticleVertex), (void*)offsetof(ParticleVertex, color));
-	
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::TexCoord);
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Color);
+	m_pParticleVAO->SetVertexAttributes(ParticleVertex::GetAttribLayout());
 	
 	GL_VertexArrayObject::ResetVAOBinding();
 
@@ -205,15 +204,15 @@ void CParticleEngine::CreateCluster(const char* szPath, Vector origin, Vector di
 	strcpy(szFilePath, "/scripts/particles/");
 	strcat(szFilePath, szPath);
 
-	char* pFile = (char*)gEngfuncs.COM_LoadFile(szFilePath, 5, nullptr);
+	std::vector<std::byte> pFile = FileSystem_LoadFileIntoBuffer(szFilePath, FileContentFormat::Text);
 
-	if (!pFile)
+	if (pFile.empty())
 	{
 		gEngfuncs.Con_Printf("Could not load particle cluster file: %s!\n", szPath);
 		return;
 	}
 
-	char* pToken = pFile;
+	char* pToken = (char*)pFile.data();
 	while (1)
 	{
 		char szField[256];
@@ -225,8 +224,6 @@ void CParticleEngine::CreateCluster(const char* szPath, Vector origin, Vector di
 
 		CreateSystem(szField, origin, dir, iId);
 	}
-
-	gEngfuncs.COM_FreeFile(pFile);
 }
 
 /*
@@ -244,9 +241,9 @@ particle_system_t* CParticleEngine::CreateSystem(char* szPath, Vector origin, Ve
  	strcpy(szFilePath, "/scripts/particles/");
 	strcat(szFilePath, szPath);
 
-	char* pFile = (char*)gEngfuncs.COM_LoadFile(szFilePath, 5, nullptr);
+	std::vector<std::byte> pFile = FileSystem_LoadFileIntoBuffer(szFilePath, FileContentFormat::Text);
 
-	if (!pFile)
+	if (pFile.empty())
 	{
 		gEngfuncs.Con_Printf("Could not load particle definitions file: %s!\n", szPath);
 		return nullptr;
@@ -257,7 +254,6 @@ particle_system_t* CParticleEngine::CreateSystem(char* szPath, Vector origin, Ve
 	if (!pSystem)
 	{
 		gEngfuncs.Con_Printf("Warning! Exceeded max number of particle systems!\n");
-		gEngfuncs.COM_FreeFile(pFile);
 		return nullptr;
 	}
 
@@ -267,7 +263,7 @@ particle_system_t* CParticleEngine::CreateSystem(char* szPath, Vector origin, Ve
 	pSystem->spawntime = engine_cl->time;
 	VectorCopy(dir, pSystem->dir);
 
-	char* pToken = pFile;
+	char* pToken = (char*)pFile.data();
 	while (1)
 	{
 		char szField[32];
@@ -438,7 +434,6 @@ particle_system_t* CParticleEngine::CreateSystem(char* szPath, Vector origin, Ve
 				}
 				delete[] pSystem;
 
-				gEngfuncs.COM_FreeFile(pFile);
 				return nullptr;
 			}
 
@@ -450,7 +445,6 @@ particle_system_t* CParticleEngine::CreateSystem(char* szPath, Vector origin, Ve
 		else
 			gEngfuncs.Con_Printf("Warning! Unknown field: %s\n", szField);
 	}
-	gEngfuncs.COM_FreeFile(pFile);
 
 	if (pSystem->shapetype != SYSTEM_SHAPE_PLANE_ABOVE_PLAYER)
 	{
@@ -1162,8 +1156,7 @@ Vector CParticleEngine::LightForParticle(cl_particle_t* pParticle)
 
 		VectorMA(vColor, flAtten, pLight->color, vColor);
 	}
-
-	return (vColor * (gEngfuncs.pfnGetCvarFloat("lightgamma"))).Normalize();
+	return vColor;
 }
 
 /*
@@ -1664,10 +1657,16 @@ void CParticleEngine::GetParticleQuad(cl_particle_t* pParticle, float flUp, floa
 	memcpy(quad.vert[2].uv, pParticle->texcoords[2], sizeof(float) * 2);
 	memcpy(quad.vert[3].uv, pParticle->texcoords[3], sizeof(float) * 2);
 
-	quad.vert[0].color.r = pParticle->color.x * 255.f;
-	quad.vert[0].color.g = pParticle->color.y * 255.f;
-	quad.vert[0].color.b = pParticle->color.z * 255.f;
+	quad.vert[0].color.r = std::clamp(pParticle->color.x * 255.f, 0.f, 255.f);
+	quad.vert[0].color.g = std::clamp(pParticle->color.y * 255.f, 0.f, 255.f);
+	quad.vert[0].color.b = std::clamp(pParticle->color.z * 255.f, 0.f, 255.f);
 	quad.vert[0].color.a = (pParticle->alpha * pParticle->pSystem->mainalpha) * 255.f;
+	if (pParticle->pSystem->displaytype == SYSTEM_RENDERMODE_ADDITIVE)
+	{
+		quad.vert[0].color.r *= (pParticle->alpha * pParticle->pSystem->mainalpha);
+		quad.vert[0].color.g *= (pParticle->alpha * pParticle->pSystem->mainalpha);
+		quad.vert[0].color.b *= (pParticle->alpha * pParticle->pSystem->mainalpha);
+	}
 
 
 	quad.vert[3].color = quad.vert[2].color = quad.vert[1].color = quad.vert[0].color;

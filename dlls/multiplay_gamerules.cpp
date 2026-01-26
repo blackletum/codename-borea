@@ -27,6 +27,7 @@
 #include	"items.h"
 #include	"voice_gamemgr.h"
 #include	"hltv.h"
+#include "filesystem_utils.h"
 #include "UserMessages.h"
 
 #include "ctf/ctfplay_gamerules.h"
@@ -1555,11 +1556,14 @@ int ReloadMapCycleFile( char *filename, mapcycle_t *cycle )
 	char szMap[ 32 ];
 	int length;
 	char *pFileList;
-	char *aFileList = pFileList = (char*)LOAD_FILE_FOR_ME( filename, &length );
 	int hasbuffer;
 	mapcycle_item_s *item, *newlist = nullptr, *next;
 
-	if ( pFileList && length )
+	std::vector<std::byte> pFileListBuffer = FileSystem_LoadFileIntoBuffer(filename, FileContentFormat::Text);
+	length = pFileListBuffer.size();
+	pFileList = (char*)pFileListBuffer.data();
+
+	if ( !pFileListBuffer.empty())
 	{
 		// the first map name in the file becomes the default
 		while ( 1 )
@@ -1633,8 +1637,6 @@ int ReloadMapCycleFile( char *filename, mapcycle_t *cycle )
 			}
 
 		}
-
-		FREE_FILE( aFileList );
 	}
 
 	// Fixup circular list pointer
@@ -1887,9 +1889,10 @@ void CHalfLifeMultiplay :: ChangeLevel()
 void CHalfLifeMultiplay :: SendMOTDToClient( edict_t *client )
 {
 	// read from the MOTD.txt file
-	int length, char_count = 0;
-	char *pFileList;
-	char *aFileList = pFileList = (char*)LOAD_FILE_FOR_ME( (char *)CVAR_GET_STRING( "motdfile" ), &length );
+	int char_count = 0;
+	std::vector<std::byte> pFileListBuffer = FileSystem_LoadFileIntoBuffer((char*)CVAR_GET_STRING("motdfile"), FileContentFormat::Text);
+	char* pFileList = (char*)pFileListBuffer.data();
+	int length = pFileListBuffer.size();
 
 	// send the server name
 	MESSAGE_BEGIN( MSG_ONE, gmsgServerName, nullptr, client );
@@ -1915,7 +1918,7 @@ void CHalfLifeMultiplay :: SendMOTDToClient( edict_t *client )
 
 		char_count += strlen( chunk );
 		if ( char_count < MAX_MOTD_LENGTH )
-			pFileList = aFileList + char_count; 
+			pFileList = (char*)pFileListBuffer.data() + char_count;
 		else
 			*pFileList = 0;
 
@@ -1924,8 +1927,6 @@ void CHalfLifeMultiplay :: SendMOTDToClient( edict_t *client )
 			WRITE_STRING( chunk );
 		MESSAGE_END();
 	}
-
-	FREE_FILE( aFileList );
 }
 	
 

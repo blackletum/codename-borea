@@ -216,56 +216,6 @@ private:
 
 };
 
-//
-//-----------------------------------------------------
-//
-
-class CHudLensflare : public CHudBase
-{
-public:
-		int Init() override;
-		int VidInit() override;
-		int Draw(float flTime) override;
-		int MsgFunc_Lensflare(const char* pszName, int iSize, void* pbuf);
-
-		int SunEnabled;
-
-private:
-		int Sunanglex;
-		int Sunangley;
-
-		int Sunadd[5];
-
-		float flPlayerBlend;
-		float flPlayerBlend2;
-		float flPlayerBlend3;
-		float flPlayerBlend4;
-		float flPlayerBlend5;
-		float flPlayerBlend6;
-
-		float Screenmx;
-		float Screenmy;
-
-		float multi[10];
-
-		int scale[10];
-
-		int red[10];
-		int green[10];
-		int blue[10];
-
-		char text[10];
-		float Lensx[10];
-		float Lensy[10];
-
-		float Suncoordx;
-
-		float Suncoordy;
-
-		float Sundistx;
-		float Sundisty;
-};
-
 class GL_TextureHandler;
 
 class CBloom
@@ -978,7 +928,6 @@ public:
 
 	CPointMessageRenderer m_PointMessage;
 
-	CHudLensflare gLensflare;
 	CBloom gBloomRenderer;
 
 
@@ -1046,7 +995,6 @@ public:
 	int  _cdecl MsgFunc_DynLight( const char *pszName, int iSize, void *pbuf );
 	int  _cdecl MsgFunc_CreateSystem( const char *pszName, int iSize, void *pbuf );
 
-	int  _cdecl MsgFunc_PPGray(const char* pszName, int iSize, void* pbuf);
 	int  _cdecl MsgFunc_WpnSkn(const char* pszName, int iSize, void* pbuf);
 //RENDERERS END
 

@@ -30,7 +30,14 @@
 
 #include <unordered_map>
 
-std::vector<StudioMDL_Model*> StudioMDL_Model::m_vCachedStudioModels;
+std::vector<StudioMDL_Model*> m_vCachedStudioModels;
+
+GL_BEGIN_ATTRIBLIST(studiomdl_vertbufferdata_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, studiomdl_vertbufferdata_t, pos)
+	GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_SHORT, studiomdl_vertbufferdata_t, normal)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, studiomdl_vertbufferdata_t, texcoord)
+	GL_DEFINE_INTEGERATTRIB(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_INT, studiomdl_vertbufferdata_t, bonedata)
+GL_END_ATTRIBLIST(studiomdl_vertbufferdata_t)
 
 StudioMDL_Model::StudioMDL_Model(model_t* model)
 {
@@ -101,17 +108,7 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 	m_pModelVertIndexBuffer->Bind(GL_BufferHandler::ElementArrayBuffer);
 	m_pModelVertIndexBuffer->BufferData(GL_BufferHandler::ElementArrayBuffer, m_vTotalIndices.size() * sizeof(uint32_t), m_vTotalIndices.data(), GL_BufferHandler::StaticDraw);
 
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, pos));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Normal);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_SHORT, GL_TRUE, /*GL_FLOAT, GL_FALSE,*/ sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, normal));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, texcoord));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID);
-	glVertexAttribIPointer(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_INT, sizeof(studiomdl_vertbufferdata_t), (const void*)offsetof(studiomdl_vertbufferdata_t, bonedata));
+	m_pModelVAO->SetVertexAttributes(studiomdl_vertbufferdata_t::GetAttribLayout());
 
 	GL_VertexArrayObject::ResetVAOBinding();
 

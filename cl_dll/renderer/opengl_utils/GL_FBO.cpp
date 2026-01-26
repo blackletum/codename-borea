@@ -1,10 +1,3 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
-
 #include "GL_FBO.h"
 
 

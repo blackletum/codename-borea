@@ -47,10 +47,6 @@ Extended and/or recoded by Andrew Lucas
 #include "opengl_utils/GL_VertexArrayObject.h"
 
 #include "r_efx.h"
-#include "r_studioint.h"
-#include "studio_util.h"
-
-// #include "stb_image_write.h"
 
 #include "StudioModelRenderer.h"
 #include "BSPModel_Gen.h"
@@ -93,6 +89,25 @@ static GLuint num_multidraws;
 // GLSL SHADER END
 //
 //===========================================
+
+
+GL_BEGIN_ATTRIBLIST(brushvertex_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, brushvertex_t, pos)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, brushvertex_t, normal)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::Specular_TexCoord, 2, GL_FLOAT, brushvertex_t, speculartexcoord)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::LightMap_TexCoord, 2, GL_FLOAT, brushvertex_t, lightmaptexcoord)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, brushvertex_t, texcoord)
+GL_END_ATTRIBLIST(brushvertex_t)
+
+GL_BEGIN_ATTRIBLIST(skyvert_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, skyvert_t, pos)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, skyvert_t, texcoord)
+GL_END_ATTRIBLIST(skyvert_t)
+
+GL_BEGIN_ATTRIBLIST(DecalVert_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, DecalVert_t, pos)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::TexCoord, 2, GL_FLOAT, DecalVert_t, texcoord)
+GL_END_ATTRIBLIST(DecalVert_t)
 
 
 
@@ -416,11 +431,7 @@ void CBSPRenderer::Init(void)
 	//10.48 megabytes in vram, i think space for 524 thousand vertices is enough
 	m_pDecalsBuffer->BufferData(GL_BufferHandler::ArrayBuffer, sizeof(DecalVert_t) * 524288, nullptr, GL_BufferHandler::DynamicDraw);
 
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(DecalVert_t), (void*)offsetof(DecalVert_t, pos));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(DecalVert_t), (void*)offsetof(DecalVert_t, texcoord));
+	m_pDecalVAO->SetVertexAttributes(DecalVert_t::GetAttribLayout());
 
 	GL_VertexArrayObject::ResetVAOBinding();
 
@@ -473,11 +484,7 @@ void CBSPRenderer::Init(void)
 	m_pSimpleSky_Buffer->Bind(GL_BufferHandler::ArrayBuffer);
 	m_pSimpleSky_Buffer->BufferData(GL_BufferHandler::ArrayBuffer, skyVerts.size() * sizeof(skyvert_t), skyVerts.data(), GL_BufferHandler::StaticDraw);
 
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(skyvert_t), (void*)offsetof(skyvert_t, pos));
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(skyvert_t), (void*)offsetof(skyvert_t, texcoord));
-
+	m_pSimpleSkyVAO->SetVertexAttributes(skyvert_t::GetAttribLayout());
 
 	GL_VertexArrayObject::ResetVAOBinding();
 
@@ -1620,20 +1627,7 @@ void CBSPRenderer::GenerateVertexArray(void)
 							sizeof(brushvertex_t) * iNumVerts,
 							m_pBufferData, GL_BufferHandler::StaticDraw);
 
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, pos));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Normal);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, normal));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Specular_TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Specular_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, speculartexcoord));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::LightMap_TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::LightMap_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, lightmaptexcoord));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::TexCoord);
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, texcoord));
+	m_pBSP_VAO->SetVertexAttributes(brushvertex_t::GetAttribLayout());
 
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
@@ -1646,14 +1640,7 @@ void CBSPRenderer::GenerateVertexArray(void)
 		m_pMainBuffer->Bind(GL_BufferHandler::ArrayBuffer);
 		gPropManager.m_pStaticModelBuffer->Bind(GL_BufferHandler::ElementArrayBuffer);
 
-		glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-		glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, pos));
-
-		glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Normal);
-		glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, normal));
-
-		glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::TexCoord);
-		glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(brushvertex_t), (void*)offsetof(brushvertex_t, texcoord));
+		gPropManager.m_pStaticModelVAO->SetVertexAttributes(brushvertex_t::GetAttribLayout());
 	}
 
 
@@ -1690,22 +1677,21 @@ void CBSPRenderer::LoadWADDecals()
 	char waddir[64];
 	sprintf(waddir, "%s/decals.wad", gEngfuncs.pfnGetGameDirectory());
 	int length;
-	byte* wadfile = gEngfuncs.COM_LoadFile(waddir, 5, &length);
-	if (!wadfile)
+	std::vector<std::byte> wadfile = FileSystem_LoadFileIntoBuffer(waddir, FileContentFormat::Binary);
+	if (wadfile.empty())
 	{
 		strcpy(waddir, "valve/decals.wad");
-		wadfile = gEngfuncs.COM_LoadFile(waddir, 5, &length);
+		wadfile = FileSystem_LoadFileIntoBuffer(waddir, FileContentFormat::Binary);
 		loaded_valve_decals = true;
-		if (!wadfile) // impossible but whatever
+		if (wadfile.empty()) // impossible but whatever
 		{
 			gEngfuncs.Con_DPrintf("ERROR: FAILED TO GET DECALS WAD!!!");
 			return;
 		}
 	}
-	wadinfo_t* pInfo = (wadinfo_t*)wadfile;
+	wadinfo_t* pInfo = (wadinfo_t*)wadfile.data();
 	if (strncmp("WAD3", pInfo->identification, 4))
 	{
-		gEngfuncs.COM_FreeFile(wadfile);
 		return;
 	}
 
@@ -1713,28 +1699,28 @@ void CBSPRenderer::LoadWADDecals()
 	gTextureLoader.m_iNumWADFiles++;
 
 	strcpy(pWADFile->wadname, "decals.wad");
-	pWADFile->wadfile = wadfile;
-	pWADFile->info = (wadinfo_t*)pWADFile->wadfile;
+	pWADFile->wadfile.insert(pWADFile->wadfile.end(), std::begin(wadfile), std::end(wadfile));
+	pWADFile->info = (wadinfo_t*)pWADFile->wadfile.data();
 
 	pWADFile->lumps = new lumpinfo_t[pWADFile->info->numlumps];
-	memcpy(pWADFile->lumps, (pWADFile->wadfile + pWADFile->info->infotableofs), sizeof(lumpinfo_t) * pWADFile->info->numlumps);
+	memcpy(pWADFile->lumps, (pWADFile->wadfile.data() + pWADFile->info->infotableofs), sizeof(lumpinfo_t) * pWADFile->info->numlumps);
 	pWADFile->numlumps = pWADFile->info->numlumps;
 
 	if (!loaded_valve_decals)
 	{
 		strcpy(waddir, "valve/decals.wad");
-		wadfile = gEngfuncs.COM_LoadFile(waddir, 5, &length);
+		wadfile = FileSystem_LoadFileIntoBuffer(waddir, FileContentFormat::Binary);
 		loaded_valve_decals = true;
 
 		wadfile_t* pWADFile = &gTextureLoader.m_pWADFiles[gTextureLoader.m_iNumWADFiles];
 		gTextureLoader.m_iNumWADFiles++;
 
 		strcpy(pWADFile->wadname, "decals.wad");
-		pWADFile->wadfile = wadfile;
-		pWADFile->info = (wadinfo_t*)pWADFile->wadfile;
+		pWADFile->wadfile.insert(pWADFile->wadfile.end(), std::begin(wadfile), std::end(wadfile));
+		pWADFile->info = (wadinfo_t*)pWADFile->wadfile.data();
 
 		pWADFile->lumps = new lumpinfo_t[pWADFile->info->numlumps];
-		memcpy(pWADFile->lumps, (pWADFile->wadfile + pWADFile->info->infotableofs), sizeof(lumpinfo_t) * pWADFile->info->numlumps);
+		memcpy(pWADFile->lumps, (pWADFile->wadfile.data() + pWADFile->info->infotableofs), sizeof(lumpinfo_t) * pWADFile->info->numlumps);
 		pWADFile->numlumps = pWADFile->info->numlumps;
 	}
 }
@@ -3140,8 +3126,9 @@ LoadDecals
 */
 void CBSPRenderer::LoadDecals(void)
 {
-	char* pfile = (char*)gEngfuncs.COM_LoadFile("gfx/textures/decals/decalinfo.txt", 5, NULL);
-	if (!pfile)
+	std::vector<std::byte> textfile = FileSystem_LoadFileIntoBuffer("gfx/textures/decals/decalinfo.txt", FileContentFormat::Text);
+	char* pfile = (char*)textfile.data();
+	if (textfile.empty())
 	{
 		gEngfuncs.Con_Printf("BSP Renderer: Cannot open file \"gfx/textures/decals/decalinfo.txt\"\n");
 		return;
@@ -3228,7 +3215,6 @@ void CBSPRenderer::LoadDecals(void)
 	}
 
 getout:
-	gEngfuncs.COM_FreeFile(pfile);
 	gEngfuncs.Con_Printf("BSP Renderer: %d decal groups created\n", counter);
 
 	// load decals.wad
@@ -3239,7 +3225,7 @@ getout:
 	{
 		if (!stricmp(gTextureLoader.m_pWADFiles[i].wadname, "decals.wad"))
 		{
-			byte* pFile = gTextureLoader.m_pWADFiles[i].wadfile;
+			byte* pFile = (byte*)gTextureLoader.m_pWADFiles[i].wadfile.data();
 			wadinfo_t* pInfo = gTextureLoader.m_pWADFiles[i].info;
 			for (int j = 0; j < pInfo->numlumps; j++)
 			{

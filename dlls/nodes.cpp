@@ -23,6 +23,7 @@
 #include	"nodes.h"
 #include	"animation.h"
 #include	"doors.h"
+#include "filesystem_utils.h"
 
 #if !defined ( _WIN32 )
 #include <sys/stat.h>
@@ -2319,7 +2320,7 @@ int CGraph :: FLoadGraph ( char *szMapName )
 	char	szFilename[MAX_PATH];
 	int		iVersion;
 	int     length;
-	byte    *aMemFile;
+	std::vector<std::byte> pMemBuffer;
 	byte    *pMemFile;
 
 	// make sure the directories have been made
@@ -2334,9 +2335,11 @@ int CGraph :: FLoadGraph ( char *szMapName )
 	strcat ( szFilename, szMapName );
 	strcat( szFilename, ".nod" );
 
-	pMemFile = aMemFile = LOAD_FILE_FOR_ME(szFilename, &length);
+	pMemBuffer = FileSystem_LoadFileIntoBuffer(szFilename, FileContentFormat::Binary);
+	length = pMemBuffer.size();
+	pMemFile = (byte*)pMemBuffer.data();
 
-	if ( !aMemFile )
+	if (pMemBuffer.empty())
 	{
 		return FALSE;
 	}
@@ -2467,8 +2470,6 @@ int CGraph :: FLoadGraph ( char *szMapName )
 		//
 		m_fGraphPresent = TRUE;
 		m_fGraphPointersSet = FALSE;
-		
-		FREE_FILE(aMemFile);
 
 		if (length != 0)
 		{
@@ -2480,7 +2481,6 @@ int CGraph :: FLoadGraph ( char *szMapName )
 
 ShortFile:
 NoMemory:
-	FREE_FILE(aMemFile);
 	return FALSE;
 }
 

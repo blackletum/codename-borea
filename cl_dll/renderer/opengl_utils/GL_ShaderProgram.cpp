@@ -289,7 +289,7 @@ GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSr
 		errormsg += '\n';
 		errormsg += "Reach out to the developer of this renderer and relate this issue if you wish to.\n";
 		errormsg += "The program will now close.";
-		
+
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL OPENGL ERROR", errormsg.c_str(), nullptr);
 		exit(-1);
 	}
@@ -312,7 +312,7 @@ GL_ShaderProgram::~GL_ShaderProgram()
 }
 
 
-const GLuint GL_ShaderProgram::CompileShader(const char* source, const GLuint type, std::string &errormsg)
+const GLuint GL_ShaderProgram::CompileShader(const char* source, const GLuint type, std::string& errormsg)
 {
 	GLuint shader = glCreateShader(type);
 	glShaderSource(shader, 1, &source, nullptr);
@@ -485,7 +485,7 @@ GLint GL_ShaderProgram::GetUniformLoc(const char* name)
 
 		//assert(COULDNT_FIND_SHADER_UNIFORM);
 	}
-	
+
 	return returnloc;
 
 }

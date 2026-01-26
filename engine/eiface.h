@@ -191,8 +191,8 @@ typedef struct enginefuncs_s
 	void (*pfnSetView)(const edict_t* pClient, const edict_t* pViewent);
 	float (*pfnTime)();
 	void (*pfnCrosshairAngle)(const edict_t* pClient, float pitch, float yaw);
-	byte* (*pfnLoadFileForMe)(const char* filename, int* pLength);
-	void (*pfnFreeFile)(void* buffer);
+	[[deprecated("use FileSystem_LoadFileIntoBuffer")]] byte * (*pfnLoadFileForMe)(const char* filename, int* pLength);
+	[[deprecated("use FileSystem_LoadFileIntoBuffer")]] void (*pfnFreeFile)(void* buffer);
 	void (*pfnEndSection)(const char* pszSectionName); // trigger_endsection
 	int (*pfnCompareFileTime)(const char* filename1, const char* filename2, int* iCompare);
 	void (*pfnGetGameDir)(char* szGetGameDir);

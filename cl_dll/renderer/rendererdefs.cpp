@@ -32,7 +32,6 @@ Written by Andrew Lucas, Richard Rohac, BUzer, Laurie, Botman and Id Software
 #include "watershader.h"
 #include "mirrormanager.h"
 
-#include "postprocess.h"
 #include "blur.h"
 #include "goldsrc_beamrenderer.h"
 #include "goldsrc_tracerrenderer.h"
@@ -64,8 +63,6 @@ Written by Andrew Lucas, Richard Rohac, BUzer, Laurie, Botman and Id Software
 #endif
 
 Vector g_vecFull(1.0f, 1.0f, 1.0f); // color of 3d attenuation texture
-
-glstate_t g_savedGLState;
 
 extern int g_iFlashLight;
 
@@ -1107,7 +1104,6 @@ void R_Init(void)
 	gWaterShader.Init();
 	gMirrorManager.Init();
 	g_LegacySpriteRenderer.Init();
-	gPostProcess.Init();
 	gHUD.gBloomRenderer.Init();
 	gBlur.InitScreen();
 }
@@ -1142,7 +1138,6 @@ void R_VidInit(void)
 	g_BeamRenderer.Reset();
 
 	gBlur.VidInit();
-	gPostProcess.Reset();
 }
 
 /*

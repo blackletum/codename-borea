@@ -1,10 +1,3 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
-
 #include "GL_TextureHandler.h"
 
 std::vector<std::unique_ptr<GL_TextureHandler>> GL_TextureHandler::m_vTextureList;
@@ -160,4 +153,9 @@ void GL_TextureHandler::UploadPixelData(const void* pixeldata)
 	{
 		glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, m_iWidth, m_iHeight, m_TexInfo.format, m_TexInfo.colortype, pixeldata);
 	}
+}
+
+void GL_TextureHandler::ShutDown()
+{
+	m_vTextureList.clear();
 }

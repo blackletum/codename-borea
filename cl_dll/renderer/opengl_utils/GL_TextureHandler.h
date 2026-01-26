@@ -1,11 +1,9 @@
 #pragma once
 
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
+#include "GL_CommonInclude.h"
+#include <memory> //std::unique_ptr
+#include <vector>
+#include <string>
 
 class GL_TextureHandler
 {
@@ -50,6 +48,8 @@ public:
 
 	__forceinline GL_TextureType GetTextureType() const noexcept { return m_TexInfo.texturetype; };
 	__forceinline GLuint GetTextureID() const noexcept { return m_uiTextureHandle; };
+
+	static void ShutDown();
 
 protected:
 	GLuint m_uiTextureHandle;

@@ -176,8 +176,8 @@ qboolean CGoldSrc_BeamRenderer::R_BeamComputePoint(int beamEnt, Vector& pt)
 	// get attachment
 	if (attach > 0)
 	{
-		g_StudioRenderer.m_pCurrentEntity = ent;
-		g_StudioRenderer.m_pStudioHeader = (studiohdr_t*)IEngineStudio.Mod_Extradata(ent->model);
+		g_StudioRenderer.SetCurrentEntity(ent);
+		g_StudioRenderer.SetCurrentMDL(ent->model);
 		g_StudioRenderer.StudioSetUpTransform(0);
 		g_StudioRenderer.StudioSetupBones();
 		g_StudioRenderer.StudioCalcAttachments();

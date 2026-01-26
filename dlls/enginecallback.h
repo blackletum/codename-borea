@@ -127,8 +127,8 @@ inline T* GET_PRIVATE( edict_t *pent )
 #define GET_ATTACHMENT			(*g_engfuncs.pfnGetAttachment)
 #define SET_VIEW				(*g_engfuncs.pfnSetView)
 #define SET_CROSSHAIRANGLE		(*g_engfuncs.pfnCrosshairAngle)
-#define LOAD_FILE_FOR_ME		(*g_engfuncs.pfnLoadFileForMe)
-#define FREE_FILE				(*g_engfuncs.pfnFreeFile)
+//#define LOAD_FILE_FOR_ME		(*g_engfuncs.pfnLoadFileForMe)	//deprecated in favor of FileSystem
+//#define FREE_FILE				(*g_engfuncs.pfnFreeFile)		//deprecated in favor of FileSystem
 #define COMPARE_FILE_TIME		(*g_engfuncs.pfnCompareFileTime)
 #define GET_GAME_DIR			(*g_engfuncs.pfnGetGameDir)
 #define IS_MAP_VALID			(*g_engfuncs.pfnIsMapValid)

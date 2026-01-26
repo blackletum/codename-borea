@@ -1,6 +1,6 @@
 #pragma once
 
-#include "renderer/rendererdefs.h"
+#include "GL_CommonInclude.h"
 
 class GL_RBOHandler
 {

@@ -34,6 +34,9 @@ class CVideoEngine
 public:
 	void Init();
     void VidInit();
+
+    void ClearVideo();
+
 	void LoadVideo(const char* video_path);
 	void DrawVideo(float flTime);
     VideoData viddata;

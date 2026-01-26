@@ -498,7 +498,7 @@ The entity's studio model description indicated an event was
 fired during this frame, handle the event by it's tag ( e.g., muzzleflash, sound )
 =========================
 */
-void DLLEXPORT HUD_StudioEvent(const struct mstudioevent_s* event, const struct cl_entity_s* entity)
+void DLLEXPORT HUD_StudioEvent(const struct mstudioevent_t* event, const struct cl_entity_s* entity)
 {
 	//	RecClStudioEvent(event, entity);
 
@@ -675,9 +675,9 @@ void HUD_TempEntUpdate_(
 		if (!active) // Kill it
 		{
 
-			g_StudioRenderer.m_pCurrentEntity = &pTemp->entity;
+			g_StudioRenderer.SetCurrentEntity(&pTemp->entity);
 			g_StudioRenderer.StudioFreeEntity();
-			g_StudioRenderer.m_pCurrentEntity = nullptr;
+			g_StudioRenderer.SetCurrentEntity(nullptr);
 
 			if(pTemp->diecallback)
 				pTemp->diecallback(pTemp);

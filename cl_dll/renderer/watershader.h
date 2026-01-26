@@ -31,6 +31,53 @@ class GL_FBOHandler;
 class GL_RBOHandler;
 class GL_ShaderProgram;
 
+//==================================================
+//				WATER SHADER DEFS
+//
+//==================================================
+#define MAX_WATER_ENTITIES 64
+#define MAX_WATER_VERTEX_SHADERS 2
+#define MAX_WATER_FRAGMENT_SHADERS 4
+#define WATER_RESOLUTION 512
+
+//==================================================
+//				WATER SHADER STRUCTS
+//
+//==================================================
+
+struct cl_waterinfo_t
+{
+	cl_entity_s* entity;
+	Vector waterfog_color;
+	int waterfog_start;
+	int waterfog_end;
+	float watertex_scale;
+	float refraction_scale, reflection_scale;
+	float normal_scale;
+	float fresnel;
+};
+
+struct cl_water_t
+{
+	int index;
+	cl_entity_t* entity;
+
+	mplane_t wplane;
+
+	Vector mins;
+	Vector maxs;
+	Vector origin;
+	bool draw;
+
+	GL_TextureHandler* refract;
+	GL_TextureHandler* reflect;
+
+	clientmsurface_t** surfaces;
+	int numsurfaces;
+
+	bool rendered;
+};
+
 /*
 ====================
 CWaterShader

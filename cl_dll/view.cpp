@@ -479,12 +479,12 @@ void V_CalcViewRoll ( struct ref_params_s *pparams )
 
 int GetAnimBoneFromFile(char* name)
 {
-	char* pfile, * pfile2;
-	pfile = pfile2 = (char*)gEngfuncs.COM_LoadFile("models/animbonelist.txt", 5, NULL);
+	std::vector<std::byte> pfilebuffer = FileSystem_LoadFileIntoBuffer("models/animbonelist.txt", FileContentFormat::Text);
+	char* pfile = (char*)pfilebuffer.data();
 	char token[500];
 	int index = -1;
 
-	if (pfile == nullptr)
+	if (pfilebuffer.empty())
 	{
 		return -1;
 	}
@@ -498,9 +498,6 @@ int GetAnimBoneFromFile(char* name)
 			break;
 		}
 	}
-
-	gEngfuncs.COM_FreeFile(pfile2);
-	pfile = pfile2 = nullptr;
 
 	return index;
 }

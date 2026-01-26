@@ -30,6 +30,7 @@
 #endif
 
 #include "UserMessages.h"
+#include "filesystem_utils.h"
 
 static char *memfgets( byte *pMemFile, int fileSize, int &filePos, char *pBuffer, int bufferSize );
 
@@ -1502,8 +1503,10 @@ void SENTENCEG_Init()
 
 	
 	int filePos = 0, fileSize;
-	byte *pMemFile = g_engfuncs.pfnLoadFileForMe( "sound/sentences.txt", &fileSize );
-	if ( !pMemFile )
+	std::vector<std::byte> pMemBuffer = FileSystem_LoadFileIntoBuffer("sound/sentences.txt", FileContentFormat::Text);
+	fileSize = pMemBuffer.size();
+	byte *pMemFile =(byte*)pMemBuffer.data();
+	if ( pMemBuffer.empty() )
 		return;
 
 	// for each line in the file...
@@ -1586,8 +1589,6 @@ void SENTENCEG_Init()
 				rgsentenceg[isentencegs].count++;
 		}
 	}
-
-	g_engfuncs.pfnFreeFile( pMemFile );
 	
 	fSentencesInit = TRUE;
 

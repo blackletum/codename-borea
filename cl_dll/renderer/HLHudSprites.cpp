@@ -270,11 +270,17 @@ void Draw_SpriteFrame(mspriteframe_t* pFrame, int ix, int iy, const Rect* prcSub
 		width = prcSubrect->right - prcSubrect->left;
 		height = prcSubrect->bottom - prcSubrect->top;
 
-		fLeft = (prcSubrect->left + 0.5) * 1.0 / pFrame->width;
-		fRight = (prcSubrect->right - 0.5) * 1.0 / pFrame->width;
+		//fLeft = (prcSubrect->left + 0.5) * 1.0 / pFrame->width;
+		//fRight = (prcSubrect->right - 0.5) * 1.0 / pFrame->width;
 
-		fTop = (prcSubrect->top + 0.5) * 1.0 / pFrame->height;
-		fBottom = (prcSubrect->bottom - 0.5) * 1.0 / pFrame->height;
+		//fTop = (prcSubrect->top + 0.5) * 1.0 / pFrame->height;
+		//fBottom = (prcSubrect->bottom - 0.5) * 1.0 / pFrame->height;
+
+		fLeft = (float)(prcSubrect->left + 0.5) / (float)pFrame->width;
+		fRight = (float)(prcSubrect->right - 0.5) / (float)pFrame->width;
+
+		fTop = (float)(prcSubrect->top + 0.5) / (float)pFrame->height;
+		fBottom = (float)(prcSubrect->bottom - 0.5) / (float)pFrame->height;
 	}
 
 	glDepthMask(GL_FALSE);

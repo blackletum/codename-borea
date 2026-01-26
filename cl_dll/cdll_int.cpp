@@ -182,8 +182,6 @@ static bool CL_InitClient()
 extern void Hook_gEngfuncs_Functions();
 
 SDL_Window* hlWindow = nullptr;
-SDL_Window** windowPptr = nullptr;
-SDL_GLContext newGlContext;
 
 
 void LoadWindowIcon()
@@ -230,13 +228,27 @@ size_t GetModuleSize(HMODULE hModule)
 
 #ifdef HL25_UPDATE
 
+static bool startframe = true;
+static bool endframe = false;
+
 void WINAPI replace_glBindFramebufferEXT(GLenum target, GLuint framebuffer)
 {
-	glBindFramebufferEXT(target, !framebuffer); //this seems to override the new hl25 fbo stuff, ugly but i dont care
+	if(startframe)
+	{
+		glBindFramebufferEXT(target, 0);
+		startframe = false;
+	}
+	if (endframe)
+	{
+		//gl_endrendering does glclearcolor, dont
+		glBindFramebufferEXT(GL_READ_FRAMEBUFFER, 0);
+		glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER, 1);
+	}
 }
 
 void WINAPI replace_glBlitFramebufferEXT(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
 {
+	//glBlitFramebufferEXT(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
 	//dont do anything
 }
 
@@ -279,9 +291,31 @@ void GetDefaultSettings(int *width, int *height)
 
 int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 {
+	static SDL_Window** windowPptr = nullptr;
+	static SDL_GLContext newGlContext;
+
 	gEngfuncs = *pEnginefuncs;
 
-	//	RecClInitialize(pEnginefuncs, iVersion);
+	//check goldsrc version
+	const char* version = gEngfuncs.pfnGetCvarString("sv_version");
+	char gpszVersionString[32];
+	int unknown;
+	int build_number;
+	
+	if (sscanf(version, "%255[^,],%d,%d", gpszVersionString, &unknown, &build_number) == 3)
+	{
+		//see https://developer.valvesoftware.com/wiki/GoldSrc/Engine_versions
+
+#ifdef HL25_UPDATE
+		if (build_number < 10210)
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Mod error",
+				"Binary files are built for hl25, but goldsrc is on legacy branch!\n please switch to the latest 25th anniversary build of goldsrc or replace the binary files with the ones provided in \"Prava/legacy_dlls\".\n", SDL_GetWindowFromID(1));
+#else
+		if (build_number >= 9884)
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Mod error",
+				"Binary files are built for legacy goldsrc, but goldsrc is on 25th anniversary build!\n please switch to the legacy build of goldsrc or replace the binary files with the ones built for hl25.\n", SDL_GetWindowFromID(1));
+#endif
+	}
 
 
 	// !!!!!!!!! credits to Meetem for the code below !!!!!!!
@@ -290,8 +324,31 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 	auto oldHlWindow = hlWindow == nullptr ? SDL_GetWindowFromID(1) : hlWindow;
 	hlWindow = oldHlWindow;
 
+	int w, h;
+	GetDefaultSettings(&w, &h);
+
+#ifdef HL25_UPDATE
+
+	uint32_t flags = SDL_GetWindowFlags(hlWindow);
+	if (flags & SDL_WINDOW_FULLSCREEN) //fix stupid hl25 shit
+	{
+		SDL_DisplayMode mode;
+		SDL_GetWindowDisplayMode(hlWindow, &mode);
+		mode.w = w;
+		mode.h = h;
+		SDL_SetWindowDisplayMode(hlWindow, &mode);
+
+		SDL_SetWindowFullscreen(hlWindow, 0); //make windowed
+		SDL_SetWindowFullscreen(hlWindow, SDL_WINDOW_FULLSCREEN);//then make fullscreen
+	}
+#endif
+
+#define SDL_TEMPFIX
+
+
 	if (oldHlWindow != nullptr)
 	{
+#ifndef SDL_TEMPFIX
 		auto flags = SDL_GetWindowFlags(oldHlWindow);
 		auto brightness = SDL_GetWindowBrightness(oldHlWindow);
 		auto a = SDL_GetWindowPixelFormat(oldHlWindow);
@@ -338,6 +395,7 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		//flags |= SDL_WINDOW_HIDDEN; // only start hidden seems to work properly
 
 		SDL_Window* window = SDL_CreateWindow(titlecp, x, y, w, h, flags);
+#endif //SDL_TEMPFIX
 		auto engineBase = GetModuleHandleA("hw.dll");
 		auto size = GetModuleSize(engineBase);
 
@@ -346,15 +404,13 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		bool got_bindframebuffer = false;
 		bool got_blitframebuffer = false;
 
-		PFNGLBINDFRAMEBUFFEREXTPROC framebuffer_func = (PFNGLBINDFRAMEBUFFEREXTPROC)SDL_GL_GetProcAddress("glBindFramebufferEXT"); 
+		PFNGLBINDFRAMEBUFFEREXTPROC framebuffer_func = (PFNGLBINDFRAMEBUFFEREXTPROC)SDL_GL_GetProcAddress("glBindFramebufferEXT");
 		PFNGLBLITFRAMEBUFFEREXTPROC blitframebuffer_func = (PFNGLBLITFRAMEBUFFEREXTPROC)SDL_GL_GetProcAddress("glBlitFramebufferEXT");
 #endif
 
 
-		if (windowPptr == nullptr)
-		{
 #ifdef HL25_UPDATE
-			if( !gEngfuncs.CheckParm("-nofbo", nullptr) )
+		if (!gEngfuncs.CheckParm("-nofbo", nullptr))
 			for (int i = 0; i < size; i += 4)
 			{
 				auto* ptr = (void**)((uint8_t*)engineBase + i);
@@ -372,7 +428,7 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 					break;
 			}
 #endif
-
+#ifndef SDL_TEMPFIX
 			for (int i = 0; i < size; i += 4)
 			{
 				auto* ptr = (SDL_Window**)((uint8_t*)engineBase + i);
@@ -390,6 +446,7 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		{
 			*windowPptr = window;
 		}
+#endif
 
 		if (windowPptr == nullptr)
 			assert(0);
@@ -408,6 +465,7 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 			Debug.Fatal("Can't enable hook on wglMakeCurrent, %p", hookstatus);
 		}
 		*/
+#ifndef SDL_TEMPFIX
 
 		SDL_GLContext glContext = SDL_GL_CreateContext(window);
 		newGlContext = glContext;
@@ -431,9 +489,12 @@ int DLLEXPORT Initialize(cl_enginefunc_t* pEnginefuncs, int iVersion)
 		//SDL_AddEventWatch(CloseWindowOnAltF4, nullptr);
 
 		hlWindow = window;
+#endif
 	}
 
+#ifndef SDL_TEMPFIX
 	LoadWindowIcon();
+#endif
 
 
 
@@ -859,6 +920,11 @@ void pfnFrameBegin(void) //(called in Host_Frame before everything)
 {
 	if (engine_cl->worldmodel && restore_numleafs)
 		engine_cl->worldmodel->numleafs = 0;
+
+#ifdef HL25_UPDATE
+	startframe = true;
+	endframe = false;
+#endif
 	// gEngfuncs.Con_Printf("%s", __func__);
 }
 void pfnFrameRender1(void) //(called in SCR_UpdateScreen before everything)
@@ -874,10 +940,15 @@ void pfnFrameRender2(void) //(called in SCR_UpdateScreen in the end before GL_En
 	if (restore_numleafs && engine_cl->worldmodel)
 		engine_cl->worldmodel->numleafs = restore_numleafs;
 
+#ifdef HL25_UPDATE
+	startframe = false;
+	endframe = true;
+#endif
+
 	glDisable(GL_ALPHA_TEST);
-
+	
 	g_ImGUIManager.Draw();
-
+	
 	glEnable(GL_ALPHA_TEST);
 	//SDL_GL_SwapWindow(hlWindow); let GL_EndRendering swap the window buffer
 }

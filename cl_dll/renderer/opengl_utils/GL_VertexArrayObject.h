@@ -1,11 +1,53 @@
 #pragma once
 
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
+#include "GL_CommonInclude.h"
 
-#include "renderer/rendererdefs.h"
+struct gl_vertattrib_t
+{
+	uint32_t index;		  // attribute index in shader
+	uint32_t numelements; //
+	uint32_t type;		  // GL_FLOAT, GL_UNSIGNED_SHORT, etc
+	uint32_t structsize;  // sizeof(struct);
+	uint32_t offset;	  // ex: offsetof(struct, vertpos);
+
+	bool integer_attrib; // ex: ivec4 or vec4 (glvertexattribI or glvertexattribI)
+	bool normalize;
+};
+
+struct gl_vertattriblist_t
+{
+	const gl_vertattrib_t* attribs;
+	const int numattribs;
+};
+
+#define GL_DECLARE_ATTRIBLIST()										\
+	static const gl_vertattriblist_t* GetAttribLayout()				\
+
+
+#define GL_BEGIN_ATTRIBLIST(structure)								\
+	const gl_vertattriblist_t* structure::GetAttribLayout() {		\
+		static const gl_vertattrib_t structure##_attribinfo[] = {	\
+
+
+
+#define GL_DEFINE_ATTRIB(index, numelements, type, structure, member) \
+	{index, numelements, type, sizeof(structure), offsetof(structure, member), false, true},
+#define GL_DEFINE_NORMALIZEDATTRIB(index, numelements, type, structure, member) \
+	{index, numelements, type, sizeof(structure), offsetof(structure, member), false, true},
+#define GL_DEFINE_INTEGERATTRIB(index, numelements, type, structure, member) \
+	{index, numelements, type, sizeof(structure), offsetof(structure, member), true, false},
+
+
+
+#define GL_END_ATTRIBLIST(structure)					\
+		};												\
+														\
+		static const gl_vertattriblist_t attriblist = {	\
+				structure##_attribinfo,					\
+				std::size(structure##_attribinfo)		\
+		};												\
+		return &attriblist;								\
+	};
 
 class GL_VertexArrayObject // should this be shortened to VAO ? dunno, maybe not, want my code to be clear
 {
@@ -24,6 +66,8 @@ public:
 	static __forceinline void ResetVAOBinding() { glBindVertexArray(0); m_pCurrentBoundVAO = nullptr; };
 
 	#endif
+
+	void SetVertexAttributes(const gl_vertattriblist_t* attriblist);
 
 
 	static __forceinline GL_VertexArrayObject* GetBoundVAO() { return m_pCurrentBoundVAO; };

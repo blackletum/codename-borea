@@ -1,13 +1,8 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
 #include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
 #include "renderer/bsprenderer.h"
+
 #include "GL_ShaderProgram.h"
 #include "GL_Buffers.h"
-
 #include "GL_Buffers.h"
 #include "GL_FBO.h"
 #include "GL_ShadowMap.h"
@@ -17,7 +12,7 @@ GL_FBOHandler* GL_ShadowMap::m_pMainShadowFBO = nullptr;
 std::vector<GL_RBOHandler*> GL_ShadowMap::m_pShadowRBOs;
 
 
-std::vector<std::unique_ptr<GL_ShadowMap>> GL_ShadowMap::m_vShadowMapList;
+std::vector<GL_ShadowMap*> GL_ShadowMap::m_vShadowMapList;
 
 GL_ShadowMap* GL_ShadowMap::AllocateShadowMap(GL_TextureType target, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, bool canuseblur)
 {
@@ -30,7 +25,7 @@ GL_ShadowMap* GL_ShadowMap::AllocateShadowMap(GL_TextureType target, GLint inter
 			shadowmap->m_TexInfo.internalformat == internalformat)
 		{
 			shadowmap->m_bInUse = true;
-			return shadowmap.get();
+			return shadowmap;
 		}
 	}
 
@@ -45,6 +40,29 @@ void GL_ShadowMap::DeAllocateShadowMap(GL_ShadowMap* pSM)
 	//	MEMORY LEAK WARNING! need to automatically delete inactive shadowmaps from gpu after a period of time,
 	//	can't depend on shadowmaps getting cleared on level load.
 	pSM->m_bInUse = false;
+}
+
+void GL_ShadowMap::ClearAllShadowMaps()
+{
+	for (auto it = m_vTextureList.begin(); it != m_vTextureList.end();)
+	{
+		bool shoulderase = false;
+		for (auto shadowmap : m_vShadowMapList)
+		{
+			if (shadowmap == it->get())
+			{
+				shoulderase = true;
+				break;
+			}
+		}
+
+		if (shoulderase)
+			it = m_vTextureList.erase(it);
+		else
+			++it;
+	}
+
+	m_vShadowMapList.clear();
 }
 
 void GL_ShadowMap::CheckFBO(GLsizei width, GLsizei height)
@@ -98,8 +116,7 @@ GL_ShadowMap::GL_ShadowMap(gl_texturecreationinfo_t* texinfo, bool canuseblur)
 	m_bInUse = true;
 	m_bCanBlur = canuseblur;
 
-	std::unique_ptr<GL_ShadowMap> ptr(this);
-	m_vShadowMapList.push_back(std::move(ptr));
+	m_vShadowMapList.push_back(this);
 	gl_texturecreationinfo_t dummyinfo = *texinfo;
 	dummyinfo.texturetype = _2DTexture_Storage;
 	m_pDummyTexture = new GL_TextureHandler(&dummyinfo);
@@ -237,7 +254,7 @@ void GL_ShadowMap::StartShadowMapping()
 
 void GL_ShadowMap::EndShadowMapping()
 {
-	if (gBSPRenderer.m_pCvarBlurShadows->value > 0)
+	if (gBSPRenderer.m_pCvarBlurShadows->value)
 		BlurShadows();
 
 	GL_FBOHandler::ResetToMainFBO();

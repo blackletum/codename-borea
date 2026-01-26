@@ -76,12 +76,6 @@
     <Filter Include="Source Files\minhook">
       <UniqueIdentifier>{83583eae-f753-4f4a-a996-f02d515fc760}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\sptlib">
-      <UniqueIdentifier>{c272c921-f237-4160-952a-ae3a605af980}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\regs">
-      <UniqueIdentifier>{e4159116-63c6-4f0f-a595-b14210387267}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\glew">
       <UniqueIdentifier>{5b5ddcde-88a3-4039-9396-d90354f653b8}</UniqueIdentifier>
     </Filter>
@@ -399,12 +393,6 @@
     <ClCompile Include="..\..\external\minhook\trampoline.c">
       <Filter>Source Files\minhook</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\external\sptlib\DetoursUtils.cpp">
-      <Filter>Source Files\sptlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\cl_dll\regs\reGS_enginehook.cpp">
-      <Filter>Source Files\regs</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\common\gl\glew.c">
       <Filter>Source Files\glew</Filter>
     </ClCompile>
@@ -439,9 +427,6 @@
       <Filter>Source Files\cl_dll\renderer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\cl_dll\renderer\particle_engine.cpp">
-      <Filter>Source Files\cl_dll\renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\cl_dll\renderer\postprocess.cpp">
       <Filter>Source Files\cl_dll\renderer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\cl_dll\renderer\propmanager.cpp">
@@ -493,9 +478,6 @@
       <Filter>Source Files\cl_dll\renderer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\cl_dll\renderer\imgui_manager.cpp">
-      <Filter>Source Files\cl_dll\renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\cl_dll\renderer\lensflare.cpp">
       <Filter>Source Files\cl_dll\renderer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_ShaderProgram.cpp">
@@ -1003,30 +985,6 @@
     </ClInclude>
     <ClInclude Include="..\..\external\minhook\trampoline.h">
       <Filter>Source Files\minhook</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\sptlib\DetoursUtils.hpp">
-      <Filter>Source Files\sptlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\sptlib\MemUtils.h">
-      <Filter>Source Files\sptlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\sptlib\patterns.hpp">
-      <Filter>Source Files\sptlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\sptlib\patterns_macros.hpp">
-      <Filter>Source Files\sptlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\sptlib\sptlib-stdafx.hpp">
-      <Filter>Source Files\sptlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\external\sptlib\Utils.hpp">
-      <Filter>Source Files\sptlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\cl_dll\regs\reGS_enginehook.h">
-      <Filter>Source Files\regs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\cl_dll\regs\reGS_patterns.hpp">
-      <Filter>Source Files\regs</Filter>
     </ClInclude>
     <ClInclude Include="..\..\cl_dll\videoengine.h">
       <Filter>Header Files\cl_dll</Filter>

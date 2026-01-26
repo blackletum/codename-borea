@@ -51,7 +51,6 @@ extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player in
 #include "particle_engine.h"
 #include "watershader.h"
 #include "mirrormanager.h"
-#include "postprocess.h"
 #include "goldsrc_spriterenderer.h"
 #include "r_efx.h"
 
@@ -485,11 +484,6 @@ int __MsgFunc_WaterInfo(const char* pszName, int iSize, void* pbuf)
 {
 	return gWaterShader.MsgWaterInfo(pszName, iSize, pbuf);
 }
-int __MsgFunc_PPGray(const char* pszName, int iSize, void* pbuf)
-{
-	gHUD.MsgFunc_PPGray(pszName, iSize, pbuf);
-	return 1;
-}
 int __MsgFunc_WpnSkn(const char* pszName, int iSize, void* pbuf)
 {
 	gHUD.MsgFunc_WpnSkn(pszName, iSize, pbuf);
@@ -722,7 +716,6 @@ void CHud :: Init()
 	HOOK_MESSAGE( FreeEnt );
 	HOOK_MESSAGE( Particle );
 	HOOK_MESSAGE( WaterInfo );
-	HOOK_MESSAGE( PPGray );
 	HOOK_MESSAGE( WpnSkn );
 	HOOK_MESSAGE(UseEnt);
 	HOOK_MESSAGE(SendAnim);
@@ -731,6 +724,7 @@ void CHud :: Init()
 	//R_Init(); do this right after getting ienginestudio
 
 	gSoundSystem.Init();
+	gVideoEngine.Init();
 
 	// Aynekko
 	HOOK_MESSAGE( KickPunch );
@@ -879,6 +873,9 @@ void CHud :: VidInit()
 #endif
 	m_scrinfo.iSize = sizeof(m_scrinfo);
 	GetScreenInfo(&m_scrinfo);
+
+	extern void GetDefaultSettings(int* width, int* height);
+	GetDefaultSettings(&m_scrinfo.iWidth, &m_scrinfo.iHeight);
 
 	// ----------
 	// Load Sprites

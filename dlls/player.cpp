@@ -6923,6 +6923,7 @@ void CBasePlayer::LeaningThink()
 		//but i guess its less buggy than using the up vector
 		Vector vecSrc = pev->origin + pev->view_ofs + Vector(0, 0, 24);
 		Vector vecEnd = vecSrc - right * 100;
+
 		//UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev), &leanLeftTr);
 		UTIL_TraceHull(vecSrc, vecEnd, dont_ignore_monsters, head_hull, ENT(pev), &leanLeftTr);
 		vecEnd = leanLeftTr.vecEndPos;

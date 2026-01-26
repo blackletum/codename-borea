@@ -35,6 +35,7 @@
 #include "UserMessages.h"
 #include "movewith.h"
 #include "locus.h"
+#include "filesystem_utils.h"
 
 float UTIL_WeaponTimeBase()
 {
@@ -2992,10 +2993,19 @@ int CRestore::ReadFields( const char *pname, void *pBaseData, TYPEDESCRIPTION *p
 	int		lastField, fileCount;
 	HEADER	header;
 
+	bool blightstyledebug = false;
+
+	if (!strcmp(pname, "LIGHTSTYLE"))
+		blightstyledebug = true;
+
 	i = ReadShort();
 	ASSERT( i == sizeof(int) );			// First entry should be an int
+	if (blightstyledebug)
+		ALERT(at_console, "%hu\n", i);
 
 	token = ReadShort();
+	if (blightstyledebug)
+		ALERT(at_console, "%hu\n", token);
 
 	// Check the struct name
 	if ( token != TokenHash(pname) )			// Field Set marker
@@ -3007,6 +3017,8 @@ int CRestore::ReadFields( const char *pname, void *pBaseData, TYPEDESCRIPTION *p
 
 	// Skip over the struct name
 	fileCount = ReadInt();						// Read field count
+	if (blightstyledebug)
+		ALERT(at_console, "%d\n", fileCount);
 
 	lastField = 0;								// Make searches faster, most data is read/written in the same order
 
@@ -3323,12 +3335,9 @@ skipwhite:
 
 void GetFallbackDir(char* falldir)
 {
-
-	char *pfile, *pfile2;
-	int length;
-	pfile = pfile2 = (char*)g_engfuncs.pfnLoadFileForMe("liblist.gam", &length);
-
-	if (pfile == nullptr)
+	std::vector<std::byte> pfilebuffer = FileSystem_LoadFileIntoBuffer("liblist.gam", FileContentFormat::Text);
+	char* pfile = (char*)pfilebuffer.data();
+	if (pfilebuffer.empty())
 	{
 		return;
 	}
@@ -3342,9 +3351,6 @@ void GetFallbackDir(char* falldir)
 			break;
 		}
 	}
-
-	g_engfuncs.pfnFreeFile(pfile2);
-	pfile = pfile2 = nullptr;
 
 }
 

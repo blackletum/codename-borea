@@ -343,9 +343,9 @@ typedef struct cl_enginefuncs_s
 	pfnEngSrc_pfnSetScreenFade_t pfnSetScreenFade;
 	pfnEngSrc_VGui_GetPanel_t VGui_GetPanel;
 	pfnEngSrc_VGui_ViewportPaintBackground_t VGui_ViewportPaintBackground;
-	pfnEngSrc_COM_LoadFile_t COM_LoadFile;
+	[[deprecated("use FileSystem_LoadFileIntoBuffer")]] pfnEngSrc_COM_LoadFile_t COM_LoadFile;
 	pfnEngSrc_COM_ParseFile_t COM_ParseFile;
-	pfnEngSrc_COM_FreeFile_t COM_FreeFile;
+	[[deprecated("use FileSystem_LoadFileIntoBuffer")]] pfnEngSrc_COM_FreeFile_t COM_FreeFile;
 	struct triangleapi_s* pTriAPI;
 	struct efx_api_s* pEfxAPI;
 	struct event_api_s* pEventAPI;

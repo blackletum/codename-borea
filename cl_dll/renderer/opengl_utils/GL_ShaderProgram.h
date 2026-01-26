@@ -26,38 +26,38 @@ public:
 
 	void Bind();
 
-	void Uniform1i(GLint loc, const int& value){
+	void Uniform1i(GLint loc, const int& value) {
 		assert(m_pCurrentProgram == this);
 		glUniform1i(loc, value);
 	};
-	void Uniform1iv(GLint loc, const int& count, const int* value){
+	void Uniform1iv(GLint loc, const int& count, const int* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform1iv(loc, count, value);
 	};
 
-	void Uniform2i(GLint loc, const int& value1, const int& value2){
+	void Uniform2i(GLint loc, const int& value1, const int& value2) {
 		assert(m_pCurrentProgram == this);
 		glUniform2i(loc, value1, value2);
 	};
-	void Uniform2iv(GLint loc, const int& count, const int* value){
+	void Uniform2iv(GLint loc, const int& count, const int* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform2iv(loc, count, value);
 	};
 
-	void Uniform3i(GLint loc, const int& value1, const int& value2, const int& value3){
+	void Uniform3i(GLint loc, const int& value1, const int& value2, const int& value3) {
 		assert(m_pCurrentProgram == this);
 		glUniform3i(loc, value1, value2, value3);
 	};
-	void Uniform3iv(GLint loc, const int& count, const int* value){
+	void Uniform3iv(GLint loc, const int& count, const int* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform3iv(loc, count, value);
 	};
 
-	void Uniform4i(GLint loc, const int& value1, const int& value2, const float& value3, const float& value4){
+	void Uniform4i(GLint loc, const int& value1, const int& value2, const float& value3, const float& value4) {
 		assert(m_pCurrentProgram == this);
 		glUniform4i(loc, value1, value2, value3, value4);
 	};
-	void Uniform4iv(GLint loc, const int& count, const int* value){
+	void Uniform4iv(GLint loc, const int& count, const int* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform4iv(loc, count, value);
 	};
@@ -65,38 +65,38 @@ public:
 
 
 
-	void Uniform1f(GLint loc, const float& value){
+	void Uniform1f(GLint loc, const float& value) {
 		assert(m_pCurrentProgram == this);
 		glUniform1f(loc, value);
 	};
-	void Uniform1fv(GLint loc, const int& count, const float* value){
+	void Uniform1fv(GLint loc, const int& count, const float* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform1fv(loc, count, value);
 	};
 
-	void Uniform2f(GLint loc, const float& value1, const float& value2){
+	void Uniform2f(GLint loc, const float& value1, const float& value2) {
 		assert(m_pCurrentProgram == this);
 		glUniform2f(loc, value1, value2);
 	};
-	void Uniform2fv(GLint loc, const int& count, const float* value){
+	void Uniform2fv(GLint loc, const int& count, const float* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform2fv(loc, count, value);
 	};
 
-	void Uniform3f(GLint loc, const float& value1, const float& value2, const float& value3){
+	void Uniform3f(GLint loc, const float& value1, const float& value2, const float& value3) {
 		assert(m_pCurrentProgram == this);
 		glUniform3f(loc, value1, value2, value3);
 	};
-	void Uniform3fv(GLint loc, const int& count, const float* value){
+	void Uniform3fv(GLint loc, const int& count, const float* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform3fv(loc, count, value);
 	};
 
-	void Uniform4f(GLint loc, const float& value1, const float& value2, const float& value3, const float& value4){
+	void Uniform4f(GLint loc, const float& value1, const float& value2, const float& value3, const float& value4) {
 		assert(m_pCurrentProgram == this);
 		glUniform4f(loc, value1, value2, value3, value4);
 	};
-	void Uniform4fv(GLint loc, const int& count, const float* value){
+	void Uniform4fv(GLint loc, const int& count, const float* value) {
 		assert(m_pCurrentProgram == this);
 		glUniform4fv(loc, count, value);
 	};
@@ -106,17 +106,17 @@ public:
 
 
 
-	void UniformMatrix4fv(GLint loc, const int& count, const bool& transpose, const float* value){
+	void UniformMatrix4fv(GLint loc, const int& count, const bool& transpose, const float* value) {
 		assert(m_pCurrentProgram == this);
 		glUniformMatrix4fv(loc, count, transpose, value);
 	};
 
-	void UniformMatrix3x4fv(GLint loc, const int& count, const bool& transpose, const float* value){
+	void UniformMatrix3x4fv(GLint loc, const int& count, const bool& transpose, const float* value) {
 		assert(m_pCurrentProgram == this);
 		glUniformMatrix3x4fv(loc, count, transpose, value);
 	};
 
-	void UniformMatrix4x3fv(GLint loc, const int& count, const bool& transpose, const float* value){
+	void UniformMatrix4x3fv(GLint loc, const int& count, const bool& transpose, const float* value) {
 		assert(m_pCurrentProgram == this);
 		glUniformMatrix4x3fv(loc, count, transpose, value);
 	};
@@ -132,62 +132,62 @@ public:
 
 	__forceinline void Bind() { glUseProgram(m_uiProgramIndex); };
 
-	__forceinline void Uniform1i(GLint loc, const int& value){
+	__forceinline void Uniform1i(GLint loc, const int& value) {
 		glUniform1i(loc, value);
 	};
-	__forceinline void Uniform1iv(GLint loc, const int& count, const int* value){
+	__forceinline void Uniform1iv(GLint loc, const int& count, const int* value) {
 		glUniform1iv(loc, count, value);
 	};
 
-	__forceinline void Uniform2i(GLint loc, const int& value1, const int& value2){
+	__forceinline void Uniform2i(GLint loc, const int& value1, const int& value2) {
 		glUniform2i(loc, value1, value2);
 	};
-	__forceinline void Uniform2iv(GLint loc, const int& count, const int* value){
+	__forceinline void Uniform2iv(GLint loc, const int& count, const int* value) {
 		glUniform2iv(loc, count, value);
 	};
 
-	__forceinline void Uniform3i(GLint loc, const int& value1, const int& value2, const int& value3){
+	__forceinline void Uniform3i(GLint loc, const int& value1, const int& value2, const int& value3) {
 		glUniform3i(loc, value1, value2, value3);
 	};
-	__forceinline void Uniform3iv(GLint loc, const int& count, const int* value){
+	__forceinline void Uniform3iv(GLint loc, const int& count, const int* value) {
 		glUniform3iv(loc, count, value);
 	};
 
-	__forceinline void Uniform4i(GLint loc, const int& value1, const int& value2, const float& value3, const float& value4){
+	__forceinline void Uniform4i(GLint loc, const int& value1, const int& value2, const float& value3, const float& value4) {
 		glUniform4i(loc, value1, value2, value3, value4);
 	};
-	__forceinline void Uniform4iv(GLint loc, const int& count, const int* value){
+	__forceinline void Uniform4iv(GLint loc, const int& count, const int* value) {
 		glUniform4iv(loc, count, value);
 	};
 
 
 
 
-	__forceinline void Uniform1f(GLint loc, const float& value){
+	__forceinline void Uniform1f(GLint loc, const float& value) {
 		glUniform1f(loc, value);
 	};
-	__forceinline void Uniform1fv(GLint loc, const int& count, const float* value){
+	__forceinline void Uniform1fv(GLint loc, const int& count, const float* value) {
 		glUniform1fv(loc, count, value);
 	};
 
-	__forceinline void Uniform2f(GLint loc, const float& value1, const float& value2){
+	__forceinline void Uniform2f(GLint loc, const float& value1, const float& value2) {
 		glUniform2f(loc, value1, value2);
 	};
-	__forceinline void Uniform2fv(GLint loc, const int& count, const float* value){
+	__forceinline void Uniform2fv(GLint loc, const int& count, const float* value) {
 		glUniform2fv(loc, count, value);
 	};
 
-	__forceinline void Uniform3f(GLint loc, const float& value1, const float& value2, const float& value3){
+	__forceinline void Uniform3f(GLint loc, const float& value1, const float& value2, const float& value3) {
 		glUniform3f(loc, value1, value2, value3);
 	};
-	__forceinline void Uniform3fv(GLint loc, const int& count, const float* value){
+	__forceinline void Uniform3fv(GLint loc, const int& count, const float* value) {
 		glUniform3fv(loc, count, value);
 	};
 
-	__forceinline void Uniform4f(GLint loc, const float& value1, const float& value2, const float& value3, const float& value4){
+	__forceinline void Uniform4f(GLint loc, const float& value1, const float& value2, const float& value3, const float& value4) {
 		glUniform4f(loc, value1, value2, value3, value4);
 	};
-	__forceinline void Uniform4fv(GLint loc, const int& count, const float* value){
+	__forceinline void Uniform4fv(GLint loc, const int& count, const float* value) {
 		glUniform4fv(loc, count, value);
 	};
 
@@ -196,15 +196,15 @@ public:
 
 
 
-	__forceinline void UniformMatrix4fv(GLint loc, const int& count, const bool& transpose, const float* value){
+	__forceinline void UniformMatrix4fv(GLint loc, const int& count, const bool& transpose, const float* value) {
 		glUniformMatrix4fv(loc, count, transpose, value);
 	};
 
-	__forceinline void UniformMatrix3x4fv(GLint loc, const int& count, const bool& transpose, const float* value){
+	__forceinline void UniformMatrix3x4fv(GLint loc, const int& count, const bool& transpose, const float* value) {
 		glUniformMatrix3x4fv(loc, count, transpose, value);
 	};
 
-	__forceinline void UniformMatrix4x3fv(GLint loc, const int& count, const bool& transpose, const float* value){
+	__forceinline void UniformMatrix4x3fv(GLint loc, const int& count, const bool& transpose, const float* value) {
 		glUniformMatrix4x3fv(loc, count, transpose, value);
 	};
 
@@ -233,7 +233,7 @@ public:
 
 private:
 
-	static const GLuint CompileShader(const char* source, const GLuint type, std::string &errormsg);
+	static const GLuint CompileShader(const char* source, const GLuint type, std::string& errormsg);
 	void ShaderPreLink();
 	void ShaderPostLink();
 

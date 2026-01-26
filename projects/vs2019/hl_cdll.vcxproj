@@ -277,7 +277,6 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\cl_dll\message.cpp" />
     <ClCompile Include="..\..\cl_dll\mp3.cpp" />
     <ClCompile Include="..\..\cl_dll\openal\OpenAL_System.cpp" />
-    <ClCompile Include="..\..\cl_dll\regs\reGS_enginehook.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\bloom.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\blur.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\BSPModelGen.cpp" />
@@ -288,7 +287,6 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\cl_dll\renderer\goldsrc_tracerrenderer.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\HLHudSprites.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\imgui_manager.cpp" />
-    <ClCompile Include="..\..\cl_dll\renderer\lensflare.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\mirrormanager.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_Buffers.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_DebugInterface.cpp" />
@@ -299,7 +297,6 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_TextureHandler.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_VertexArrayObject.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\particle_engine.cpp" />
-    <ClCompile Include="..\..\cl_dll\renderer\postprocess.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\propmanager.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\rendererdefs.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\StudioMDL_MeshGen.cpp" />
@@ -365,7 +362,6 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\external\minhook\hde\hde64.c" />
     <ClCompile Include="..\..\external\minhook\hook.c" />
     <ClCompile Include="..\..\external\minhook\trampoline.c" />
-    <ClCompile Include="..\..\external\sptlib\DetoursUtils.cpp" />
     <ClCompile Include="..\..\game_shared\filesystem_utils.cpp" />
     <ClCompile Include="..\..\game_shared\vgui_checkbutton2.cpp" />
     <ClCompile Include="..\..\game_shared\vgui_grid.cpp" />
@@ -402,8 +398,6 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\cl_dll\kbutton.h" />
     <ClInclude Include="..\..\cl_dll\mp3.h" />
     <ClInclude Include="..\..\cl_dll\openal\OpenAL_System.h" />
-    <ClInclude Include="..\..\cl_dll\regs\reGS_enginehook.h" />
-    <ClInclude Include="..\..\cl_dll\regs\reGS_patterns.hpp" />
     <ClInclude Include="..\..\cl_dll\renderer\blur.h" />
     <ClInclude Include="..\..\cl_dll\renderer\BSPModel_Gen.h" />
     <ClInclude Include="..\..\cl_dll\renderer\bsprenderer.h" />
@@ -572,12 +566,6 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\external\minhook\hde\table64.h" />
     <ClInclude Include="..\..\external\minhook\MinHook.h" />
     <ClInclude Include="..\..\external\minhook\trampoline.h" />
-    <ClInclude Include="..\..\external\sptlib\DetoursUtils.hpp" />
-    <ClInclude Include="..\..\external\sptlib\MemUtils.h" />
-    <ClInclude Include="..\..\external\sptlib\patterns.hpp" />
-    <ClInclude Include="..\..\external\sptlib\patterns_macros.hpp" />
-    <ClInclude Include="..\..\external\sptlib\sptlib-stdafx.hpp" />
-    <ClInclude Include="..\..\external\sptlib\Utils.hpp" />
     <ClInclude Include="..\..\game_shared\filesystem_utils.h" />
     <ClInclude Include="..\..\game_shared\vgui_scrollbar2.h" />
     <ClInclude Include="..\..\game_shared\vgui_slider2.h" />

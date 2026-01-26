@@ -44,6 +44,34 @@ extern int CL_FxBlend(cl_entity_t* ent);
 
 #include "glshaders/sprite_glsl.h"
 
+struct sprite_vertex_t
+{
+	Vector point;  // 12 bytes
+	color32 color; // x, y, z, a //4 bytes
+	int padding[4];
+	GL_DECLARE_ATTRIBLIST();
+};
+
+struct sprite_quad_t
+{
+	sprite_vertex_t vert[4];
+	byte rendermode;
+};
+
+static std::vector<cl_entity_s*> m_vSpriteDrawList;
+static std::unordered_map<int, std::vector<sprite_quad_t>> m_vSpriteQuadList;
+
+static GL_BufferHandler* m_pSpriteQuadBuffer;
+static GL_ShaderProgram* m_pSpriteShader;
+static GL_VertexArrayObject* m_pSpriteVAO;
+
+static cl_entity_s* m_pCurrentEntity;
+
+GL_BEGIN_ATTRIBLIST(sprite_vertex_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, sprite_vertex_t, point)
+	GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Color, 4, GL_UNSIGNED_BYTE, sprite_vertex_t, color)
+GL_END_ATTRIBLIST(sprite_vertex_t)
+
 
 
 void CSpriteRenderer::Init()
@@ -60,11 +88,7 @@ void CSpriteRenderer::Init()
 	m_pSpriteShader->Bind();
 	m_pSpriteShader->Uniform1i(m_pSpriteShader->GetUniformLoc("texture0"), 0);
 
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, GL_FALSE, sizeof(sprite_vertex_t), (void*)offsetof(sprite_vertex_t, point));
-	glVertexAttribPointer(GL_ShaderProgram::ShaderAttribs::Color, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(sprite_vertex_t), (void*)offsetof(sprite_vertex_t, color));
-
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::VertexPos);
-	glEnableVertexAttribArray(GL_ShaderProgram::ShaderAttribs::Color);
+	m_pSpriteVAO->SetVertexAttributes(sprite_vertex_t::GetAttribLayout());
 
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 	GL_ShaderProgram::ResetShaderBind();
@@ -91,6 +115,11 @@ void CSpriteRenderer::PushEntityToDraw(cl_entity_s* pEnt)
 		return; // hacky way to not draw beams
 
 	m_vSpriteDrawList.push_back(m_pCurrentEntity);
+}
+
+void CSpriteRenderer::ClearDrawList()
+{ 
+	m_vSpriteDrawList.clear(); 
 }
 
 void CSpriteRenderer::DrawSpriteEntities()

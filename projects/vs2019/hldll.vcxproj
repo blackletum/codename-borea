@@ -225,15 +225,6 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\dlls\apache.cpp" />
     <ClCompile Include="..\..\dlls\bmodels.cpp" />
     <ClCompile Include="..\..\dlls\boneworks.cpp" />
-    <ClCompile Include="..\..\dlls\spider.cpp" />
-    <ClCompile Include="..\..\dlls\buttons.cpp" />
-    <ClCompile Include="..\..\dlls\cbase.cpp" />
-    <ClCompile Include="..\..\dlls\client.cpp" />
-    <ClCompile Include="..\..\dlls\combat.cpp" />
-    <ClCompile Include="..\..\dlls\controller.cpp" />
-    <ClCompile Include="..\..\dlls\coopplay_gamerules.cpp" />
-    <ClCompile Include="..\..\dlls\CRecruit.cpp" />
-    <ClCompile Include="..\..\dlls\debugger.cpp" />
     <ClCompile Include="..\..\dlls\ctf\CHUDIconTrigger.cpp" />
     <ClCompile Include="..\..\dlls\ctf\CItemAcceleratorCTF.cpp" />
     <ClCompile Include="..\..\dlls\ctf\CItemBackpackCTF.cpp" />
@@ -248,6 +239,15 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\dlls\ctf\CTFGoalFlag.cpp" />
     <ClCompile Include="..\..\dlls\ctf\ctfplay_gamerules.cpp" />
     <ClCompile Include="..\..\dlls\ctf\CTFSpawn.cpp" />
+    <ClCompile Include="..\..\dlls\spider.cpp" />
+    <ClCompile Include="..\..\dlls\buttons.cpp" />
+    <ClCompile Include="..\..\dlls\cbase.cpp" />
+    <ClCompile Include="..\..\dlls\client.cpp" />
+    <ClCompile Include="..\..\dlls\combat.cpp" />
+    <ClCompile Include="..\..\dlls\controller.cpp" />
+    <ClCompile Include="..\..\dlls\coopplay_gamerules.cpp" />
+    <ClCompile Include="..\..\dlls\CRecruit.cpp" />
+    <ClCompile Include="..\..\dlls\debugger.cpp" />
     <ClCompile Include="..\..\dlls\defaultai.cpp" />
     <ClCompile Include="..\..\dlls\doors.cpp" />
     <ClCompile Include="..\..\dlls\effects.cpp" />
@@ -323,10 +323,12 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\dlls\weapons_shared.cpp" />
     <ClCompile Include="..\..\dlls\world.cpp" />
     <ClCompile Include="..\..\dlls\wpn_shared\pistol.cpp" />
+    <ClCompile Include="..\..\game_shared\filesystem_utils.cpp" />
     <ClCompile Include="..\..\game_shared\voice_gamemgr.cpp" />
     <ClCompile Include="..\..\pm_shared\pm_debug.cpp" />
     <ClCompile Include="..\..\pm_shared\pm_math.cpp" />
     <ClCompile Include="..\..\pm_shared\pm_shared.cpp" />
+    <ClCompile Include="..\..\public\interface.cpp" />
     <ClCompile Include="pointmessage.cpp" />
   </ItemGroup>
   <ItemGroup>

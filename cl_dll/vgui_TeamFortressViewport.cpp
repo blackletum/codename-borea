@@ -57,6 +57,7 @@
 
 #include "shake.h"
 #include "screenfade.h"
+#include "filesystem_utils.h"
 
 extern int g_iVisibleMouse;
 class CCommandMenu;
@@ -765,8 +766,9 @@ int TeamFortressViewport::CreateCommandMenu( const char * menuFile, int directio
 
 	// Read Command Menu from the txt file
 	char token[1024];
-	char *pfile = (char*)gEngfuncs.COM_LoadFile( menuFile, 5, nullptr);
-	if (!pfile)
+	std::vector<std::byte> pfilebuffer = FileSystem_LoadFileIntoBuffer( menuFile, FileContentFormat::Text);
+	char *pfile = (char*)pfilebuffer.data();
+	if (pfilebuffer.empty())
 	{
 		gEngfuncs.Con_DPrintf( "Unable to open %s\n", menuFile);
 		SetCurrentCommandMenu( nullptr );
@@ -997,7 +999,6 @@ catch( CException *e )
 
 	SetCurrentMenu( nullptr );
 	SetCurrentCommandMenu( nullptr );
-	gEngfuncs.COM_FreeFile( pfile );
 
 	m_iInitialized = true;
 	return newIndex;
@@ -1903,9 +1904,10 @@ CMenuPanel* TeamFortressViewport::CreateTextWindow( int iTextToShow )
 			}
 		}
 
-		pfile = (char*)gEngfuncs.COM_LoadFile( sz, 5, nullptr );
+		std::vector<std::byte> pfilebuffer = FileSystem_LoadFileIntoBuffer(sz, FileContentFormat::Text);
+		pfile = (char*)pfilebuffer.data();
 
-		if (!pfile)
+		if (pfilebuffer.empty())
 			return nullptr;
 
 		cText = pfile;
@@ -1972,9 +1974,6 @@ CMenuPanel* TeamFortressViewport::CreateTextWindow( int iTextToShow )
 	// if we're in the game (ie. have selected a class), flag the menu to be only grayed in the dialog box, instead of full screen
 	CMenuPanel *pMOTDPanel = CMessageWindowPanel_Create( cText, cTitle, g_iPlayerClass == PC_UNDEFINED, false, 0, 0, ScreenWidth, ScreenHeight );
 	pMOTDPanel->setParent( this );
-
-	if ( pfile )
-		gEngfuncs.COM_FreeFile( pfile );
 
 	return pMOTDPanel;
 }

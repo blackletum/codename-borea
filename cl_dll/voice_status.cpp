@@ -4,17 +4,7 @@
 //
 // $NoKeywords: $
 //=============================================================================
-
-// There are hud.h's coming out of the woodwork so this ensures that we get the right one.
-#if defined(THREEWAVE) || defined(DMC_BUILD)
-	#include "../dmc/cl_dll/hud.h"
-#elif defined(CSTRIKE)
-	#include "../cstrike/cl_dll/hud.h"
-#elif defined(DOD)
-	#include "../dod/cl_dll/hud.h"
-#else
-	#include "hud.h"
-#endif
+#include "hud.h"
 
 #include "cl_util.h"
 #include <assert.h>
@@ -34,6 +24,7 @@
 #include "VGUI_MouseCode.h"
 
 
+#include "filesystem_utils.h"
 
 using namespace vgui;
 
@@ -287,17 +278,16 @@ int CVoiceStatus::VidInit()
 
 	// Figure out the voice head model height.
 	m_VoiceHeadModelHeight = 45;
-	char *pFile = (char *)gEngfuncs.COM_LoadFile("scripts/voicemodel.txt", 5, nullptr);
+	std::vector<std::byte> filebuffer = FileSystem_LoadFileIntoBuffer("scripts/voicemodel.txt", FileContentFormat::Text);
+	char *pFile = (char *)filebuffer.data();
 	if(pFile)
 	{
 		char token[4096];
 		gEngfuncs.COM_ParseFile(pFile, token);
-		if(token[0] >= '0' && token[0] <= '9')
+		if (token[0] >= '0' && token[0] <= '9')
 		{
 			m_VoiceHeadModelHeight = (float)atof(token);
 		}
-
-		gEngfuncs.COM_FreeFile(pFile);
 	}
 
 	m_VoiceHeadModel = SPR_Load("sprites/voiceicon.spr");

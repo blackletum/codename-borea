@@ -28,7 +28,7 @@ extern "C"
 	// From entity
 	int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *modelname );
 	void DLLEXPORT HUD_CreateEntities( void );
-	void DLLEXPORT HUD_StudioEvent( const struct mstudioevent_s *event, const struct cl_entity_s *entity );
+	void DLLEXPORT HUD_StudioEvent( const struct mstudioevent_t *event, const struct cl_entity_s *entity );
 	void DLLEXPORT HUD_TxferLocalOverrides( struct entity_state_s *state, const struct clientdata_s *client );
 	void DLLEXPORT HUD_ProcessPlayerState( struct entity_state_s *dst, const struct entity_state_s *src );
 	void DLLEXPORT HUD_TxferPredictionData ( struct entity_state_s *ps, const struct entity_state_s *pps, struct clientdata_s *pcd, const struct clientdata_s *ppcd, struct weapon_data_s *wd, const struct weapon_data_s *pwd );

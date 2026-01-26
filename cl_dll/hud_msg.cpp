@@ -26,7 +26,6 @@
 #include "bsprenderer.h"
 #include "propmanager.h"
 #include "watershader.h"
-#include "postprocess.h"
 
 #include "studio.h"
 #include "StudioModelRenderer.h"
@@ -72,7 +71,6 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 	gHUD.m_pSkyFogSettings.end = 0.0; 
 	gHUD.m_pSkyFogSettings.start = 0.0;
 	gHUD.m_pSkyFogSettings.active = false;
-	gLensflare.SunEnabled = FALSE;
 //RENDERERS END
 	// clear all hud data
 	HUDLIST *pList = m_pHudList;
@@ -131,7 +129,6 @@ void CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 	gHUD.m_pSkyFogSettings.end = 0.0; 
 	gHUD.m_pSkyFogSettings.start = 0.0;
 	gHUD.m_pSkyFogSettings.active = false;
-	gLensflare.SunEnabled = FALSE;
 	//RENDERERS END
 
 	// prepare all hud data
@@ -426,19 +423,6 @@ int CHud::MsgFunc_KickPunch( const char *pszName, int iSize, void *pbuf )
 	return 1;
 }
 
-int CHud::MsgFunc_PPGray(const char* pszName, int iSize, void* pbuf)
-{
-	BEGIN_READ(pbuf, iSize);
-	float spw	=	READ_FLOAT();						// StartPower
-	float epw	=	READ_FLOAT();						// EndPower
-	float tim	=	READ_FLOAT();						// Time
-	bool sty	=	(READ_SHORT() == 1) ? true : false;	// Stay?
-	bool fin	=	(READ_SHORT() == 1) ? true : false;	// Reset
-
-	gPostProcess.CallTemporaryGrayscale(spw, epw, tim, sty, fin);
-
-	return 1;
-}
 int CHud::MsgFunc_WpnSkn(const char* pszName, int iSize, void* pbuf)
 {
 	BEGIN_READ(pbuf, iSize);

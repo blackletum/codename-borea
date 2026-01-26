@@ -18,7 +18,7 @@
 #include "game.h"
 
 #include "cdll_dll.h"
-
+#include "filesystem_utils.h"
 #include <vector>
 
 cvar_t	displaysoundlist = {"displaysoundlist","0"};
@@ -55,7 +55,7 @@ cvar_t	impulsetarget={"sohl_impulsetarget","0", FCVAR_SERVER }; //LRC - trigger 
 cvar_t	mw_debug={"sohl_mwdebug","0", FCVAR_SERVER }; //LRC - debug info. for MoveWith. (probably not useful for most people.)
 
 cvar_t wallrun = { "sv_wallrun", "0", FCVAR_SERVER | FCVAR_ARCHIVE };
-cvar_t noclipspeed = { "sv_noclipspeed", "1", FCVAR_SERVER | FCVAR_ARCHIVE };
+cvar_t noclipspeed = { "sv_noclipspeed", "6", FCVAR_SERVER | FCVAR_ARCHIVE };
 cvar_t sprintduration = { "sv_sprintdur", "150", FCVAR_SERVER | FCVAR_ARCHIVE };
 
  //LRC 1.8 - cvars for mapmakers to read (for use with calc_cvar.)
@@ -688,6 +688,23 @@ cvar_t	sk_punch2_dmg1 = { "sk_punch2_dmg1","20" };
 cvar_t	sk_punch2_dmg2 = { "sk_punch2_dmg2","17" };
 cvar_t	sk_punch2_dmg3 = { "sk_punch2_dmg3","15" };
 
+static bool SV_InitServer()
+{
+	if (!FileSystem_LoadFileSystem())
+	{
+		return false;
+	}
+
+	if (UTIL_IsValveGameDirectory())
+	{
+		g_engfuncs.pfnServerPrint("This mod has detected that it is being run from a Valve game directory which is not supported\n"
+			"Run this mod from its intended location\n\nThe game will now shut down\n");
+		return false;
+	}
+
+	return true;
+}
+
 std::vector<subtitlelist_t> subtitles_vector;
 
 void LoadSubtitles()
@@ -699,9 +716,11 @@ void LoadSubtitles()
 	char szTime[32];
 
 	int iSize = NULL;
-	char* pFile = (char*)g_engfuncs.pfnLoadFileForMe("sound/subtitles.txt", &iSize);
+	std::vector<std::byte> vFileBuffer = FileSystem_LoadFileIntoBuffer("sound/subtitles.txt", FileContentFormat::Text);
+	iSize = vFileBuffer.size();
+	char* pFile = (char*)vFileBuffer.data();
 
-	if (!pFile)
+	if (vFileBuffer.empty())
 	{
 		ALERT(at_console, "Could not load sound/subtitles.txt!\n");
 		return;
@@ -843,6 +862,15 @@ void GameDLLInit()
 	else {
 		g_engfuncs.pfnServerPrint("Failed to register sys_timescale cvar, falling back to old slowmotion implementation\n");
 	}
+
+	if (!SV_InitServer())
+	{
+		g_engfuncs.pfnServerPrint("Error initializing server\n");
+		//Shut the game down as soon as possible.
+		SERVER_COMMAND("quit\n");
+		return;
+	}
+
 
 	CVAR_REGISTER (&displaysoundlist);
 	CVAR_REGISTER( &allow_spectators );

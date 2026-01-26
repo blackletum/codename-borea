@@ -1,10 +1,3 @@
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
-
 #include "GL_VertexArrayObject.h"
 
 GL_VertexArrayObject* GL_VertexArrayObject::m_pCurrentBoundVAO = nullptr;
@@ -37,3 +30,19 @@ void GL_VertexArrayObject::ResetVAOBinding()
 }
 
 #endif
+
+void GL_VertexArrayObject::SetVertexAttributes(const gl_vertattriblist_t* attributelist)
+{
+	for (int i = 0; i < attributelist->numattribs; i++)
+	{
+		const gl_vertattrib_t* attribute = &attributelist->attribs[i];
+		glEnableVertexAttribArray(attribute->index);
+
+		if (attribute->integer_attrib)
+			glVertexAttribIPointer(attribute->index, attribute->numelements, attribute->type, attribute->structsize, (const void*)attribute->offset);
+		else
+			glVertexAttribPointer(attribute->index, attribute->numelements, attribute->type, attribute->normalize, attribute->structsize, (const void*)attribute->offset);
+
+		attribute++;
+	}
+}

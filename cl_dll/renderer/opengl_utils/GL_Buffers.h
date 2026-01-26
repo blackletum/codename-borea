@@ -1,17 +1,10 @@
 #pragma once
 
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-
-#include "renderer/rendererdefs.h"
+#include "GL_CommonInclude.h"
 
 class GL_BufferHandler
 {
 public:
-	GL_BufferHandler();
-	~GL_BufferHandler();
 
 	enum vbo_targets
 	{
@@ -19,12 +12,11 @@ public:
 		ElementArrayBuffer = GL_ELEMENT_ARRAY_BUFFER,
 		UniformBuffer = GL_UNIFORM_BUFFER
 	};
-
 	//	STREAM: The data will be modified once and used at most a few times.
 	//	STATIC: The data will be modified once and used many times.
 	//	DYNAMIC:The data will be modified repeatedly and used many times.
-	//	
-	//	
+	//
+	//
 	//	_DRAW: The data is modified by the application, and used as the source for GL drawing and image specification commands.
 	//	_READ: The data is modified by reading data from the GL, and used to return that data when queried by the application.
 	//	_COPY: The data is modified by reading data from the GL, and used as the source for GL drawing and image specification commands.
@@ -41,6 +33,10 @@ public:
 		StaticRead = GL_STATIC_READ,
 		StaticCopy = GL_STATIC_COPY,
 	};
+
+	GL_BufferHandler();
+	GL_BufferHandler(vbo_targets target, vbo_usage usage, int bytesize);
+	~GL_BufferHandler();
 
 	enum vbo_flags
 	{
