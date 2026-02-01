@@ -6914,6 +6914,8 @@ void CBasePlayer::LeaningThink()
 	right.z = 0;
 	right.Normalize();
 
+	bool bCrouching = (pev->button & IN_DUCK);
+
 
 	// left leaning
 	if (pev->button & IN_LEFT)
@@ -6921,7 +6923,7 @@ void CBasePlayer::LeaningThink()
 		// first scan
 		//using view_ofs for this makes camera clip though geometry when moving to crouch position,
 		//but i guess its less buggy than using the up vector
-		Vector vecSrc = pev->origin + pev->view_ofs + Vector(0, 0, 24);
+		Vector vecSrc = pev->origin + Vector(0, 0, bCrouching ? 24 : 32) + right * 5;
 		Vector vecEnd = vecSrc - right * 100;
 
 		//UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev), &leanLeftTr);
@@ -6952,7 +6954,7 @@ void CBasePlayer::LeaningThink()
 	else if (pev->button & IN_RIGHT)
 	{
 		// first scan
-		Vector vecSrc = pev->origin + pev->view_ofs + Vector(0, 0, 24);
+		Vector vecSrc = pev->origin + Vector(0, 0, bCrouching ? 24 : 32) - right * 5;
 		Vector vecEnd = vecSrc + right * 100;
 		UTIL_TraceHull(vecSrc, vecEnd, dont_ignore_monsters, head_hull, ENT(pev), &leanRightTr);
 		vecEnd = leanRightTr.vecEndPos;

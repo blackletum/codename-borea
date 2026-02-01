@@ -1043,7 +1043,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 
 	// Bacontsu - Leaning
 	static float leanLerp = 0;
-	leanLerp = lerp(leanLerp, gHUD.leanAngle, gHUD.m_flTimeDelta * 7.0f);
+	leanLerp = lerp(leanLerp, gHUD.leanAngle, gHUD.m_flTimeDelta * 10.0f);
 
 	// apply rotation
 	pparams->viewangles[ROLL] += leanLerp * 17.0f / 30.0f;
