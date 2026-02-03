@@ -191,17 +191,26 @@ void CGlock::GlockFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 
 	// add aim "bloom" system (from Diffusion)
-	float Cone = m_pPlayer->pev->velocity.Length() * 0.00019;
-	Cone = std::clamp( Cone, 0.01f, 0.05f );
-	if( Cone < 0.02 )
+	float Cone;
+	if( pev->body == 1 ) // silenced
 	{
-		if( m_pPlayer->pev->flags & FL_DUCKING )
-			Cone = 0.01;
-		else
-			Cone = 0.0175;
+		Cone = m_pPlayer->pev->velocity.Length() * 0.00019f;
+		Cone = std::clamp( Cone, 0.01f, 0.05f );
+		if( Cone < 0.02 )
+		{
+			if( m_pPlayer->pev->flags & FL_DUCKING )
+				Cone = 0.01;
+			else
+				Cone = 0.0175;
+		}
+	}
+	else
+	{
+		Cone = m_pPlayer->pev->velocity.Length() * 0.00025f;
+		Cone = std::clamp( Cone, 0.025f, 0.1f );
 	}
 	Vector vecDir;
-	vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, Vector( flSpread + Cone, flSpread + Cone, flSpread + Cone ), 8192, BULLET_PLAYER_9MM, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+	vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, Vector( flSpread + Cone, flSpread + Cone, flSpread + Cone ), 8192, BULLET_PLAYER_9MM, 0, pev->body == 1 ? gSkillData.plrDmg9MMs : gSkillData.plrDmg9MM, m_pPlayer->pev, m_pPlayer->random_seed );
 
 	// Aynekko: animation and sound done here instead
 	SendWeaponAnim( (m_iClip <= 0) ? GLOCK_SHOOT_EMPTY : GLOCK_SHOOT, 1, pev->body );

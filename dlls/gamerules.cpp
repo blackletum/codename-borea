@@ -341,6 +341,7 @@ void CGameRules::RefreshSkillData ()
 
 	// Glock Round
 	gSkillData.plrDmg9MM = GetSkillCvar( "sk_plr_9mm_bullet");
+	gSkillData.plrDmg9MMs = GetSkillCvar( "sk_plr_9mm_silenced" );
 
 	// 357 Round
 	gSkillData.plrDmg357 = GetSkillCvar( "sk_plr_357_bullet");

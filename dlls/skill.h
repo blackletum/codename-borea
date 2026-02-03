@@ -178,6 +178,7 @@ struct skilldata_t
 // Player Weapons
 	float plrDmgCrowbar;
 	float plrDmg9MM;
+	float plrDmg9MMs;
 	float plrDmg357;
 	float plrDmgMP5;
 	float plrDmgM203Grenade;
