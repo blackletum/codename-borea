@@ -538,6 +538,14 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 			}
 		}
 		break;
+	case TASK_BIG_FLINCH:
+	{
+		if( m_fSequenceFinished )
+		{
+			TaskComplete();
+		}
+	}
+	break;
 	case TASK_WAIT_FOR_SCRIPT:
 		{
 			if ( m_pCine->m_iDelay <= 0 && gpGlobals->time >= m_pCine->m_startTime )
@@ -1297,6 +1305,11 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			m_IdealActivity = GetSmallFlinchActivity();
 			break;
 		}
+	case TASK_BIG_FLINCH:
+	{
+		m_IdealActivity = GetBigFlinchActivity();
+		break;
+	}
 	case TASK_DIE:
 		{
 			RouteClear();	

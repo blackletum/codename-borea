@@ -26,6 +26,7 @@
 #include	"decals.h"
 #include	"soundent.h"
 #include	"game.h"
+#include	"player.h"
 
 #define		SQUID_SPRINT_DIST	256 // how close the squid has to get before starting to sprint and refusing to swerve
 
@@ -302,9 +303,27 @@ void CPitdrone::LeapTouch( CBaseEntity *pOther )
 	if( !FBitSet( pev->flags, FL_ONGROUND ) )
 	{
 		EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "rat/rat_bite.wav", 1.0, ATTN_IDLE, 0, 100 );
+		bool bBlocked = false;
+		if( pOther->IsPlayer() )
+		{
+			CBasePlayer *pPlayer = (CBasePlayer *)pOther;
+			if( pPlayer->bBlocking )
+				bBlocked = true;
+		}
 
-		pOther->TakeDamage( pev, pev, gSkillData.ratDmg, DMG_SLASH );
-		UTIL_ScreenShake( pOther->pev->origin, 15.0, 1.5, 0.7, 2 );
+
+		if( bBlocked )
+			EMIT_SOUND_DYN( pOther->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+		else
+			UTIL_ScreenShake( pOther->pev->origin, 15.0, 1.5, 0.7, 2 );
+
+		float dmg = bBlocked ? gSkillData.ratDmg * 0.5f : gSkillData.dogDmg;
+		pOther->TakeDamage( pev, pev, dmg, DMG_CLUB );
+
+		pOther->pev->punchangle.x -= bBlocked ? 5 : 15;
+
+		if( bBlocked )
+			ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 	}
 
 	SetTouch( nullptr );
@@ -649,16 +668,31 @@ void CPitdrone :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case PITDRONE_AE_BITE:
 		{
-			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.ratDmg, DMG_SLASH );
-			
-			if ( pHurt )
+			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.ratDmg, DMG_CLUB );
+
+			if( pHurt )
 			{
-				//pHurt->pev->punchangle.z = -15;
-				//pHurt->pev->punchangle.x = -45;
+				EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "rat/rat_bite.wav", 1.0, ATTN_IDLE, 0, 100 );
+				bool bBlocked = false;
+				if( pHurt->IsPlayer() )
+				{
+					CBasePlayer *pPlayer = (CBasePlayer *)pHurt;
+					if( pPlayer->bBlocking )
+						bBlocked = true;
+				}
+
+				if( bBlocked )
+					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+				else
+					UTIL_ScreenShake( pHurt->pev->origin, 15.0, 1.5, 0.7, 2 );
+
 				pHurt->pev->velocity = pHurt->pev->velocity - gpGlobals->v_forward * 100;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_up * 100;
-				EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "rat/rat_bite.wav", 1.0, ATTN_IDLE, 0, 100 );
-				UTIL_ScreenShake( pHurt->pev->origin, 15.0, 1.5, 0.7, 2 );
+
+				pHurt->pev->punchangle.x -= bBlocked ? 5 : 15;
+
+				if( bBlocked )
+					ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 			}
 		}
 		break;

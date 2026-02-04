@@ -25,6 +25,8 @@
 #include "player.h"
 #include "gamerules.h"
 
+//#define FISTS_DBG_MSG
+
 #define	PIPEWRENCH_BODYHIT_VOLUME 128
 #define	PIPEWRENCH_WALLHIT_VOLUME 512
 
@@ -32,6 +34,13 @@
 #define ANIM_FISTS_RIGHTEND 12
 #define ANIM_FISTS_LEFTSTART 15
 #define ANIM_FISTS_LEFTEND 16
+#define ANIM_FISTS_BLOCKSTART 19
+#define ANIM_FISTS_BLOCK 20
+#define ANIM_FISTS_BLOCKEND 22
+#define ANIM_FISTS_CHOPSTART 23
+#define ANIM_FISTS_CHOPIDLE 24
+#define ANIM_FISTS_CHOP 25
+#define ANIM_FISTS_CHOPEND 26
 
 #ifndef CLIENT_DLL
 TYPEDESCRIPTION	CFists::m_SaveData[] =
@@ -68,7 +77,7 @@ void CFists::Precache()
 	// in Opposing Force, if you wish to use them,
 	// uncomment all the appropriate lines.
 	/*PRECACHE_SOUND("weapons/pwrench_big_hit1.wav");
-	PRECACHE_SOUND("weapons/pwrench_big_hit2.wav");*/
+	PRECACHE_SOUND("weapons/pwrench_big_hit2.wav");
 	PRECACHE_SOUND("weapons/pwrench_big_hitbod1.wav");
 	PRECACHE_SOUND("weapons/pwrench_big_hitbod2.wav");
 	PRECACHE_SOUND("weapons/pwrench_hit1.wav");
@@ -76,7 +85,20 @@ void CFists::Precache()
 	PRECACHE_SOUND("weapons/pwrench_hitbod1.wav");
 	PRECACHE_SOUND("weapons/pwrench_hitbod2.wav");
 	PRECACHE_SOUND("weapons/pwrench_hitbod3.wav");
-	PRECACHE_SOUND( "weapons/melee_fist.wav" );
+	PRECACHE_SOUND( "weapons/melee_fist.wav" );*/
+
+	PRECACHE_SOUND( "weapons/melee_swing.wav" ); // jab swing								/
+	PRECACHE_SOUND( "weapons/melee_hit.wav" ); // jab hit wall								/
+	PRECACHE_SOUND( "weapons/melee_kick.wav" ); // kick and chop swing						/
+	PRECACHE_SOUND( "weapons/melee_bigswing.wav" ); // heavy attack swing					/
+	PRECACHE_SOUND( "weapons/melee_bighit.wav" ); // kick, heavy attack, chop hit wall		/
+	PRECACHE_SOUND( "weapons/melee_impact1.wav" ); // jab hit on NPC						/
+	PRECACHE_SOUND( "weapons/melee_impact2.wav" ); // jab hit on NPC						/
+	PRECACHE_SOUND( "weapons/melee_impact3.wav" ); // jab hit on NPC						/
+	PRECACHE_SOUND( "weapons/melee_bigimpact1.wav" ); // kick, heavy attack, chop hit on NPC /
+	PRECACHE_SOUND( "weapons/melee_bigimpact2.wav" ); // kick, heavy attack, chop hit on NPC /
+	PRECACHE_SOUND( "weapons/melee_bigimpact3.wav" ); // kick, heavy attack, chop hit on NPC /
+	PRECACHE_SOUND( "weapons/melee_block.wav" ); // hit when blocked						/
 
 	m_usPipewrench = PRECACHE_EVENT ( 1, "events/pipewrench.sc" );
 }
@@ -87,8 +109,6 @@ void CFists::Precache()
 #define ATTACK_RMB_SMALL 3
 #define ATTACK_RMB_BIG 4
 #define ATTACK_IDLE 5
-
-//#define FISTS_DBG_MSG
 
 BOOL CFists::Deploy()
 {
@@ -109,6 +129,18 @@ void CFists::Holster( int skiplocal )
 
 void CFists::PrimaryAttack()
 {
+	if( bKarate )
+	{
+		// do karate chop and out
+		DoKarateChop();
+		return;
+	}
+	
+	if( m_pPlayer->bBlocking )
+		return;
+
+	bDidStartBlock = false;
+
 	attack_state = ATTACK_LMB_SMALL;
 
 	time_counter += gpGlobals->frametime;
@@ -131,6 +163,11 @@ void CFists::PrimaryAttack()
 
 void CFists::SecondaryAttack()
 {
+	if( m_pPlayer->bBlocking )
+		return;
+
+	bDidStartBlock = false;
+
 	attack_state = ATTACK_RMB_SMALL;
 
 	time_counter += gpGlobals->frametime;
@@ -151,14 +188,95 @@ void CFists::SecondaryAttack()
 #endif
 }
 
+// this function is to unify the trace for the check and the actual attack
+CBaseMonster *CFists::GetNPCForKarateChop( void )
+{
+#ifndef CLIENT_DLL
+	CBaseMonster *pNPC = NULL;
+
+	Vector forward;
+	TraceResult KarateTr;
+	AngleVectors( m_pPlayer->pev->v_angle, &forward, NULL, NULL );
+	Vector vecSrc = m_pPlayer->EyePosition();
+	Vector vecEnd = vecSrc + forward * 64;
+	UTIL_TraceHull( vecSrc, vecEnd, dont_ignore_monsters, human_hull, ENT( pev ), &KarateTr );
+//	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, m_pPlayer->edict(), &KarateTr );
+
+	if( KarateTr.pHit && KarateTr.pHit->v.flags & FL_MONSTER )
+	{
+		pNPC = CBaseEntity::Instance( KarateTr.pHit )->MyMonsterPointer();
+
+		if( pNPC->pev->deadflag == DEAD_NO && !pNPC->HasConditions( bits_COND_SEE_CLIENT ) && pNPC->m_hEnemy != m_pPlayer )
+		{
+			// all good, we got the guy
+		}
+		else
+			pNPC = NULL;
+	}
+
+	return pNPC;
+#endif
+}
+
 void CFists::WeaponIdle()
 {
 #ifndef CLIENT_DLL
+	if( !m_pPlayer )
+		return;
+
+	if( !m_pPlayer->bBlocking )
+	{
+		// check for karate chop
+		bKarate = false;
+		
+		if( GetNPCForKarateChop() != NULL )
+		{
+			bKarate = true;
+			// start the animation
+			if( m_pPlayer->pev->weaponanim != ANIM_FISTS_CHOPSTART )
+			{
+				SendWeaponAnim( ANIM_FISTS_CHOPSTART );
+			}
+		}
+		else
+		{
+			// stop the animation
+			if( m_pPlayer->pev->weaponanim == ANIM_FISTS_CHOPSTART )
+			{
+				SendWeaponAnim( ANIM_FISTS_CHOPEND );
+			}
+		}
+
+		if( bKarate )
+			return;
+	}
+
+	if( m_pPlayer->bBlocking )
+	{
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.25f;
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.25f;
+		//	block_time_counter += gpGlobals->frametime;
+		if( !bDidStartBlock || m_pPlayer->pev->weaponanim != ANIM_FISTS_BLOCKSTART )
+		{
+#ifdef FISTS_DBG_MSG
+			ALERT( at_console, "START BLOCK!\n" );
+#endif
+			SendWeaponAnim( ANIM_FISTS_BLOCKSTART );
+			bDidStartBlock = true;
+		}
+
+		attack_state = 0;
+		bDidStartAnim = false;
+		time_counter = 0;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1;
+
+		return;
+	}
+
 	if( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
 		return;
 
-	if( !m_pPlayer )
-		return;
+	bDidStartBlock = false;
 
 	if( !attack_state )
 	{
@@ -202,6 +320,8 @@ void CFists::DoAttack()
 	}
 	if( !Damage )
 		ALERT( at_console, "ERROR: Zero damage for fists!" );
+
+	const bool bHeavyAttack = (attack_state == ATTACK_LMB_BIG || attack_state == ATTACK_RMB_BIG);
 
 	TraceResult tr;
 
@@ -259,7 +379,11 @@ void CFists::DoAttack()
 
 	if( tr.flFraction >= 1.0 )
 	{
-		EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "zombie/claw_miss2.wav", 1, ATTN_NORM );
+		// miss
+		if( bHeavyAttack )
+			EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_bigswing.wav", 1, ATTN_NORM );
+		else
+			EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_swing.wav", 1, ATTN_NORM );
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 	}
 	else
@@ -268,7 +392,7 @@ void CFists::DoAttack()
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
 		// screen shake
-		if( attack_state == ATTACK_LMB_BIG || attack_state == ATTACK_RMB_BIG )
+		if( bHeavyAttack )
 			UTIL_ScreenShake( m_pPlayer->pev->origin, 0.01, 100, 0.5, 300 );
 
 		// hit
@@ -293,14 +417,33 @@ void CFists::DoAttack()
 			if( pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE )
 			{
 				// play thwack or smack sound
-				switch( RANDOM_LONG( 0, 2 ) )
+				if( !bHeavyAttack )
 				{
-				case 0:
-					EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/pwrench_hitbod1.wav", 1, ATTN_NORM ); break;
-				case 1:
-					EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/pwrench_hitbod2.wav", 1, ATTN_NORM ); break;
-				case 2:
-					EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/pwrench_hitbod3.wav", 1, ATTN_NORM ); break;
+					switch( RANDOM_LONG( 0, 2 ) )
+					{
+					case 0:
+						EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_impact1.wav", 1, ATTN_NORM ); break;
+					case 1:
+						EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_impact2.wav", 1, ATTN_NORM ); break;
+					case 2:
+						EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_impact3.wav", 1, ATTN_NORM ); break;
+					}
+				}
+				else
+				{
+					switch( RANDOM_LONG( 0, 2 ) )
+					{
+					case 0:
+						EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_bigimpact1.wav", 1, ATTN_NORM ); break;
+					case 1:
+						EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_bigimpact2.wav", 1, ATTN_NORM ); break;
+					case 2:
+						EMIT_SOUND( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_bigimpact3.wav", 1, ATTN_NORM ); break;
+					}
+
+					// apply big flinch to them (heavy attack)
+					CBaseMonster *pNPC = pEntity->MyMonsterPointer();
+					pNPC->ChangeSchedule( pNPC->GetScheduleOfType( SCHED_BIG_FLINCH ) );
 				}
 				m_pPlayer->m_iWeaponVolume = PIPEWRENCH_BODYHIT_VOLUME;
 				if( !pEntity->IsAlive() )
@@ -329,16 +472,10 @@ void CFists::DoAttack()
 				fvolbar = 1;
 			}
 
-			// also play pipe wrench strike
-			switch( RANDOM_LONG( 0, 1 ) )
-			{
-			case 0:
-				EMIT_SOUND_DYN( m_pPlayer->edict(), CHAN_ITEM, "weapons/pwrench_hit1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) );
-				break;
-			case 1:
-				EMIT_SOUND_DYN( m_pPlayer->edict(), CHAN_ITEM, "weapons/pwrench_hit2.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) );
-				break;
-			}
+			if( bHeavyAttack )
+				EMIT_SOUND_DYN( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_bighit.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) );
+			else
+				EMIT_SOUND_DYN( m_pPlayer->edict(), CHAN_ITEM, "weapons/melee_hit.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) );
 
 			// delay the decal a bit
 			m_trHit = tr;
@@ -368,6 +505,55 @@ void CFists::DoAttack()
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1;
 #ifdef FISTS_DBG_MSG
 	ALERT( at_console, "DID ATTACK!\n" );
+#endif
+#endif
+}
+
+void CFists::DoKarateChop()
+{
+#ifndef CLIENT_DLL
+
+#ifdef FISTS_DBG_MSG
+	ALERT( at_console, "DoKarateChop()\n" );
+#endif
+
+	bKarate = false; // disable the karate attack in any case (npc will be dead or sees the player)
+	CLIENT_COMMAND( m_pPlayer->edict(), "-attack\n" );
+
+	CBaseMonster *pNPC = GetNPCForKarateChop();
+
+	if( pNPC == NULL )
+		return;
+
+	// knock out - no blood, no death scream
+	pNPC->m_fCanBleed = false;
+	pNPC->pev->spawnflags |= SF_MONSTER_GAG;
+	pNPC->Killed( m_pPlayer->pev, GIB_NEVER );
+
+	m_pPlayer->m_iWeaponVolume = 0;
+	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+	SendWeaponAnim( ANIM_FISTS_CHOP );
+
+	// with how the karate works, we are always sure we hit someone, so go ahead and play the sounds
+	switch( RANDOM_LONG( 1, 3 ) )
+	{
+	case 1: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "weapons/melee_bigimpact1.wav", 1, ATTN_NORM ); break;
+	case 2: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "weapons/melee_bigimpact2.wav", 1, ATTN_NORM ); break;
+	case 3: EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "weapons/melee_bigimpact3.wav", 1, ATTN_NORM ); break;
+	}
+
+	// screen shake
+	UTIL_ScreenShake( m_pPlayer->pev->origin, 0.01, 100, 0.5, 300 );
+
+	m_flNextPrimaryAttack = GetNextAttackDelay( 0.25 );
+	m_flNextSecondaryAttack = GetNextAttackDelay( 0.25 );
+
+	attack_state = 0;
+	bDidStartAnim = false;
+	time_counter = 0;
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1;
+#ifdef FISTS_DBG_MSG
+	ALERT( at_console, "DID KARATE ATTACK!\n" );
 #endif
 #endif
 }

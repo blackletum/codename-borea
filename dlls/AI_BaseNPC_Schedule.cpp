@@ -514,6 +514,7 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 			break;
 		}
 	case TASK_SMALL_FLINCH:
+	case TASK_BIG_FLINCH:
 		{
 			if ( m_fSequenceFinished )
 			{
@@ -1238,6 +1239,11 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			m_IdealActivity = GetSmallFlinchActivity();
 			break;
 		}
+	case TASK_BIG_FLINCH:
+	{
+		m_IdealActivity = GetBigFlinchActivity();
+		break;
+	}
 	case TASK_DIE:
 		{
 			RouteClear();	

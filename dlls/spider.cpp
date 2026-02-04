@@ -27,6 +27,7 @@
 #include	"soundent.h"
 #include	"scripted.h"
 #include	"game.h"
+#include	"player.h"
 
 #define		SQUID_SPRINT_DIST	256 // how close the squid has to get before starting to sprint and refusing to swerve
 
@@ -290,8 +291,26 @@ void CBullsquid::LeapTouch( CBaseEntity *pOther )
 	{
 		EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "arachnoid/spider_bite.wav", 1, ATTN_NORM, 0, RANDOM_LONG( 90, 110 ) );
 
-		pOther->TakeDamage( pev, pev, gSkillData.spiderDmgJump, DMG_SLASH );
-		UTIL_ScreenShake( pOther->pev->origin, 15.0, 1.5, 0.7, 2 );
+		bool bBlocked = false;
+		if( pOther->IsPlayer() )
+		{
+			CBasePlayer *pPlayer = (CBasePlayer *)pOther;
+			if( pPlayer->bBlocking )
+				bBlocked = true;
+
+			if( bBlocked )
+				EMIT_SOUND_DYN( pOther->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+
+			UTIL_MakeVectors( pev->angles );
+			pOther->pev->punchangle.x = bBlocked ? 5 : 15;
+
+			if( bBlocked )
+				ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
+		}
+
+		float dmg = bBlocked ? gSkillData.spiderDmgJump * 0.5f : gSkillData.spiderDmgJump;
+		pOther->TakeDamage( pev, pev, dmg, DMG_CLUB );
+		UTIL_ScreenShake( pOther->pev->origin, bBlocked ? 7.0 : 15.0, 1.5, 0.7, 2 );
 	}
 
 	SetTouch( nullptr );
@@ -745,14 +764,27 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case BSQUID_AE_BITE:
 		{
 			EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "zombie/claw_strike3.wav", 1, ATTN_NORM, 0, RANDOM_LONG( 90, 110 ) );
-			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.spiderDmgBite, DMG_SLASH );
+			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.spiderDmgBite, DMG_CLUB );
 			
-			if ( pHurt )
+			if( pHurt )
 			{
-				//pHurt->pev->punchangle.z = -15;
-				//pHurt->pev->punchangle.x = -45;
+				bool bBlocked = false;
+				if( pHurt->IsPlayer() )
+				{
+					CBasePlayer *pPlayer = (CBasePlayer *)pHurt;
+					if( pPlayer->bBlocking )
+						bBlocked = true;
+				}
+				if( bBlocked )
+					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+
+				UTIL_MakeVectors( pev->angles );
+				pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
 				pHurt->pev->velocity = pHurt->pev->velocity - gpGlobals->v_forward * 100;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_up * 100;
+
+				if( bBlocked )
+					ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 			}
 		}
 		break;
@@ -760,12 +792,25 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case BSQUID_AE_TAILWHIP:
 		{
 			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.spiderDmgBite, DMG_CLUB | DMG_ALWAYSGIB );
-			if ( pHurt ) 
+			if( pHurt )
 			{
-				pHurt->pev->punchangle.z = -20;
-				pHurt->pev->punchangle.x = 20;
+				bool bBlocked = false;
+				if( pHurt->IsPlayer() )
+				{
+					CBasePlayer *pPlayer = (CBasePlayer *)pHurt;
+					if( pPlayer->bBlocking )
+						bBlocked = true;
+				}
+				if( bBlocked )
+					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+
+				UTIL_MakeVectors( pev->angles );
+				pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * 200;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_up * 100;
+
+				if( bBlocked )
+					ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 			}
 		}
 		break;
@@ -800,33 +845,26 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				// squid throws its prey IF the prey is a client. 
 				CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.spiderDmgJump, DMG_CLUB | DMG_ALWAYSGIB );
 
-				if ( pHurt )
+				if( pHurt )
 				{
-					// croonchy bite sound
-					/*
-					iPitch = RANDOM_FLOAT( 90, 110 );
-					switch ( RANDOM_LONG( 0, 1 ) )
-					{
-					case 0:
-						EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "bullchicken/bc_bite2.wav", 1, ATTN_NORM, 0, iPitch );	
-						break;
-					case 1:
-						EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "bullchicken/bc_bite3.wav", 1, ATTN_NORM, 0, iPitch );	
-						break;
-					}*/
-					
-					//pHurt->pev->punchangle.x = RANDOM_LONG(0,34) - 5;
-					//pHurt->pev->punchangle.z = RANDOM_LONG(0,49) - 25;
-					//pHurt->pev->punchangle.y = RANDOM_LONG(0,89) - 45;
-		
-					// screeshake transforms the viewmodel as well as the viewangle. No problems with seeing the ends of the viewmodels.
 					UTIL_ScreenShake( pHurt->pev->origin, 25.0, 1.5, 0.7, 2 );
-
-					if ( pHurt->IsPlayer() )
+					bool bBlocked = false;
+					if( pHurt->IsPlayer() )
 					{
-						UTIL_MakeVectors( pev->angles );
-						pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 300 + gpGlobals->v_up * 300;
+						CBasePlayer *pPlayer = (CBasePlayer *)pHurt;
+						if( pPlayer->bBlocking )
+							bBlocked = true;
 					}
+
+					if( bBlocked )
+						EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+
+					pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
+					UTIL_MakeVectors( pev->angles );
+					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 300 + gpGlobals->v_up * 300;
+
+					if( bBlocked )
+						ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 				}
 			}
 		break;

@@ -835,6 +835,9 @@ void CScientist :: PainSound ()
 //=========================================================
 void CScientist :: DeathSound ()
 {
+	if( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+
 	PainSound();
 }
 
@@ -1517,6 +1520,9 @@ void CWorker::OnCatchFire( void )
 
 void CWorker::DeathSound( void )
 {
+	if( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+
 	char sentence_name[64];
 	sentence_name[0] = '\0';
 	

@@ -57,9 +57,14 @@ public:
 	void Spawn() override;
 	void Precache() override;
 	void DoAttack();
+	void DoKarateChop();
+	CBaseMonster *GetNPCForKarateChop( void );
 	float time_counter;
+	float block_time_counter;
 	int attack_state;
 	bool bDidStartAnim;
+	bool bDidStartBlock;
+	bool bKarate;
 //	void EXPORT SwingAgain();
 //	void EXPORT Smack();
 

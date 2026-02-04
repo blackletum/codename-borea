@@ -615,7 +615,7 @@ Activity CBaseMonster :: GetSmallFlinchActivity ()
 	if( m_bitsDamageType & DMG_CLUB )
 	{
 		m_LastHitGroup = RANDOM_LONG( 0, 7 ); // Aynekko: randomize flinch animation hack
-		ALERT( at_console, "woohoo\n" );
+	//	ALERT( at_console, "woohoo\n" );
 	}
 	fTriedDirection = FALSE;
 	UTIL_MakeVectors ( pev->angles );
@@ -652,6 +652,22 @@ Activity CBaseMonster :: GetSmallFlinchActivity ()
 	// do we have a sequence for the ideal activity?
 	if( LookupActivity( flinchActivity ) == ACTIVITY_NOT_AVAILABLE )
 		flinchActivity = ACT_SMALL_FLINCH;
+
+	return flinchActivity;
+}
+
+Activity CBaseMonster::GetBigFlinchActivity()
+{
+	Activity flinchActivity = ACT_BIG_FLINCH;
+
+	// do we have a sequence for the ideal activity?
+	if( LookupActivity( flinchActivity ) == ACTIVITY_NOT_AVAILABLE )
+	{
+		ALERT( at_aiconsole, "GetBigFlinchActivity: not found!\n" );
+		flinchActivity = ACT_SMALL_FLINCH; // fallback
+		if( LookupActivity( flinchActivity ) == ACTIVITY_NOT_AVAILABLE )
+			flinchActivity = ACT_IDLE;
+	}
 
 	return flinchActivity;
 }
@@ -1403,6 +1419,7 @@ void CBaseMonster :: RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entva
 CBaseEntity* CBaseMonster :: CheckTraceHullAttack( float flDist, int iDamage, int iDmgType )
 {
 	TraceResult tr;
+	float flDamage = (float)iDamage;
 
 	if (IsPlayer())
 		UTIL_MakeVectors( pev->angles );
@@ -1419,9 +1436,19 @@ CBaseEntity* CBaseMonster :: CheckTraceHullAttack( float flDist, int iDamage, in
 	{
 		CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
 
-		if ( iDamage > 0 )
+		bool bBlocked = false;
+		if( pEntity->IsPlayer() )
 		{
-			pEntity->TakeDamage( pev, pev, iDamage, iDmgType );
+			CBasePlayer *pPlayer = (CBasePlayer *)pEntity;
+			if( pPlayer->bBlocking )
+				bBlocked = true;
+		}
+
+		if( flDamage > 0.0f )
+		{
+			if( bBlocked )
+				flDamage *= 0.5f;
+			pEntity->TakeDamage( pev, pev, flDamage, iDmgType );
 		}
 
 		return pEntity;

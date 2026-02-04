@@ -96,7 +96,7 @@ const int SV_MAX_PLAYERS = 32;
 #define DMG_RADIUS_MAX		(1 << 25)	// Radius damage with this flag doesn't decrease over distance
 #define DMG_RADIUS_QUAKE	(1 << 26)	// Radius damage is done like Quake. 1/2 damage at 1/2 radius.
 #define DMG_IGNOREARMOR		(1 << 27)	// Damage ignores target's armor
-#define DMG_AIMED			(1 << 28)   // Does Hit location damage
+#define DMG_AIMED			(1 << 28)   // Does Hit location damage // Aynekko - since this is not use anywhere, I'm going to use it for karate chop
 #define DMG_WALLPIERCING	(1 << 29)	// Blast Damages ents through walls
 
 #define DMG_CALTROP				(1<<30)

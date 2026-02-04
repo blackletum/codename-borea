@@ -531,6 +531,14 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		return 0;
 	}
 
+	// Aynekko - blocking the melee blow with fists
+	if( bBlocking )
+	{
+		// check for correct weapon and incoming damage
+		if( m_pActiveItem && m_pActiveItem->m_iId == WEAPON_FISTS && bitsDamageType & DMG_CLUB )
+			flDamage *= 0.5f; // taking only half of the damage
+	}
+
 	// keep track of amount of damage last sustained
 	m_lastDamageAmount = flDamage;
 
@@ -4790,6 +4798,30 @@ void CBasePlayer::ItemPostFrame()
 	if (!m_pActiveItem)
 		return;
 
+	if( m_pActiveItem->m_iId == WEAPON_FISTS )
+	{	
+		if( (pev->button & IN_ATTACK) && (pev->button & IN_ATTACK2) )
+		{
+			bBlocking = true;
+		}
+		
+		if( bBlocking && (m_afButtonReleased & IN_ATTACK || m_afButtonReleased & IN_ATTACK2) )
+		{
+			#ifndef CLIENT_DLL // release the hounds!...I mean, buttons
+			CLIENT_COMMAND( edict(), "-attack\n" );
+			CLIENT_COMMAND( edict(), "-attack2\n" );
+			#endif
+			bBlocking = false;
+
+			CBasePlayerWeapon *pFists = (CBasePlayerWeapon *)m_pActiveItem;
+			pFists->SendWeaponAnim( 22 ); // ANIM_FISTS_BLOCKEND
+			pFists->m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2f;
+			pFists->m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.2f;
+		}
+	}
+	else
+		bBlocking = false;
+
 	// Aynekko: do kick here (activated by impulse 666)
 	if( DoPlayerKickPunch)
 	{
@@ -4820,6 +4852,7 @@ void CBasePlayer::ItemPostFrame()
 			if( tr.flFraction >= 1.0 )
 			{
 				// miss
+				EMIT_SOUND_DYN( edict(), CHAN_ITEM, "weapons/melee_kick.wav", 1.0, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) );
 			}
 			else
 			{
@@ -4831,16 +4864,25 @@ void CBasePlayer::ItemPostFrame()
 					ClearMultiDamage();
 					pEntity->TraceAttack( pev, gSkillData.kickDmg, gpGlobals->v_forward, &tr, DMG_CLUB | DMG_NEVERGIB );
 					ApplyMultiDamage( pev, pev );
-					if( pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE )
+					if( pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE ) // hit an NPC
 					{
 						// play thwack or smack sound
-						EMIT_SOUND( edict(), CHAN_ITEM, "weapons/pwrench_hitbod3.wav", 1, ATTN_NORM );
+						switch( RANDOM_LONG( 1, 3 ) )
+						{
+							case 1: EMIT_SOUND_DYN( edict(), CHAN_ITEM, "weapons/melee_bigimpact1.wav", 1, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) ); break;
+							case 2: EMIT_SOUND_DYN( edict(), CHAN_ITEM, "weapons/melee_bigimpact2.wav", 1, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) ); break;
+							case 3: EMIT_SOUND_DYN( edict(), CHAN_ITEM, "weapons/melee_bigimpact3.wav", 1, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) ); break;
+						}
 						bHitWorld = false;
+
+						// apply big flinch to them
+						CBaseMonster *pNPC = pEntity->MyMonsterPointer();
+						pNPC->ChangeSchedule( pNPC->GetScheduleOfType( SCHED_BIG_FLINCH ) );
 					}
 					UTIL_ScreenShake( pev->origin, 20.0, 1.5, 0.7, 2 );
 					if( bHitWorld )
 					{
-						EMIT_SOUND_DYN( edict(), CHAN_ITEM, "weapons/pwrench_hitbod3.wav", 1.0, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) );
+						EMIT_SOUND_DYN( edict(), CHAN_ITEM, "weapons/melee_bighit.wav", 1.0, ATTN_NORM, 0, 98 + RANDOM_LONG( 0, 3 ) );
 					}
 					if( pEntity->pev->flags & FL_MONSTER )
 					{
@@ -6472,7 +6514,27 @@ void CBasePlayer::RunningThink()
 {
 	// running mechanism
 	UTIL_MakeVectors(pev->v_angle);
-	if (pev->button & IN_FORWARD && pev->button & IN_RUN && !(pev->button & IN_DUCK) && pev->flags & FL_ONGROUND &&
+
+	if( bBlocking && m_pActiveItem && m_pActiveItem->m_iId == WEAPON_FISTS )
+	{
+		isRunning = false;
+
+		if( pev->button & IN_RUN )
+		{
+			CLIENT_COMMAND( edict(), "-speed\n" );
+			pev->button &= ~IN_RUN;
+		}
+
+		// this isn't too good.
+		if( pev->flags & FL_ONGROUND )
+		{
+			if( pev->velocity.Length() > 100.0f )
+			{
+				pev->velocity = pev->velocity.Normalize() * 100.0f;
+			}
+		}
+	}
+	else if (pev->button & IN_FORWARD && pev->button & IN_RUN && !(pev->button & IN_DUCK) && pev->flags & FL_ONGROUND &&
 		!(pev->button & IN_JUMP) && playerStamina != 0 && !isScoping)
 	{
 		isRunning = true;
@@ -7016,7 +7078,8 @@ void CBasePlayer::SlidingThink()
 		AngleVectors(pev->angles, nullptr, &right, &up);
 		Vector vecSrc = pev->origin + up * 14;
 		Vector vecEnd = vecSrc + pev->velocity.Normalize() * 30;
-		UTIL_TraceHull(vecSrc, vecEnd, dont_ignore_monsters, 50, ENT(pev), &m_slidingTr);
+	//	UTIL_TraceHull(vecSrc, vecEnd, dont_ignore_monsters, 50, ENT(pev), &m_slidingTr);
+		UTIL_TraceHull( vecSrc, vecEnd, dont_ignore_monsters, human_hull, ENT( pev ), &m_slidingTr );
 		bool blockedByWall = m_slidingTr.flFraction < 1.0;
 
 		// check if we're hitting destroyable doors
@@ -7040,6 +7103,17 @@ void CBasePlayer::SlidingThink()
 			}
 		}
 		*/
+		// Aynekko - gonna reuse this code to flinch the NPCs
+		if( blockedByWall && !FNullEnt( m_slidingTr.pHit ) )
+		{
+			CBaseEntity *pEnt = CBaseEntity::Instance( m_slidingTr.pHit );
+			if( pEnt && pEnt->pev->flags & FL_MONSTER )
+			{
+				CBaseMonster *pNPC = pEnt->MyMonsterPointer();
+				pNPC->ChangeSchedule( pNPC->GetScheduleOfType( SCHED_BIG_FLINCH ) );
+				blockedByWall = true;
+			}
+		}
 
 		// check if cancelled
 		if (!(pev->button & IN_DUCK) || blockedByWall || pev->velocity.Length2D() < 50.0f)

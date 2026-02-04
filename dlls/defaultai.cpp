@@ -690,6 +690,24 @@ Schedule_t slSmallFlinch[] =
 	},
 };
 
+Task_t tlBigFlinch[] =
+{
+	{ TASK_REMEMBER,			(float)bits_MEMORY_FLINCHED },
+	{ TASK_STOP_MOVING,			0	},
+	{ TASK_BIG_FLINCH,		0	},
+};
+
+Schedule_t slBigFlinch[] =
+{
+	{
+		tlBigFlinch,
+		ARRAYSIZE( tlBigFlinch ),
+		0,
+		0,
+		"Big Flinch"
+	},
+};
+
 //=========================================================
 // Die!
 //=========================================================
@@ -1166,6 +1184,10 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 		{
 			return &slSmallFlinch[ 0 ];
 		}
+	case SCHED_BIG_FLINCH:
+	{
+		return &slBigFlinch[0];
+	}
 	case SCHED_ALERT_SMALL_FLINCH:
 		{
 			return &slAlertSmallFlinch[ 0 ];

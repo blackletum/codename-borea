@@ -43,6 +43,7 @@
 #include	"customentity.h"
 #include	"scripted.h" //LRC
 #include	"FranUtils.hpp"
+#include	"player.h"
 
 int g_fGruntQuestion;				// true if an idle grunt asked a question. Cleared when someone answers.
 
@@ -1078,25 +1079,44 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 			if (pHurt)
 			{
+				bool bBlocked = false;
+				if( pHurt->IsPlayer() )
+				{
+					CBasePlayer *pPlayer = (CBasePlayer *)pHurt;
+					if( pPlayer->bBlocking )
+						bBlocked = true;
+				}
+
+				if( bBlocked )
+					dmg *= 0.5f;
+
 				// SOUND HERE!
 				UTIL_MakeVectors(pev->angles);
-				pHurt->pev->punchangle.x = 15;
+				pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 100 + gpGlobals->v_up * 50;
 				pHurt->TakeDamage(pev, pev, dmg, DMG_CLUB);
 				char hurtsound[96];
-				switch (RANDOM_LONG(0, 2))
+				if( !bBlocked )
 				{
-				case 0:
-					strcpy(hurtsound, "weapons/cbar_hitbod1.wav");
-					break;
-				case 1:
-					strcpy(hurtsound, "weapons/cbar_hitbod2.wav");
-					break;
-				case 2:
-					strcpy(hurtsound, "weapons/cbar_hitbod3.wav");
-					break;
+					switch( RANDOM_LONG( 0, 2 ) )
+					{
+					case 0:
+						strcpy( hurtsound, "weapons/cbar_hitbod1.wav" );
+						break;
+					case 1:
+						strcpy( hurtsound, "weapons/cbar_hitbod2.wav" );
+						break;
+					case 2:
+						strcpy( hurtsound, "weapons/cbar_hitbod3.wav" );
+						break;
+					}
+					EMIT_SOUND( pHurt->edict(), CHAN_AUTO, hurtsound, 0.5, ATTN_NORM );
 				}
-				EMIT_SOUND(pHurt->edict(), CHAN_AUTO, hurtsound, 0.5, ATTN_NORM);
+				else
+					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+
+				if( bBlocked )
+					ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 			}
 		}
 		break;
@@ -1356,6 +1376,9 @@ void CHGrunt :: PainSound ()
 //=========================================================
 void CHGrunt :: DeathSound ()
 {
+	if( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+
 	switch ( RANDOM_LONG(0,2) )
 	{
 	case 0:	
@@ -4703,11 +4726,25 @@ void CMonsterGangster::HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		if( pHurt )
 		{
-			// SOUND HERE!
+			bool bBlocked = false;
+			if( pHurt->IsPlayer() )
+			{
+				CBasePlayer *pPlayer = (CBasePlayer *)pHurt;
+				if( pPlayer->bBlocking )
+					bBlocked = true;
+			}
+			if( !bBlocked )
+				EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_hit.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+			else
+				EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
 			UTIL_MakeVectors( pev->angles );
-			pHurt->pev->punchangle.x = 15;
+			pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
 			pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 100 + gpGlobals->v_up * 50;
-			pHurt->TakeDamage( pev, pev, gSkillData.hgruntDmgKick, DMG_CLUB );
+			float dmg = bBlocked ? gSkillData.hgruntDmgKick * 0.5f : gSkillData.hgruntDmgKick;
+			pHurt->TakeDamage( pev, pev, dmg, DMG_CLUB );
+
+			if( bBlocked )
+				ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 		}
 	}
 	break;

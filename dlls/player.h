@@ -502,6 +502,8 @@ public:
 
 	EHANDLE m_videoPlayer;
 
+	bool bBlocking; // Aynekko: both attack buttons pressed
+
 private:
 	CRope* m_pRope;
 	float m_flLastClimbTime = 0;

@@ -26,6 +26,7 @@
 #include	"squadmonster.h"
 #include	"soundent.h"
 #include	"game.h"
+#include	"player.h"
 
 extern CGraph WorldGraph;
 
@@ -364,11 +365,27 @@ void CHoundeye :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			if( pHurt )
 			{
 				EMIT_SOUND( ENT( pev ), CHAN_VOICE, "dog/dog_bite.wav", 1, ATTN_NORM );
+				bool bBlocked = false;
+				if( pHurt->IsPlayer() )
+				{
+					CBasePlayer *pPlayer = (CBasePlayer *)pHurt;
+					if( pPlayer->bBlocking )
+						bBlocked = true;
+				}
+
+				if( bBlocked )
+					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+				else
+					UTIL_ScreenShake( pHurt->pev->origin, 20.0, 1.5, 0.7, 2 );
+
 				UTIL_MakeVectors( pev->angles );
-				pHurt->pev->punchangle.x -= 15;
+				pHurt->pev->punchangle.x -= bBlocked ? 5 : 15;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 100 + gpGlobals->v_up * 50;
+				float dmg = bBlocked ? gSkillData.dogDmg * 0.5f : gSkillData.dogDmg;
 				pHurt->TakeDamage( pev, pev, gSkillData.dogDmg, DMG_CLUB );
-				UTIL_ScreenShake( pHurt->pev->origin, 20.0, 1.5, 0.7, 2 );
+
+				if( bBlocked )
+					ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 			}
 			break;
 
@@ -840,7 +857,25 @@ void EXPORT CHoundeye::LungeTouch(CBaseEntity* pOther)
 	{
 		EMIT_SOUND_DYN(edict(), CHAN_WEAPON, "dog/dog_bite.wav", VOL_NORM, ATTN_IDLE, 0, PITCH_NORM);
 
-		pOther->TakeDamage(pev, pev, gSkillData.dogDmgLunge, DMG_SLASH);
+		bool bBlocked = false;
+		if( pOther->IsPlayer() )
+		{
+			CBasePlayer *pPlayer = (CBasePlayer *)pOther;
+			if( pPlayer->bBlocking )
+				bBlocked = true;
+
+			if( bBlocked )
+				EMIT_SOUND_DYN( pOther->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+
+			UTIL_MakeVectors( pev->angles );
+			pOther->pev->punchangle.x = bBlocked ? 5 : 15;
+
+			if( bBlocked )
+				ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
+		}
+
+		float dmg = bBlocked ? gSkillData.dogDmgLunge * 0.5f : gSkillData.dogDmgLunge;
+		pOther->TakeDamage( pev, pev, dmg, DMG_CLUB );
 	}
 
 	SetTouch(nullptr);

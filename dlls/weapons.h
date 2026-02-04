@@ -438,6 +438,7 @@ public:
 	virtual void SecondaryAttack() {}			// do "+ATTACK2"
 	virtual void Reload() {}						// do "+RELOAD"
 	virtual void WeaponIdle() {}					// called when no buttons pressed
+	virtual void SpecialAttack() {}				// both attack and attack2 pressed (fists)
 	int UpdateClientData( CBasePlayer *pPlayer ) override;		// sends hud info to client dll, if things have changed
 	virtual void RetireWeapon();
 	virtual BOOL ShouldWeaponIdle() {return FALSE; }
