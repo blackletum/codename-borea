@@ -1578,6 +1578,12 @@ void CBasePlayer::PlayerDeathThink()
 		PackDeadPlayerItems();
 	}
 
+	if (pev->weapons & WEAPON_SUIT)
+	{
+		if (FlashlightIsOn())
+			FlashlightTurnOff();
+	}
+
 
 	if (pev->modelindex && (!m_fSequenceFinished) && (pev->deadflag == DEAD_DYING))
 	{

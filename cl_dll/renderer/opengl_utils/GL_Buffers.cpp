@@ -10,12 +10,12 @@ GLuint GL_BufferHandler::m_uiApproximated_VRAM_Bytes = 0;
 GL_BufferHandler::GL_BufferHandler()
 {
 	glGenBuffers(1, &m_uiBufferIndex);
-	m_uiNumBuffers++;
+	GL_BufferHandler::m_uiNumBuffers++;
 }
 GL_BufferHandler::GL_BufferHandler(vbo_targets target, vbo_usage usage, int bytesize)
 {
 	glGenBuffers(1, &m_uiBufferIndex);
-	m_uiNumBuffers++;
+	GL_BufferHandler::m_uiNumBuffers++;
 
 	Bind(target);
 	BufferData(target, bytesize, nullptr, usage);
@@ -26,8 +26,8 @@ GL_BufferHandler::~GL_BufferHandler()
 {
 	glDeleteBuffers(1, &m_uiBufferIndex);
 
-	m_uiNumBuffers--;
-	m_uiApproximated_VRAM_Bytes -= m_uiBufferSize;
+	GL_BufferHandler::m_uiNumBuffers--;
+	GL_BufferHandler::m_uiApproximated_VRAM_Bytes -= m_uiBufferSize;
 }
 
 #ifdef _DEBUG

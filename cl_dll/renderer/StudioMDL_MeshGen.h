@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "rendererdefs.h"
-#include "opengl_utils/GL_VertexArrayObject.h"
+#include "opengl_utils/GL_Mesh.h"
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #undef clamp
@@ -23,6 +23,7 @@
 // structure, 
 //
 
+#define GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS
 
 struct studiotri_t;
 
@@ -30,10 +31,6 @@ class StudioMDL_BodyPart;
 class StudioMDL_SubModel;
 class StudioMDL_Mesh;
 class StudioMDL_Texture;
-
-class GL_BufferHandler;
-class GL_ShaderProgram;
-class GL_VertexArrayObject;
 
 struct studiomdl_vertbufferdata_t
 {
@@ -55,14 +52,16 @@ class StudioMDL_Model
 public:
 	StudioMDL_Model(model_t* model);
 
-	__forceinline void EnableBuffers() const noexcept { m_pModelVAO->BindVAO(); };
-	__forceinline bool IsBufferEnabled() const noexcept { return m_pModelVAO == GL_VertexArrayObject::GetBoundVAO(); }
-	__forceinline void DisableBuffers() const noexcept { GL_VertexArrayObject::ResetVAOBinding(); };
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	void BindMesh() const noexcept; 
+	bool IsMeshBound() const noexcept;
+	void UnbindMesh() const noexcept;
+#else
+	static void BindGlobalMesh() noexcept;
+	static void UnbindGlobalMesh() noexcept;
+#endif
 
-	__forceinline void DrawElements(int indexcount, int indexoffset) noexcept
-	{
-		glDrawElements(GL_TRIANGLES, indexcount * 3, GL_UNSIGNED_INT, (const void*)(indexoffset * sizeof(uint32_t)));
-	};
+	void DrawElements(int indexoffset, int indexcount) const noexcept;
 
 	__forceinline int GetNumBodyParts() const noexcept { return m_iNumBodyParts; };
 	__forceinline int GetNumTextures() const noexcept { return m_iNumTextures; }
@@ -88,12 +87,13 @@ private:
 	std::vector<StudioMDL_Texture*> m_vTextures;
 	std::vector<short> m_vSkinIndexes;
 
-	GL_BufferHandler* m_pModelVertBuffer = nullptr; // includes vert pos, vert normal, and vert texcoord. update with BufferSubData
-	GL_BufferHandler* m_pModelVertIndexBuffer = nullptr; // includes vertex indexes
-public:
-	GL_VertexArrayObject* m_pModelVAO = nullptr;
-
 private:
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	GL_Mesh* m_p3DMesh;
+#else
+	uint32_t m_uiIndexOffset;
+	uint32_t m_uiVertexOffset;
+#endif
 	
 	int m_iNumVertIndexes = 0;
 	int m_iNumVerts = 0;
@@ -145,27 +145,14 @@ public:
 
 	void UploadVertexData(Vector* pos, Vector* normal, float (*chromeuv)[2]); //unused for now
 
-	__forceinline byte* GetBoneVertInfo() noexcept { return m_vVertBoneInfo.data(); };
-	__forceinline byte* GetBoneNormInfo() noexcept { return m_vNormBoneInfo.data(); };
-
-	Vector* GetVertInfo();
-	Vector* GetNormInfo();
-
 	__forceinline int GetMeshNum() const noexcept { return m_iNumMesh; };
 	__forceinline int GetNumVerts() const noexcept { return m_iNumVerts; };
-	__forceinline int GetNumTriangles() const noexcept { return m_iNumTriangles; };
 
 	__forceinline StudioMDL_Mesh* GetMeshbyIndex(int index) { return m_vMesh[index]; };
 
 private:
-	std::vector<byte> m_vVertBoneInfo; // bone info, index into m_pbonetransform
-	std::vector<byte> m_vNormBoneInfo; // bone info, index into m_pbonetransform
-
 	std::vector<Vector> m_vVertInfo; // mesh info, 3d position of the vertex
 	std::vector<Vector> m_vNormInfo; // mesh info, 3d direction of the normal
-
-	std::vector<Vector> m_vRealVertInfo; // mesh info, 3d position of the vertex
-	std::vector<Vector> m_vRealNormInfo; // mesh info, 3d direction of the normal
 
 	std::vector<StudioMDL_Mesh*> m_vMesh;
 
@@ -174,7 +161,6 @@ private:
 	StudioMDL_Model* m_pOwner;
 
 	int m_iNumVerts = 0;
-	int m_iNumTriangles = 0;
 	int m_iStartVertexData = 0;
 	int m_iNumMesh = 0;
 };
@@ -186,30 +172,30 @@ class StudioMDL_Mesh
 	friend class StudioMDL_Model;
 
 public:
-	StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr, StudioMDL_Model* owner, StudioMDL_SubModel* submodelparent);
+	StudioMDL_Mesh(const mstudiomesh_t *mesh, studiohdr_t* studiohdr, StudioMDL_Model* owner, StudioMDL_SubModel* submodelparent);
 
 	std::vector<studiotri_t>& GetTriangleCmds() { return m_vTris; };
 
-	__forceinline int GetNumVerts() const noexcept { return m_iNumVerts; };
-	__forceinline int GetNumTriangles() const noexcept { return m_iNumTriangles; };
-	__forceinline int GetNumNormals() const noexcept { return m_iNumNorms; };
+	__forceinline int NumVerts() const noexcept { return m_iNumVerts; };
+	__forceinline int NumIndices() const noexcept { return m_iNumIndices; };
+	__forceinline int NumNormals() const noexcept { return m_pRawMesh->numnorms; };
 
-	__forceinline int GetSkinReference() const noexcept { return m_iSkinRef; };
+	__forceinline int SkinReference() const noexcept { return m_iSkinRef; };
 
-	__forceinline int GetMeshBufferOffset() const noexcept { return m_iStartVertex; };
+	__forceinline int MeshBufferOffset() const noexcept { return m_iStartVertex; };
+
+	__forceinline void DrawMesh() const noexcept { return m_pOwner->DrawElements(m_iStartVertex, m_iNumIndices); }
 
 private:
 	std::vector<studiotri_t> m_vTris;
-
 	StudioMDL_Model* m_pOwner = nullptr;
+	const mstudiomesh_t* m_pRawMesh;
 
 	int m_iSkinRef = 0;
-	int m_iNumNorms = 0;
-	int m_iNumTriangles = 0;
 	int m_iNumVerts = 0;
+	int m_iNumIndices = 0;
 
 	int m_iStartVertex = 0; // index into element array buffer, do not use in vertex array
-	int m_iStartVertexData = 0;
 };
 
 class StudioMDL_Texture

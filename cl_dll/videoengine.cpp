@@ -510,9 +510,9 @@ void drawFrame(VideoData* data) {
     glClearColor(GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    gBSPRenderer.m_FilterShader->Bind();
-    gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 0);
-    gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("flipped"), 1);
+    gBSPRenderer.m_FilterShader.Bind();
+    gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("gaussian_pass"), 0);
+    gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("flipped"), 1);
 
     m_pVideoVAO->BindVAO();
 
@@ -524,7 +524,7 @@ void drawFrame(VideoData* data) {
 
     GL_VertexArrayObject::ResetVAOBinding();
 
-    gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("flipped"), 0);
+    gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("flipped"), 0);
 
     GL_ShaderProgram::ResetShaderBind();
 }

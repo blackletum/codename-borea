@@ -48,8 +48,7 @@ Additional code taken from Id Software
 #include "opengl_utils/GL_FBO.h"
 #include "opengl_utils/GL_ShaderProgram.h"
 #include "opengl_utils/GL_TextureHandler.h"
-#include "opengl_utils/GL_Buffers.h"
-#include "opengl_utils/GL_VertexArrayObject.h"
+#include "opengl_utils/GL_Mesh.h"
 
 #include "goldsrc_spriterenderer.h"
 #include "StudioModelRenderer.h"
@@ -59,14 +58,18 @@ CMirrorManager gMirrorManager;
 
 
 //===========================================
-// GLSL SHADER START
+// OPENGL START
 //
 //===========================================
 
 #include "glshaders/mirror_glsl.h"
 
+static GL_FBOHandler* s_mirrorFBO;
+static GL_RBOHandler* s_mirrorDepthBuffer;
+static GL_ShaderProgram s_MirrorShader(mirror_vertex, mirror_fragment);
+
 //===========================================
-// GLSL SHADER END
+// OPENGL END
 //
 //===========================================
 
@@ -87,10 +90,8 @@ void CMirrorManager::Init(void)
 {
 	m_pCvarDrawMirrors = gEngfuncs.pfnRegisterVariable("r_mirrors", "1", 0);
 
-	m_MirrorShader = new GL_ShaderProgram(mirror_vertex, mirror_fragment);
-
-	m_MirrorShader->Bind();
-	m_MirrorShader->Uniform1i(m_MirrorShader->GetUniformLoc("texture0"), 0);
+	s_MirrorShader.Bind();
+	s_MirrorShader.Uniform1i(s_MirrorShader.GetUniformLoc("texture0"), 0);
 
 	GL_ShaderProgram::ResetShaderBind();
 }
@@ -110,16 +111,16 @@ void CMirrorManager::VidInit(void)
 	m_iNumMirrors = 0;
 	m_iNumPasses = 0;
 
-	if (!mirrorFBO)
-		mirrorFBO = new GL_FBOHandler();
-	if (!mirrorDepthBuffer)
-		mirrorDepthBuffer = new GL_RBOHandler();
+	if (!s_mirrorFBO)
+		s_mirrorFBO = new GL_FBOHandler();
+	if (!s_mirrorDepthBuffer)
+		s_mirrorDepthBuffer = new GL_RBOHandler();
 
-	mirrorFBO->Bind(GL_FBOHandler::Framebuffer);
+	s_mirrorFBO->Bind(GL_FBOHandler::Framebuffer);
 
-	mirrorDepthBuffer->Bind();
-	mirrorDepthBuffer->RenderBufferStorage(GL_DEPTH_COMPONENT24, MIRROR_RESOLUTION, MIRROR_RESOLUTION);
-	mirrorFBO->FramebufferRenderbuffer(GL_FBOHandler::Framebuffer, GL_FBOHandler::DepthAttachment, mirrorDepthBuffer);
+	s_mirrorDepthBuffer->Bind();
+	s_mirrorDepthBuffer->RenderBufferStorage(GL_DEPTH_COMPONENT24, MIRROR_RESOLUTION, MIRROR_RESOLUTION);
+	s_mirrorFBO->FramebufferRenderbuffer(GL_FBOHandler::Framebuffer, GL_FBOHandler::DepthAttachment, s_mirrorDepthBuffer);
 
 	GL_FBOHandler::ResetToMainFBO();
 
@@ -395,8 +396,8 @@ void CMirrorManager::SetupMirrorPass(void)
 
 	gBSPRenderer.m_ViewMatrix = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 
-	mirrorFBO->Bind(GL_FBOHandler::Framebuffer);
-	mirrorFBO->FramebufferTexture2D(GL_FBOHandler::Framebuffer, GL_FBOHandler::ColorAttachment, GL_TEXTURE_2D, m_pCurrentMirror->texture->GetTextureID(), 0);
+	s_mirrorFBO->Bind(GL_FBOHandler::Framebuffer);
+	s_mirrorFBO->FramebufferTexture2D(GL_FBOHandler::Framebuffer, GL_FBOHandler::ColorAttachment, GL_TEXTURE_2D, m_pCurrentMirror->texture->GetTextureID(), 0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(glm::value_ptr(gBSPRenderer.m_ViewMatrix * gBSPRenderer.m_ModelMatrix));
@@ -462,13 +463,13 @@ void CMirrorManager::DrawMirrors(void)
 		return;
 
 
-	m_MirrorShader->Bind();
+	s_MirrorShader.Bind();
 
-	m_MirrorShader->UniformMatrix4fv(m_MirrorShader->GetUniformLoc("projectionMatrix"), 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ProjectionMatrix));
-	m_MirrorShader->UniformMatrix4fv(m_MirrorShader->GetUniformLoc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ModelMatrix));
+	s_MirrorShader.UniformMatrix4fv(s_MirrorShader.GetUniformLoc("projectionMatrix"), 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ProjectionMatrix));
+	s_MirrorShader.UniformMatrix4fv(s_MirrorShader.GetUniformLoc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ModelMatrix));
 
 
-	gBSPRenderer.m_pBSP_VAO->BindVAO();
+	gBSPRenderer.m_pBSPMesh->BindMesh();
 
 	for (int i = 0; i < m_iNumMirrors; i++)
 	{
@@ -480,9 +481,9 @@ void CMirrorManager::DrawMirrors(void)
 		if (gHUD.viewFrustum.CullBox(m_pCurrentMirror->mins, m_pCurrentMirror->maxs))
 			continue;
 
-		GLuint location = m_MirrorShader->GetUniformLoc("viewMatrix");
+		GLuint location = s_MirrorShader.GetUniformLoc("viewMatrix");
 
-		m_MirrorShader->UniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ViewMatrix));
+		s_MirrorShader.UniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ViewMatrix));
 
 		model_t* model = m_pMirrors[i].entity->model;
 		clientmsurface_t* psurf = &BSPWorld_Model::m_pWorldSurfaces[model->firstmodelsurface];

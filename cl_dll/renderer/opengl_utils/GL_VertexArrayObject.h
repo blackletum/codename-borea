@@ -26,25 +26,26 @@ struct gl_vertattriblist_t
 
 #define GL_BEGIN_ATTRIBLIST(structure)								\
 	const gl_vertattriblist_t* structure::GetAttribLayout() {		\
-		static const gl_vertattrib_t structure##_attribinfo[] = {	\
+		typedef structure _struct;									\
+		static const gl_vertattrib_t _struct_attribinfo[] = {		
 
 
 
-#define GL_DEFINE_ATTRIB(index, numelements, type, structure, member) \
-	{index, numelements, type, sizeof(structure), offsetof(structure, member), false, true},
-#define GL_DEFINE_NORMALIZEDATTRIB(index, numelements, type, structure, member) \
-	{index, numelements, type, sizeof(structure), offsetof(structure, member), false, true},
-#define GL_DEFINE_INTEGERATTRIB(index, numelements, type, structure, member) \
-	{index, numelements, type, sizeof(structure), offsetof(structure, member), true, false},
+#define GL_DEFINE_ATTRIB(index, numelements, type, member) \
+	{index, numelements, type, sizeof(_struct), offsetof(_struct, member), false, true},
+#define GL_DEFINE_NORMALIZEDATTRIB(index, numelements, type, member) \
+	{index, numelements, type, sizeof(_struct), offsetof(_struct, member), false, true},
+#define GL_DEFINE_INTEGERATTRIB(index, numelements, type, member) \
+	{index, numelements, type, sizeof(_struct), offsetof(_struct, member), true, false},
 
 
 
-#define GL_END_ATTRIBLIST(structure)					\
+#define GL_END_ATTRIBLIST()								\
 		};												\
 														\
 		static const gl_vertattriblist_t attriblist = {	\
-				structure##_attribinfo,					\
-				std::size(structure##_attribinfo)		\
+				_struct_attribinfo,						\
+				std::size(_struct_attribinfo)			\
 		};												\
 		return &attriblist;								\
 	};

@@ -27,10 +27,6 @@ Written by Andrew Lucas
 #include "textureloader.h"
 #include "rendererdefs.h"
 
-class GL_FBOHandler;
-class GL_RBOHandler;
-class GL_ShaderProgram;
-
 //==================================================
 //				WATER SHADER DEFS
 //
@@ -153,38 +149,6 @@ public:
 
 	int m_iNumPasses;
 	double m_fRenderTime;
-
-public:
-	GL_ShaderProgram *m_WaterFragmentShader;
-
-	GL_FBOHandler* m_waterFBO;
-	GL_RBOHandler* m_waterDepthBuffer;
-	
-	enum watershader_uniforms
-	{
-		watershader_renderorigin,
-
-		watershader_projviewmodelmatrix,
-
-		watershader_underwater,
-
-		watershader_waterfog, // program.local[1] = (r, g, b)
-		watershader_fogstart, 
-		watershader_fogend,
-		watershader_m_flFresnelTerm, // program.local[2] = float
-		watershader_flTime,			 // program.local[3] = client time
-
-		watershader_normalscale,
-		watershader_watertex_scale,
-		watershader_refraction_scale,
-		watershader_reflection_scale,
-
-		_watershader_locsize
-		
-	};
-
-	GLuint m_WaterShader_locs[_watershader_locsize];
-
 
 public:
 	fog_settings_t m_pMainFogSettings;

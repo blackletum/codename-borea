@@ -22,8 +22,6 @@ char glsl_cable_vp[] = R"(
 
 		vec3 vertpos = aPosition + (width * vRight);
 
-
-
 		gl_Position = projviewmatrix * vec4(vertpos, 1);
 	}
 

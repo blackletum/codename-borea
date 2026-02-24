@@ -34,6 +34,7 @@ class StudioMDL_Model;
 struct studiohdr_t;
 struct decal_msg_cache;
 struct brushvertex_t;
+struct Default3DVert_t;
 
 //========================================
 //			PROP MANAGER DEFINITIONS
@@ -74,7 +75,7 @@ struct vbosubmodel_t
 
 struct vboheader_t
 {
-	brushvertex_t* pBufferData;
+	Default3DVert_t* pBufferData;
 	int numverts;
 
 	unsigned int* indexes;
@@ -192,19 +193,10 @@ public:
 	// Extra data for all entities.
 	entextradata_t* m_pCurrentExtraData;
 	std::vector<std::unique_ptr<entextradata_t>> m_pExtraData;
-	std::vector<std::unique_ptr<entextrainfo_t>> m_pExtraInfo;
+	std::vector<std::unique_ptr<entextrainfo_t>> pExtraInfo;
 
-	brushvertex_t* m_pVertexData;
+	Default3DVert_t* m_pVertexData;
 	int m_iNumTotalVerts;
-
-	GL_ShaderProgram* m_CableShader;
-
-	GL_BufferHandler *m_pStaticModelBuffer;
-	GL_VertexArrayObject *m_pStaticModelVAO;
-
-	//may be best to merge this with CBSPRenderer::m_pMainBuffer
-	GL_BufferHandler* m_pCableVertsBuffer; 
-	GL_VertexArrayObject* m_pCableVertsVAO;
 
 	int m_iNumCableVerts;
 

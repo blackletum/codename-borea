@@ -162,20 +162,6 @@ public:
 
 public:
 
-	// Player info for current player, if drawing a player
-	static player_info_t* m_pPlayerInfo;
-
-	// The index of the player being drawn
-	static int m_nPlayerIndex;
-
-	// Pointers to current body part and submodel
-	static mstudiobodyparts_t* m_pBodyPart;
-	static mstudiomodel_t* m_pSubModel;
-
-	//
-	// Sprite model used for drawing studio model chrome
-	static model_t* m_pChromeSprite;
-
 	// Matrices
 	// Model to world transformation
 	static matrix3x4_t(*m_protationmatrix);
@@ -197,7 +183,7 @@ public:
 public:
 	static void StudioSetupModel(int bodypart);
 
-	static void StudioSetupRenderer(int rendermode);
+	static void StudioSetupRenderer();
 	static qboolean StudioCheckBBox(void);
 
 	static void StudioEntityLight(void);
@@ -207,23 +193,6 @@ public:
 	static bool StudioRecursiveLightPoint(entextrainfo_t* ext, clientmnode_t* node, Vector start, Vector end, Vector& color);
 
 	static entextrainfo_t* StudioAllocExtraInfo(void);
-
-	static Vector m_vMins;
-	static Vector m_vMaxs;
-
-	static Vector m_vVertexTransform[MAXSTUDIOVERTS]; // transformed vertices
-	static Vector m_vNormalTransform[MAXSTUDIOVERTS]; // transformed normals
-
-	static Vector* m_pVertexTransform; // pointer to vertex transform
-	static Vector* m_pNormalTransform; // pointer to normal transform
-
-	static lighting_ext m_pLighting; // buz
-
-	static mlight_t* m_pModelLights[MAX_MODEL_LIGHTS];
-	static int m_iNumModelLights;
-
-	static entextrainfo_t m_pExtraInfo[MAXRENDERENTS];
-	static int m_iNumExtraInfo;
 
 	static double m_fStudioMDLRenderTime;
 

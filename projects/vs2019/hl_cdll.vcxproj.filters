@@ -510,6 +510,9 @@
     <ClCompile Include="..\..\cl_dll\tempents.cpp">
       <Filter>Source Files\cl_dll</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_Mesh.cpp">
+      <Filter>Source Files\cl_dll\renderer\opengl_utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cl_dll\kbutton.h">
@@ -1114,6 +1117,12 @@
     </ClInclude>
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\blacknwhite_glsl.h">
       <Filter>Header Files\cl_dll\renderer\glshaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_Mesh.h">
+      <Filter>Header Files\cl_dll\renderer\opengl_utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cl_dll\renderer\RenderCamera.h">
+      <Filter>Header Files\cl_dll\renderer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

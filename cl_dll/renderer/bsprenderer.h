@@ -24,6 +24,7 @@ Extended and/or recoded by Andrew Lucas
 #include "textureloader.h"
 #include "rendererdefs.h"
 #include "opengl_utils/GL_VertexArrayObject.h"
+#include "opengl_utils/GL_ShaderProgram.h"
 
 #include "BSPModel_Gen.h"
 
@@ -114,7 +115,7 @@ Extended and/or recoded by Andrew Lucas
 //
 //========================================
 
-struct DecalVert_t
+struct Default3DTextureVert_t
 {
 	Vector pos;
 	float texcoord[2];
@@ -123,11 +124,11 @@ struct DecalVert_t
 	GL_DECLARE_ATTRIBLIST();
 };
 
-struct skyvert_t
+struct Default3DVert_t
 {
 	Vector pos;
+	Vector normal;
 	float texcoord[2];
-	byte _padding[12];
 
 	GL_DECLARE_ATTRIBLIST();
 };
@@ -269,6 +270,7 @@ class GL_RBOHandler;
 class GL_BufferHandler;
 class GL_ShaderProgram;
 class GL_VertexArrayObject;
+class GL_Mesh;
 
 /*
 ====================
@@ -387,7 +389,7 @@ public:
 	int MsgCustomDecal(const char* pszName, int iSize, void* pbuf);
 
 	void CreateCachedDecals(void);
-	void DrawSingleDecal(customdecal_t* decal, std::vector<DecalVert_t>& decalvertlist, bool m_bTransPass = false, bool *bNeedsBufferUpdate = nullptr);
+	void DrawSingleDecal(customdecal_t* decal, std::vector<Default3DTextureVert_t>& decalvertlist, bool m_bTransPass = false, bool *bNeedsBufferUpdate = nullptr);
 
 	customdecal_t* AllocDecal(void);
 	customdecal_t* AllocStaticDecal(void);
@@ -408,18 +410,11 @@ public:
 		
 	};
 
-	GL_BufferHandler *m_pMainBuffer;
-	GL_BufferHandler *m_pBasicFullscreenQuad;
-	GL_BufferHandler *m_pDecalsBuffer;
 	brushvertex_t* m_pBufferData;
 	brushface_t* m_pFacesExtraData;
 
-	GL_BufferHandler* m_pSimpleSky_Buffer;
-
-	GL_VertexArrayObject* m_pBSP_VAO;
-	GL_VertexArrayObject* m_pDecalVAO;
-	GL_VertexArrayObject* m_pSimpleSkyVAO;
-	GL_VertexArrayObject* m_pScreenQuadVAO;
+	GL_Mesh* m_pBSPMesh;
+	GL_Mesh* m_p2DScreenMesh;
 
 	GL_TextureHandler* m_pMainFBOTexture;
 	GL_FBOHandler* m_pMainFBO;
@@ -550,97 +545,8 @@ public:
 	GL_ShaderProgram *m_WorldSolidShader;
 	GL_ShaderProgram *m_DecalShader;
 	GL_ShaderProgram *m_SimpleSkyboxShader;
-	GL_ShaderProgram *m_FilterShader;
-	GL_ShaderProgram *m_BlacknwhiteShader;
-
-	enum worldshader_uniforms
-	{
-		world_projectionmatrix = 0,
-		world_viewmatrix,
-		world_modelmatrix,
-
-		world_spotlight_texturematrix,
-
-		world_spotlight,
-		world_pointlight,
-		world_shadow,
-		world_onlyshadow,
-
-		world_sundir,
-		
-		world_waterpolys,
-		world_scrollingpolys,
-		world_specular,
-		world_fltime,
-
-		world_alphatest,
-
-		world_renderamt,
-		world_rendercolor,
-
-		world_light_pos,
-		world_light_color,//red green blue
-		world_light_radius,
-		world_sunshadow_fadedist,
-		world_sunshadow_strength,
-		world_renderorigin,
-		world_renderforward,
-		world_renderright,
-
-		world_lightmap_pass,
-		world_texture_pass,
-
-		world_fog_active,
-		world_fogcolor,
-		world_fogstart,
-		world_fogend,
-
-		world_lightgamma,
-		world_texgamma,
-
-		world_wireframe,
-
-		world_shaderlocs_size, //must be last
-	};
-
-	enum worldshadersolid_uniforms
-	{
-		worldsolid_projviewmatrix = 0,
-		worldsolid_modelmatrix,
-
-		worldsolid_alphatest,
-
-		worldsolid_light_pos,
-
-		worldsolid_shaderlocs_size, //must be last
-	};
-
-	enum decalshader_uniforms
-	{
-		decal_projviewmatrix = 0,
-
-		decal_wireframe,
-
-		decal_shaderlocs_size,
-	};
-
-	enum skyboxshader_uniforms
-	{
-		skybox_projviewmatrix = 0,
-
-		skybox_skyfog,
-		skybox_fogcolor,
-
-		skybox_shaderlocs_size,
-	};
-
-	GLuint m_WorldShader_locs[world_shaderlocs_size];
-
-	GLuint m_WorldSolidShader_locs[worldsolid_shaderlocs_size];
-
-	GLuint m_SimpleSkyboxShader_locs[skybox_shaderlocs_size];
-
-	GLuint m_DecalShader_locs[decal_shaderlocs_size];
+	static GL_ShaderProgram m_FilterShader;
+	static GL_ShaderProgram m_BlacknwhiteShader;
 
 	glm::mat4 m_ProjectionMatrix; //	fov, aspect, near, far
 	glm::mat4 m_ViewMatrix;  //	camera position, camera angles

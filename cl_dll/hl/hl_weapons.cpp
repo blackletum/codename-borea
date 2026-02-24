@@ -557,10 +557,10 @@ void SetLocalBody( int id, int body )
 {
 	auto pWeapon = GetLocalWeapon( id );
 
-	if( pWeapon )
-	{
-		pWeapon->pev->body = body;
-	}
+	//if( pWeapon )
+	//{
+	//	pWeapon->pev->body = body;
+	//}
 }
 
 /*

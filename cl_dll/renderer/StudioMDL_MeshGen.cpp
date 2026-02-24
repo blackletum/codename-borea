@@ -24,8 +24,9 @@
 #include "r_studioint.h"
 
 #include "StudioMDL_MeshGen.h"
-#include "opengl_utils/GL_Buffers.h"
 #include "opengl_utils/GL_ShaderProgram.h"
+#include "opengl_utils/GL_Mesh.h"
+#include "opengl_utils/GL_Buffers.h"
 #include "opengl_utils/GL_VertexArrayObject.h"
 
 #include <unordered_map>
@@ -33,11 +34,19 @@
 std::vector<StudioMDL_Model*> m_vCachedStudioModels;
 
 GL_BEGIN_ATTRIBLIST(studiomdl_vertbufferdata_t)
-	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, studiomdl_vertbufferdata_t, pos)
-	GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_SHORT, studiomdl_vertbufferdata_t, normal)
-	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, studiomdl_vertbufferdata_t, texcoord)
-	GL_DEFINE_INTEGERATTRIB(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_INT, studiomdl_vertbufferdata_t, bonedata)
-GL_END_ATTRIBLIST(studiomdl_vertbufferdata_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, pos)
+	GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_SHORT, normal)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, texcoord)
+	GL_DEFINE_INTEGERATTRIB(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_INT, bonedata)
+GL_END_ATTRIBLIST()
+
+#if defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+static GL_BufferHandler* s_pStudioMDLVertexBuffer = nullptr;
+static uint32_t s_StudioMDLVertexHead = 0;
+static GL_BufferHandler* s_pStudioMDLIndexBuffer = nullptr;
+static uint32_t s_StudioMDLIndexHead = 0;
+static GL_VertexArrayObject* s_pStudioMDL_VAO;
+#endif
 
 StudioMDL_Model::StudioMDL_Model(model_t* model)
 {
@@ -97,24 +106,115 @@ StudioMDL_Model::StudioMDL_Model(model_t* model)
 	// generate opengl mesh buffer
 	//
 
-	m_pModelVAO = new GL_VertexArrayObject();
-	m_pModelVAO->BindVAO();
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
 
-	m_pModelVertBuffer = new GL_BufferHandler();
-	m_pModelVertBuffer->Bind(GL_BufferHandler::ArrayBuffer);
-	m_pModelVertBuffer->BufferData(GL_BufferHandler::ArrayBuffer, m_vTotalVerts.size() * sizeof(studiomdl_vertbufferdata_t), m_vTotalVerts.data(), GL_BufferHandler::StaticDraw);
+	m_p3DMesh = new GL_Mesh(m_vTotalVerts.size(), 
+		studiomdl_vertbufferdata_t::GetAttribLayout(), true, 
+		m_vTotalVerts.data());
+	m_p3DMesh->SetDrawMode(GL_TRIANGLES);
+	m_p3DMesh->SetIndices(m_vTotalIndices.data(), m_vTotalIndices.size());
 
-	m_pModelVertIndexBuffer = new GL_BufferHandler();
-	m_pModelVertIndexBuffer->Bind(GL_BufferHandler::ElementArrayBuffer);
-	m_pModelVertIndexBuffer->BufferData(GL_BufferHandler::ElementArrayBuffer, m_vTotalIndices.size() * sizeof(uint32_t), m_vTotalIndices.data(), GL_BufferHandler::StaticDraw);
+#else
 
-	m_pModelVAO->SetVertexAttributes(studiomdl_vertbufferdata_t::GetAttribLayout());
+	m_uiIndexOffset = s_StudioMDLIndexHead;
+	m_uiVertexOffset = s_StudioMDLVertexHead;
+
+	if (!s_pStudioMDLVertexBuffer)
+	{
+		s_pStudioMDL_VAO = new GL_VertexArrayObject();
+		s_pStudioMDL_VAO->BindVAO();
+
+		s_pStudioMDLVertexBuffer = new GL_BufferHandler();
+		s_pStudioMDLIndexBuffer = new GL_BufferHandler();
+		s_pStudioMDLVertexBuffer->Bind(GL_BufferHandler::ArrayBuffer);
+		//37 mb for vertexes (1 million vertices)
+		s_pStudioMDLVertexBuffer->BufferData(GL_BufferHandler::ArrayBuffer, 
+			sizeof(studiomdl_vertbufferdata_t) * (1 << 21), nullptr, 
+			GL_BufferHandler::StaticDraw);
+		//16 mb for indeces (4 million indexes)
+		s_pStudioMDLIndexBuffer->Bind(GL_BufferHandler::ElementArrayBuffer);
+		s_pStudioMDLIndexBuffer->BufferData(GL_BufferHandler::ElementArrayBuffer,
+			sizeof(uint32_t) * (1 << 24), nullptr,
+			GL_BufferHandler::StaticDraw);
+
+		s_pStudioMDL_VAO->SetVertexAttributes(studiomdl_vertbufferdata_t::GetAttribLayout());
+
+		GL_VertexArrayObject::ResetVAOBinding();
+
+		GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
+		GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
+	}
+
+	for (int i = 0; i < m_vTotalIndices.size(); i++)
+	{
+		m_vTotalIndices[i] += m_uiVertexOffset;
+	}
+
+	s_pStudioMDL_VAO->BindVAO();
+
+	s_pStudioMDLVertexBuffer->Bind(GL_BufferHandler::ArrayBuffer);
+	s_pStudioMDLVertexBuffer->BufferSubData(GL_BufferHandler::ArrayBuffer, 
+		s_StudioMDLVertexHead * sizeof(studiomdl_vertbufferdata_t), //offset
+		sizeof(studiomdl_vertbufferdata_t) * m_vTotalVerts.size(), //numbytes
+		m_vTotalVerts.data());//data
+
+	s_pStudioMDLIndexBuffer->Bind(GL_BufferHandler::ElementArrayBuffer);
+	s_pStudioMDLIndexBuffer->BufferSubData(GL_BufferHandler::ElementArrayBuffer,
+		s_StudioMDLIndexHead * sizeof(uint32_t),  //offset
+		sizeof(uint32_t) * m_vTotalIndices.size(),//numbytes
+		m_vTotalIndices.data());//data
 
 	GL_VertexArrayObject::ResetVAOBinding();
 
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
+
+	s_StudioMDLVertexHead += m_vTotalVerts.size();
+	s_StudioMDLIndexHead += m_vTotalIndices.size();
+
+	#endif
+
+	m_vTotalVerts.clear();
+	m_vTotalIndices.clear();
 }
+
+#if defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+
+void StudioMDL_Model::BindGlobalMesh() noexcept
+{ 
+	s_pStudioMDL_VAO->BindVAO();
+};
+void StudioMDL_Model::UnbindGlobalMesh() noexcept
+{ 
+	GL_VertexArrayObject::ResetVAOBinding();
+};
+
+void StudioMDL_Model::DrawElements(int indexoffset, int indexcount) const noexcept
+{
+	glDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, (const void*)((indexoffset + m_uiIndexOffset) * sizeof(uint32_t)));
+};
+
+#else
+
+void StudioMDL_Model::BindMesh() const noexcept
+{ 
+	m_p3DMesh->BindMesh();
+};
+bool StudioMDL_Model::IsMeshBound() const noexcept
+{ 
+	return m_p3DMesh == GL_Mesh::GetBoundMesh();
+}
+void StudioMDL_Model::UnbindMesh() const noexcept
+{ 
+	GL_Mesh::UnbindMesh();
+};
+
+void StudioMDL_Model::DrawElements(int indexoffset, int indexcount) noexcept
+{
+	m_p3DMesh->DrawElements(indexoffset, indexcount);
+};
+
+#endif
 
 extern char* UTIL_VarArgs_client(const char* format, ...);
 
@@ -287,50 +387,14 @@ StudioMDL_SubModel::StudioMDL_SubModel(mstudiomodel_t* submodel, studiohdr_t* st
 
 	for (int i = 0; i < submodel->nummesh; i++)
 	{
-		m_vMesh.push_back(new StudioMDL_Mesh(pmeshes[i], studiohdr, owner, this));
+		m_vMesh.push_back(new StudioMDL_Mesh(&pmeshes[i], studiohdr, owner, this));
 	}
 
 	m_iNumMesh = m_vMesh.size();
 
 	auto& numvertices = m_pOwner->m_iNumVerts;
 	numvertices += m_iNumVerts;
-
-
-	if (m_vMesh.empty())
-		return;
-
-	int base = m_vMesh[0]->m_iStartVertexData;
-
-	m_vRealVertInfo.resize(m_iNumVerts);
-	for (int i = 0; i < m_iNumVerts; i++)
-	{
-		auto pos = m_pOwner->m_vTotalVerts[i + base].pos;
-		m_vRealVertInfo[i] = Vector(pos.x, pos.y, pos.z);
-	}
-
-	m_vRealNormInfo.resize(m_iNumVerts);
-	for (int i = 0; i < m_iNumVerts; i++)
-	{
-		auto norm = m_pOwner->m_vTotalVerts[i + base].normal;
-		m_vRealNormInfo[i] = Vector(norm.x, norm.y, norm.z) / std::numeric_limits<short>::max();
-	}
 }
-
-Vector* StudioMDL_SubModel::GetVertInfo()
-{
-	if (m_vMesh.empty())
-		return nullptr;
-
-	return m_vRealVertInfo.data();
-};
-Vector* StudioMDL_SubModel::GetNormInfo()
-{
-	if (m_vMesh.empty())
-		return nullptr;
-
-	return m_vRealNormInfo.data();
-};
-
 void CheckNewVertex(studiovert_t vert, std::vector<studiovert_t>& vertlist)
 {
 	for (auto vertex : vertlist)
@@ -364,13 +428,14 @@ struct VertexKey
 	}
 };
 
-StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr, StudioMDL_Model* owner, StudioMDL_SubModel* submodelparent)
+StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t* mesh, studiohdr_t* studiohdr, StudioMDL_Model* owner, StudioMDL_SubModel* submodelparent)
 {
 
 	m_pOwner = owner;
-	m_iSkinRef = mesh.skinref;
+	m_iSkinRef = mesh->skinref;
+	m_pRawMesh = mesh;
 
-	short* ptricmds = (short*)((byte*)studiohdr + mesh.triindex);
+	short* ptricmds = (short*)((byte*)studiohdr + mesh->triindex);
 
 	auto& numvertindexes = m_pOwner->m_iNumVertIndexes;
 
@@ -384,14 +449,11 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 	auto normBoneIndices = ((byte*)studiohdr + submodelparent->m_pRawModel->norminfoindex);
 
 	m_iStartVertex = owner->m_vTotalIndices.size();
-	m_iStartVertexData = owner->m_vTotalVerts.size();
 
-	int numVerts = 0;
 	int numVertsTotal = owner->m_vTotalVerts.size();
 	std::vector<uint32_t>& indices = owner->m_vTotalIndices;
 
 	std::vector<studiomdl_vertbufferdata_t>& vertices = owner->m_vTotalVerts;
-	std::vector<studiomdl_vertbufferdata_t> vertstest;
 
 	int skinnum = 0;
 
@@ -400,7 +462,7 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 	if (skinnum != 0 && skinnum < owner->GetNumSkinFamilies())
 		pskinref += (skinnum * owner->GetNumSkinIndexes());
 
-	int meshskinref = this->GetSkinReference();
+	int meshskinref = this->SkinReference();
 
 	if (meshskinref > (owner->GetNumTextures() - 1))
 		meshskinref = (owner->GetNumTextures() - 1);
@@ -470,10 +532,6 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 
 			normal = normal.Normalize();
 
-			submodelparent->m_vVertBoneInfo.push_back(vertboneid);
-			submodelparent->m_vNormBoneInfo.push_back(normboneid);
-
-
 			studiomdl_vertbufferdata_t vert{};
 			vert.pos[0] = vpos.x;
 			vert.pos[1] = vpos.y;
@@ -494,19 +552,14 @@ StudioMDL_Mesh::StudioMDL_Mesh(const mstudiomesh_t mesh, studiohdr_t* studiohdr,
 			vert.bonedata = bonedata;
 
 			vertices.push_back(vert);
-			vertstest.push_back(vert);
 
-			numVerts++;
+			m_iNumVerts++;
 			numVertsTotal = owner->m_vTotalVerts.size();
 		}
 	}
 
-	m_iNumTriangles = mesh.numtris;
-	m_iNumVerts = numVerts;
-	m_iNumNorms = mesh.numnorms;
-
+	m_iNumIndices = indices.size() - m_iStartVertex;
 	submodelparent->m_iNumVerts += m_iNumVerts;
-	submodelparent->m_iNumTriangles += m_iNumTriangles;
 
 	// assert(m_iNumVerts == owner->m_vTotalIndices.size() - m_iStartVertex);
 }

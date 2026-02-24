@@ -3,7 +3,7 @@
 
 #include "GL_ShaderProgram.h"
 #include "GL_Buffers.h"
-#include "GL_Buffers.h"
+#include "GL_Mesh.h"
 #include "GL_FBO.h"
 #include "GL_ShadowMap.h"
 #include "GL_StateHandler.h"
@@ -163,11 +163,11 @@ void GL_ShadowMap::BlurShadows()
 
 	m_pMainShadowFBO->Bind(GL_FBOHandler::DrawFramebuffer);
 	
-	gBSPRenderer.m_FilterShader->Bind();
-	gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("texture_"), 0);
-	gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("horizontal"), 1);
+	gBSPRenderer.m_FilterShader.Bind();
+	gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("texture_"), 0);
+	gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("horizontal"), 1);
 	
-	gBSPRenderer.m_pScreenQuadVAO->BindVAO();
+	gBSPRenderer.m_p2DScreenMesh->BindMesh();
 	
 	g_GlobalGLState.SetDepthTest(false);
 	g_GlobalGLState.SetCullFace(false);
@@ -189,18 +189,18 @@ void GL_ShadowMap::BlurShadows()
 		if (shadowmap->GetTextureType() == _2DTexture || shadowmap->GetTextureType() == _2DTexture_Storage)
 		{
 			gBSPRenderer.BindGLTexture(GL_TEXTURE0, shadowmap->m_uiTextureHandle);
-			gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 1);
+			gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("gaussian_pass"), 1);
 	
 			//blur shadow into m_pDummyTexture
-			glDrawArrays(GL_TRIANGLES, 0, 6);
+			gBSPRenderer.m_p2DScreenMesh->DrawArrays(0, 6);
 	
 			m_pMainShadowFBO->FramebufferTexture2D(GL_FBOHandler::DrawFramebuffer, GL_FBOHandler::ColorAttachment, GL_TEXTURE_2D, shadowmap->GetTextureID(), 0);
 	
 			gBSPRenderer.BindGLTexture(GL_TEXTURE0, shadowmap->m_pDummyTexture->GetTextureID());
-			gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 0);
+			gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("gaussian_pass"), 0);
 	
 			//now render blurred shadow into the actual shadowmap texture
-			glDrawArrays(GL_TRIANGLES, 0, 6);
+			gBSPRenderer.m_p2DScreenMesh->DrawArrays(0, 6);
 		}
 		else if (shadowmap->GetTextureType() == _CubeMap || shadowmap->GetTextureType() == _CubeMap_Storage)
 		{
@@ -210,20 +210,20 @@ void GL_ShadowMap::BlurShadows()
 			{
 				m_pMainShadowFBO->FramebufferTexture2D(GL_FBOHandler::DrawFramebuffer, GL_FBOHandler::ColorAttachment, GL_TEXTURE_2D, shadowmap->m_pDummyTexture->GetTextureID(), 0);
 		
-				gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 1);
-				gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("cubemap"), 1);
-				gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("cubemap_layer"), i);
+				gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("gaussian_pass"), 1);
+				gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("cubemap"), 1);
+				gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("cubemap_layer"), i);
 		
 				// blur shadow into m_pDummyTexture
-				glDrawArrays(GL_TRIANGLES, 0, 6);
+				gBSPRenderer.m_p2DScreenMesh->DrawArrays(0, 6);
 		
 				m_pMainShadowFBO->FramebufferTexture2D(GL_FBOHandler::DrawFramebuffer, GL_FBOHandler::ColorAttachment, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, shadowmap->GetTextureID(), 0);
 		
-				gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 0);
-				gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("cubemap"), 0);
+				gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("gaussian_pass"), 0);
+				gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("cubemap"), 0);
 		
 				// now render blurred shadow into the actual shadowmap texture
-				glDrawArrays(GL_TRIANGLES, 0, 6);
+				gBSPRenderer.m_p2DScreenMesh->DrawArrays(0, 6);
 			}
 		}
 	}

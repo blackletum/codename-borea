@@ -216,6 +216,7 @@ CBaseMonster *CFists::GetNPCForKarateChop( void )
 
 	return pNPC;
 #endif
+	return nullptr;
 }
 
 void CFists::WeaponIdle()
