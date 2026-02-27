@@ -229,26 +229,29 @@ void CFists::WeaponIdle()
 		// check for karate chop
 		bKarate = false;
 		
-		if( GetNPCForKarateChop() != NULL )
+		if( attack_state != ATTACK_LMB_BIG && attack_state != ATTACK_RMB_BIG )
 		{
-			bKarate = true;
-			// start the animation
-			if( m_pPlayer->pev->weaponanim != ANIM_FISTS_CHOPSTART )
+			if( GetNPCForKarateChop() != NULL )
 			{
-				SendWeaponAnim( ANIM_FISTS_CHOPSTART );
+				bKarate = true;
+				// start the animation
+				if( m_pPlayer->pev->weaponanim != ANIM_FISTS_CHOPSTART )
+				{
+					SendWeaponAnim( ANIM_FISTS_CHOPSTART );
+				}
 			}
-		}
-		else
-		{
-			// stop the animation
-			if( m_pPlayer->pev->weaponanim == ANIM_FISTS_CHOPSTART )
+			else
 			{
-				SendWeaponAnim( ANIM_FISTS_CHOPEND );
+				// stop the animation
+				if( m_pPlayer->pev->weaponanim == ANIM_FISTS_CHOPSTART )
+				{
+					SendWeaponAnim( ANIM_FISTS_CHOPEND );
+				}
 			}
-		}
 
-		if( bKarate )
-			return;
+			if( bKarate )
+				return;
+		}
 	}
 
 	if( m_pPlayer->bBlocking )
