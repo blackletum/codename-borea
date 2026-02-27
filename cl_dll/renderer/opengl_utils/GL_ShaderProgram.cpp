@@ -1,99 +1,69 @@
 
 #include <SDL2/SDL_messagebox.h>
-#include "PlatformHeaders.h"
-#include "Platform.h"
-#include "hud.h"
-#include "cl_util.h"
-#include <unordered_map>
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
-
-#include "renderer/rendererdefs.h"
 
 #include "GL_ShaderProgram.h"
 
 extern SDL_Window* hlWindow;
 
 const std::string glsl_version130 = R"(
-
 #version 130
 #define GLSL_130
-
 )";
 
 const std::string glsl_version140 = R"(
-
 #version 140
 #define GLSL_140
-
 )";
 
 const std::string glsl_version150 = R"(
-
 #version 150
 #define GLSL_150
-
 )";
 
 const std::string glsl_version330 = R"(
-
 #version 330 compatibility
 #define GLSL_330
-
 )";
 
 const std::string glsl_version400 = R"(
-
 #version 400 compatibility
 #define GLSL_400
-
-
 )";
 
 const std::string glsl_version410 = R"(
-
 #version 410 compatibility
 #define GLSL_410
-
 )";
 
 const std::string glsl_version420 = R"(
-
 #version 420 compatibility
 #define GLSL_420
-
 )";
 
 const std::string glsl_version430 = R"(
-
 #version 430 compatibility
 #define GLSL_430
-
 )";
 
 const std::string glsl_version440 = R"(
-
 #version 440 compatibility
 #define GLSL_440
-
 )";
 
 const std::string glsl_version450 = R"(
-
 #version 450 compatibility
 #define GLSL_450
-
 )";
 
 const std::string glsl_version460 = R"(
-
 #version 460 compatibility
 #define GLSL_460
-
 )";
 
-const std::string glsl_versions[] = {  //fucking intel gpus fuck you intel
+const std::string glsl_versions[] = {
 	glsl_version130,
 	glsl_version140,
 	glsl_version150,
@@ -123,7 +93,7 @@ const std::string glsl_engine_defines_vertex = R"(
 	in vec3 aNormal;
 	in vec2 aTexCoord;
 	in vec2 aTexCoordLM;
-	in vec2 aTexCoordSpecular; //(salsatobias: was aTexCoordDetail)
+	in vec2 aTexCoordSpecular;
 	in vec4 aColor;
 	in int aBoneID;
 
@@ -222,10 +192,32 @@ GL_ShaderProgram* GL_ShaderProgram::m_pCurrentProgram = nullptr;
 GLuint GL_ShaderProgram::m_uiCurFreeUBOindex = 0;
 GLint GL_ShaderProgram::m_Driver_UBOAlignment = 0;
 
+static struct shaderlist_t
+{
+	GL_ShaderProgram* shader;
+	shaderlist_t* pNext;
+} s_pListShaders{nullptr, nullptr};
+static bool gl_initialized = false;
+
 GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSrc)
 {
+	m_bValid = false;
+	m_uiCurFreeUBOindex = 0;
+
+	m_pVertexSrc = vertexSrc;
+	m_pFragmentSrc = fragmentSrc;
+
+	if (!gl_initialized)
+	{
+		s_pListShaders.pNext = new shaderlist_t{s_pListShaders.shader, s_pListShaders.pNext};
+		s_pListShaders.shader = this;
+	}
+}
+
+void GL_ShaderProgram::Init()
+{
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_Driver_UBOAlignment);
-	//m_Driver_UBOAlignment = 256;
+	assert(!m_bValid);
 
 	GLuint vertexShader = 123456789;
 	GLuint fragmentShader = 123456789;
@@ -236,8 +228,8 @@ GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSr
 	{
 		errormsg[0] = errormsg[1] = "";
 
-		std::string vertexcode = glsl_versions[i] + glsl_engine_defines_vertex + vertexSrc;
-		std::string fragmentcode = glsl_versions[i] + glsl_engine_defines_fragment + fragmentSrc;
+		std::string vertexcode = glsl_versions[i] + glsl_engine_defines_vertex + m_pVertexSrc;
+		std::string fragmentcode = glsl_versions[i] + glsl_engine_defines_fragment + m_pFragmentSrc;
 
 		errormsg[0] = "\nA OpenGL vertex shader could not be compiled.\n\n";
 
@@ -257,7 +249,6 @@ GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSr
 			fragmentShader = fragmentid;
 			break;
 		}
-
 	}
 
 	if (vertexShader == 123456789)
@@ -294,6 +285,8 @@ GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSr
 		exit(-1);
 	}
 
+	m_bValid = true;
+
 	ShaderPostLink();
 
 	// Cleanup
@@ -303,12 +296,6 @@ GL_ShaderProgram::GL_ShaderProgram(const char* vertexSrc, const char* fragmentSr
 	GenUniformList();
 	GenUBOList();
 	GenAttribList();
-
-}
-
-GL_ShaderProgram::~GL_ShaderProgram()
-{
-	glDeleteProgram(m_uiProgramIndex);
 }
 
 
@@ -332,8 +319,8 @@ const GLuint GL_ShaderProgram::CompileShader(const char* source, const GLuint ty
 		errormsg += "Reach out to the developer of this renderer and relate this issue if you wish to.\n";
 		errormsg += "The program will now close.";
 
-		//SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL OPENGL ERROR", errormsg.c_str(), hlWindow);
-		//exit(-1);
+		// SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL OPENGL ERROR", errormsg.c_str(), hlWindow);
+		// exit(-1);
 
 		glDeleteShader(shader);
 
@@ -358,6 +345,12 @@ void GL_ShaderProgram::ShaderPreLink()
 void GL_ShaderProgram::ShaderPostLink()
 {
 	//nothing to do here yet
+}
+
+void GL_ShaderProgram::Delete()
+{
+	if (m_bValid)
+		glDeleteProgram(m_uiProgramIndex);
 }
 
 extern char* UTIL_VarArgs_client(const char* format, ...);
@@ -485,7 +478,7 @@ GLint GL_ShaderProgram::GetUniformLoc(const char* name)
 
 		//assert(COULDNT_FIND_SHADER_UNIFORM);
 	}
-
+	
 	return returnloc;
 
 }
@@ -546,6 +539,25 @@ void GL_ShaderProgram::ResetShaderBind()
 
 #endif
 
+
+void GL_InitAllShaders(){
+	shaderlist_t* list = &s_pListShaders;
+	while(list->shader != nullptr)
+	{
+		list->shader->Init();
+		list = list->pNext;
+	}
+
+	gl_initialized = true;
+}
+void GL_ShutdownAllShaders(){
+	shaderlist_t* list = &s_pListShaders;
+	while (list->shader != nullptr)
+	{
+		list->shader->Delete();
+		list = list->pNext;
+	}
+}
 
 
 //

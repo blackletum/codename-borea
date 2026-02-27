@@ -38,10 +38,9 @@ Written by Andrew Lucas
 #include "event_args.h"
 
 #include "StudioModelRenderer.h"
-#include "opengl_utils/GL_Buffers.h"
 #include "opengl_utils/GL_ShaderProgram.h"
 #include "opengl_utils/GL_StateHandler.h"
-#include "opengl_utils/GL_VertexArrayObject.h"
+#include "opengl_utils/GL_Mesh.h"
 #include "goldsrc_spriterenderer.h"
 
 CParticleEngine gParticleEngine;
@@ -59,10 +58,13 @@ CParticleEngine gParticleEngine;
 //===========================================
 
 GL_BEGIN_ATTRIBLIST(ParticleVertex)
-		GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos,		3,	GL_FLOAT,			ParticleVertex, pos)
-		GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord,			2,	GL_FLOAT,			ParticleVertex, uv)
-		GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Color,	4,	GL_UNSIGNED_BYTE,	ParticleVertex, color)
-GL_END_ATTRIBLIST(ParticleVertex)
+GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, pos)
+GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, uv)
+GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Color, 4, GL_UNSIGNED_BYTE, color)
+GL_END_ATTRIBLIST()
+
+static GL_Mesh* s_pParticleBuffer;
+static GL_ShaderProgram s_ParticleShader(glsl_particle_vp, glsl_particle_fp);
 
 /*
 ====================
@@ -76,27 +78,13 @@ void CParticleEngine::Init()
 	m_pCvarParticleDebug = gEngfuncs.pfnRegisterVariable("r_particles_debug", "0", 0);
 	m_pCvarGravity = gEngfuncs.pfnGetCvarPointer("sv_gravity");
 
-	m_ParticleShader =  new GL_ShaderProgram(glsl_particle_vp, glsl_particle_fp);
+	s_ParticleShader.Bind();
+	s_ParticleShader.Uniform1i(s_ParticleShader.GetUniformLoc("texture0"), 0);
 
-	m_ParticleShader->Bind();
-	m_ParticleShader->Uniform1i(m_ParticleShader->GetUniformLoc("texture0"), 0);
-
-	m_pParticleVAO = new GL_VertexArrayObject();
-	m_pParticleVAO->BindVAO();
+	s_pParticleBuffer = new GL_Mesh(4 * 100000, ParticleVertex::GetAttribLayout(), false);
+	s_pParticleBuffer->SetDrawMode(GL_QUADS);
 	
-	m_pQuadBuffer = new GL_BufferHandler();
-	
-	m_pQuadBuffer->Bind(GL_BufferHandler::ArrayBuffer);
-	//limit of 100 thousand particles, i dont think this limit can be reached
-	//9600000 bytes = 9.6 mb
-	m_pQuadBuffer->BufferData(GL_BufferHandler::ArrayBuffer, sizeof(ParticleQuad) * 100000, nullptr, GL_BufferHandler::DynamicDraw);
-	
-	m_pParticleVAO->SetVertexAttributes(ParticleVertex::GetAttribLayout());
-	
-	GL_VertexArrayObject::ResetVAOBinding();
-
 	GL_ShaderProgram::ResetShaderBind();
-	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 };
 
 /*
@@ -1798,7 +1786,7 @@ void CParticleEngine::DrawParticles()
 	if (particlebatch.empty())
 		return;
 
-	m_ParticleShader->Bind();
+	s_ParticleShader.Bind();
 
 	DrawQuadList(particlebatch, psystem);
 
@@ -1811,11 +1799,9 @@ void CParticleEngine::DrawQuadList(std::unordered_map<std::pair<GLuint, int>, st
 	g_GlobalGLState.SetDepthWrite(false);
 	g_GlobalGLState.SetCullFace(false);
 
-	m_pParticleVAO->BindVAO();
-
-	static int projviewmatrixloc = m_ParticleShader->GetUniformLoc("projviewmatrix");
+	static int projviewmatrixloc = s_ParticleShader.GetUniformLoc("projviewmatrix");
 	
-	m_ParticleShader->UniformMatrix4fv(projviewmatrixloc, 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix));
+	s_ParticleShader.UniformMatrix4fv(projviewmatrixloc, 1, GL_FALSE, glm::value_ptr(gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix));
 
 	std::vector<ParticleVertex> verts;
 	for (auto batch : particlebatch)
@@ -1830,8 +1816,9 @@ void CParticleEngine::DrawQuadList(std::unordered_map<std::pair<GLuint, int>, st
 			verts.push_back(quad.vert[3]);
 		}
 	}
-	m_pQuadBuffer->Bind(GL_BufferHandler::ArrayBuffer);
-	m_pQuadBuffer->BufferSubData(GL_BufferHandler::ArrayBuffer, 0, sizeof(ParticleVertex) * verts.size(), verts.data());
+	s_pParticleBuffer->BindMesh();
+
+	s_pParticleBuffer->ModifyMesh(verts.data(), verts.size(), 0);
 
 	int offset = 0;
 	int currendermode = -1;
@@ -1869,10 +1856,10 @@ void CParticleEngine::DrawQuadList(std::unordered_map<std::pair<GLuint, int>, st
 			gBSPRenderer.BindGLTexture(GL_TEXTURE0, batch.first.first);
 		}
 
-		glDrawArrays(GL_QUADS, offset, batch.second.size() * 4);
+		s_pParticleBuffer->DrawArrays(offset, batch.second.size() * 4);
 		offset += batch.second.size() * 4;
 	}
-
+		
 	g_GlobalGLState.SetBlend(false);
 	g_GlobalGLState.SetDepthWrite(true);
 	g_GlobalGLState.SetCullFace(true);

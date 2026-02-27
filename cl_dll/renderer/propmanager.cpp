@@ -41,20 +41,17 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "opengl_utils/GL_StateHandler.h"
 #include "opengl_utils/GL_ShaderProgram.h"
 #include "opengl_utils/GL_VertexArrayObject.h"
+#include "opengl_utils/GL_Mesh.h"
 
 #include "StudioModelRenderer.h"
 #include "StudioMDL_MeshGen.h"
 
 //===========================================
-// GLSL SHADER START
+// OPENGL START
 //
 //===========================================
 #include "glshaders/cable_glsl.h"
 
-//===========================================
-// GLSL SHADER END
-//
-//===========================================
 
 struct tempvert_struct_t
 {
@@ -65,10 +62,26 @@ struct tempvert_struct_t
 };
 
 GL_BEGIN_ATTRIBLIST(tempvert_struct_t)
-	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, tempvert_struct_t, pos)
-	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, tempvert_struct_t, tangent)
-	GL_DEFINE_INTEGERATTRIB(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_SHORT, tempvert_struct_t, width)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, pos)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, tangent)
+	GL_DEFINE_INTEGERATTRIB(GL_ShaderProgram::ShaderAttribs::StudioMDL_BoneID, 1, GL_UNSIGNED_SHORT, width)
 GL_END_ATTRIBLIST(tempvert_struct_t)
+
+GL_BEGIN_ATTRIBLIST(Default3DVert_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, pos)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::Normal, 3, GL_FLOAT, normal)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::TexCoord, 2, GL_FLOAT, texcoord)
+GL_END_ATTRIBLIST()
+
+static GL_ShaderProgram s_CableShader(glsl_cable_vp, glsl_cable_fp);
+
+GL_Mesh* g_pStaticMeshBuffer; //not static, used in StudioModelRenderer.cpp
+static GL_Mesh* s_pCableMeshBuffer;
+
+//===========================================
+// OPENGL END
+//
+//===========================================
 
 CPropManager gPropManager;
 
@@ -86,7 +99,7 @@ entextradata_t* AllocExtraData()
 
 entextrainfo_t* AllocExtraInfo()
 {
-	auto& ptr = gPropManager.m_pExtraInfo.emplace_back(std::make_unique<entextrainfo_t>());
+	auto& ptr = gPropManager.pExtraInfo.emplace_back(std::make_unique<entextrainfo_t>());
 	return ptr.get();
 }
 
@@ -117,7 +130,7 @@ void CPropManager::Reset(void)
 
 	m_pExtraData.clear();
 
-	m_pExtraInfo.clear();
+	pExtraInfo.clear();
 
 	m_pCurrentExtraData = NULL;
 
@@ -158,19 +171,6 @@ void CPropManager::Reset(void)
 		m_iEntDataSize = NULL;
 	}
 
-	if (m_pVertexData)
-	{
-		delete[] m_pVertexData;
-		m_pVertexData = NULL;
-		m_iNumTotalVerts = NULL;
-	}
-
-	if (m_pIndexBuffer)
-	{
-		delete[] m_pIndexBuffer;
-		m_pIndexBuffer = NULL;
-	}
-
 	m_pCables.clear();
 }
 
@@ -184,9 +184,8 @@ void CPropManager::Init(void)
 {
 	m_pCvarDrawClientEntities = CVAR_CREATE("r_drawstudiomdl_staticprops", "1", 0);
 
-	m_CableShader = new GL_ShaderProgram(glsl_cable_vp, glsl_cable_fp);
-	m_CableShader->Bind();
-	m_CableShader->Uniform1i(m_CableShader->GetUniformLoc("wireframe"), 0);
+	s_CableShader.Bind();
+	s_CableShader.Uniform1i(s_CableShader.GetUniformLoc("wireframe"), 0);
 }
 
 /*
@@ -756,25 +755,14 @@ SetupVBO
 */
 void CPropManager::SetupVBO(void)
 {
-	if (m_pStaticModelBuffer)
-		delete m_pStaticModelBuffer;
+	if (g_pStaticMeshBuffer)
+		delete g_pStaticMeshBuffer;
 
-	if (m_pStaticModelVAO)
-		delete m_pStaticModelVAO;
+	if (s_pCableMeshBuffer)
+		delete s_pCableMeshBuffer;
 
-	if (m_pCableVertsBuffer)
-		delete m_pCableVertsBuffer;
-
-	if (m_pCableVertsVAO)
-		delete m_pCableVertsVAO;
-
-	m_pStaticModelBuffer = nullptr;
-	
-	m_pStaticModelVAO = nullptr;
-
-	m_pCableVertsBuffer = nullptr;
-
-	m_pCableVertsVAO = nullptr;
+	g_pStaticMeshBuffer = nullptr;
+	s_pCableMeshBuffer = nullptr;
 
 	if (m_pHeaders.empty())
 		return;
@@ -790,11 +778,8 @@ void CPropManager::SetupVBO(void)
 		iTotalIndexes += header->pVBOHeader.numindexes;
 	}
 
-	m_pVertexData = new brushvertex_t[m_iNumTotalVerts];
-	memset(m_pVertexData, 0, sizeof(brushvertex_t) * m_iNumTotalVerts);
-
+	m_pVertexData = new Default3DVert_t[m_iNumTotalVerts];
 	m_pIndexBuffer = new unsigned int[iTotalIndexes];
-	memset(m_pIndexBuffer, 0, sizeof(unsigned int) * iTotalIndexes);
 
 	int iVertexOffset = 0;
 	int iIndexOffset = 0;
@@ -803,7 +788,7 @@ void CPropManager::SetupVBO(void)
 		modeldata_t* header = header_.get();
 
 		memcpy(&m_pVertexData[iVertexOffset], header->pVBOHeader.pBufferData,
-			sizeof(brushvertex_t) * header->pVBOHeader.numverts);
+			sizeof(Default3DVert_t) * header->pVBOHeader.numverts);
 
 		for (int j = 0; j < header->pVBOHeader.numindexes; j++)
 			header->pVBOHeader.indexes[j] += iVertexOffset;
@@ -848,15 +833,8 @@ void CPropManager::SetupVBO(void)
 				VectorSubtract(cable.vpoints[0], cable.vpoints[j], vTangent);
 			}
 
-			//CrossProduct(vTangent, -vTangent, vRight);
-
-			//vRight = vRight.Normalize();
-
 			Vector vert1 = cable.vpoints[j];
 			Vector vert2 = cable.vpoints[j];
-			//VectorMA(cable.vpoints[j], cable.iwidth, vRight, vert1);
-			//VectorMA(cable.vpoints[j], -cable.iwidth, vRight, vert2);
-
 
 			if (j == 0)
 			{
@@ -887,26 +865,16 @@ void CPropManager::SetupVBO(void)
 
 	m_iNumCableVerts = cabletris.size() * 3;
 
-	m_pStaticModelVAO = new GL_VertexArrayObject();
+	g_pStaticMeshBuffer = new GL_Mesh(m_iNumTotalVerts, Default3DVert_t::GetAttribLayout(), true, m_pVertexData);
+	g_pStaticMeshBuffer->SetIndices(m_pIndexBuffer, iTotalIndexes);
+	g_pStaticMeshBuffer->SetDrawMode(GL_TRIANGLES);
 
-	m_pStaticModelBuffer = new GL_BufferHandler();
-	m_pStaticModelBuffer->Bind(GL_BufferHandler::ElementArrayBuffer);
-	m_pStaticModelBuffer->BufferData(GL_BufferHandler::ElementArrayBuffer, iTotalIndexes * sizeof(unsigned int), m_pIndexBuffer, GL_BufferHandler::StaticDraw);
+	delete[] m_pVertexData;
+	delete[] m_pIndexBuffer;
 
-	//we set up m_pStaticModelVAO in CBSPRenderer::GenerateVertexArray() since we need m_pMainBuffer
+	s_pCableMeshBuffer = new GL_Mesh(cabletris.size() * 3, tempvert_struct_t::GetAttribLayout(), true, cabletris.data());
+	s_pCableMeshBuffer->SetDrawMode(GL_TRIANGLES);
 
-	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ElementArrayBuffer);
-
-	m_pCableVertsVAO = new GL_VertexArrayObject();
-	m_pCableVertsVAO->BindVAO();
-
-	m_pCableVertsBuffer = new GL_BufferHandler;
-	m_pCableVertsBuffer->Bind(GL_BufferHandler::ArrayBuffer);
-	m_pCableVertsBuffer->BufferData(GL_BufferHandler::ArrayBuffer, (cabletris.size() * 3) * sizeof(tempvert_struct_t), cabletris.data(), GL_BufferHandler::StaticDraw);
-
-	m_pCableVertsVAO->SetVertexAttributes(tempvert_struct_t::GetAttribLayout());
-
-	GL_VertexArrayObject::ResetVAOBinding();
 }
 
 void CPropManager::HandleFoliageProp(cl_entity_s* ent, entextradata_t* extradata)
@@ -938,9 +906,7 @@ void CPropManager::HandleFoliageProp(cl_entity_s* ent, entextradata_t* extradata
 			closest_distance = distance;
 		}
 		else
-		{
 			continue;
-		}
 
 		closest_player = _entity;
 	}
@@ -1054,10 +1020,10 @@ void CPropManager::RenderProps(bool bSkybox)
 	if (g_StudioRenderer.m_pCvarDrawEntities->value < 1)
 		return;
 
-	if (m_pStaticModelVAO)
-		m_pStaticModelVAO->BindVAO();
-	else
+	if (!g_pStaticMeshBuffer)
 		return;
+
+	g_pStaticMeshBuffer->BindMesh();
 
 	if (m_pCvarDrawClientEntities->value == 2)
 		g_GlobalGLState.SetDepthTest(false);
@@ -1293,9 +1259,9 @@ void CPropManager::DrawCables(void)
 	if (!m_pCvarDrawClientEntities->value || m_pCables.empty())
 		return;
 
-	static int projviewmatrix_loc = m_CableShader->GetUniformLoc("projviewmatrix");
-	static int renderorigin_loc = m_CableShader->GetUniformLoc("renderorigin");
-	static int wireframe_loc = m_CableShader->GetUniformLoc("wireframe");
+	static int projviewmatrix_loc = s_CableShader.GetUniformLoc("projviewmatrix");
+	static int renderorigin_loc = s_CableShader.GetUniformLoc("renderorigin");
+	static int wireframe_loc = s_CableShader.GetUniformLoc("wireframe");
 
 	g_GlobalGLState.SetCullFace(false);
 	g_GlobalGLState.SetBlend(false);
@@ -1303,25 +1269,26 @@ void CPropManager::DrawCables(void)
 	auto proj = gBSPRenderer.m_ProjectionMatrix;
 	auto view = gBSPRenderer.m_ViewMatrix;
 
-	m_CableShader->Bind();
-	m_CableShader->UniformMatrix4fv(projviewmatrix_loc, 1, GL_FALSE, glm::value_ptr(proj * view));
-	m_CableShader->Uniform3fv(renderorigin_loc, 1, gBSPRenderer.m_vRenderOrigin);
+	s_CableShader.Bind();
+	s_CableShader.UniformMatrix4fv(projviewmatrix_loc, 1, GL_FALSE, glm::value_ptr(proj * view));
+	s_CableShader.Uniform3fv(renderorigin_loc, 1, gBSPRenderer.m_vRenderOrigin);
 
-	m_pCableVertsVAO->BindVAO();
-
-	glDrawArrays(GL_TRIANGLES, 0, m_iNumCableVerts); //beautiful
+	s_pCableMeshBuffer->BindMesh();
+	s_pCableMeshBuffer->DrawArrays(0, m_iNumCableVerts);
 	if (gBSPRenderer.m_pCvarWireFrame->value)
 	{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		s_pCableMeshBuffer->SetDrawMode(GL_LINES);
 
-		m_CableShader->Uniform1i(wireframe_loc, 1);
-		glDrawArrays(GL_LINES, 0, m_iNumCableVerts);
-		m_CableShader->Uniform1i(wireframe_loc, 0);
+		s_CableShader.Uniform1i(wireframe_loc, 1);
+		s_pCableMeshBuffer->DrawArrays(0, m_iNumCableVerts);
+		s_CableShader.Uniform1i(wireframe_loc, 0);
 
+		s_pCableMeshBuffer->SetDrawMode(GL_TRIANGLES);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	GL_VertexArrayObject::ResetVAOBinding();
+	GL_Mesh::UnbindMesh();
 
 	g_GlobalGLState.SetCullFace(true);
 }
@@ -1343,10 +1310,10 @@ void CPropManager::RenderPropsSolid(void)
 	if (g_StudioRenderer.m_pCvarDrawEntities->value < 1)
 		return;
 
-	if (!m_pStaticModelVAO)
+	if (!g_pStaticMeshBuffer)
 		return;
 
-	m_pStaticModelVAO->BindVAO();
+	g_pStaticMeshBuffer->BindMesh();
 
 	g_StudioRenderer.StudioSetupPropDraw(true);
 

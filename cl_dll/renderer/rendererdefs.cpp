@@ -48,6 +48,7 @@ Written by Andrew Lucas, Richard Rohac, BUzer, Laurie, Botman and Id Software
 #include "opengl_utils/GL_DebugInterface.h"
 #include "opengl_utils/GL_ShadowMap.h"
 #include "opengl_utils/GL_StateHandler.h"
+#include "opengl_utils/GL_Mesh.h"
 
 #include "BSPModel_Gen.h"
 
@@ -269,19 +270,6 @@ int IsEntityTransparent(cl_entity_t* e)
 		return FALSE;
 	else
 		return TRUE;
-}
-
-//==========================
-//	IsPitchReversed
-//
-//==========================
-int IsPitchReversed(float pitch)
-{
-	int quadrant = int(pitch / 90) % 4;
-	if ((quadrant == 1) || (quadrant == 2))
-		return -1;
-
-	return 1;
 }
 
 
@@ -718,9 +706,9 @@ void DrawQuadDebugTest()
 	if (!gBSPRenderer.m_pSunShadowMap)
 		return;
 
-	gBSPRenderer.m_FilterShader->Bind();
-	gBSPRenderer.m_FilterShader->Uniform1i(gBSPRenderer.m_FilterShader->GetUniformLoc("gaussian_pass"), 0);
-	gBSPRenderer.m_pScreenQuadVAO->BindVAO();
+	gBSPRenderer.m_FilterShader.Bind();
+	gBSPRenderer.m_FilterShader.Uniform1i(gBSPRenderer.m_FilterShader.GetUniformLoc("gaussian_pass"), 0);
+	gBSPRenderer.m_p2DScreenMesh->BindMesh();
 
 	gBSPRenderer.BindGLTexture(GL_TEXTURE0, gBSPRenderer.m_iEngineLightmapIndex);
 
@@ -728,10 +716,10 @@ void DrawQuadDebugTest()
 	g_GlobalGLState.SetCullFace(false);
 	g_GlobalGLState.SetDepthTest(false);
 
-	glDrawArrays(GL_TRIANGLES, gBSPRenderer.quad_TopRight, 6);
+	gBSPRenderer.m_p2DScreenMesh->DrawArrays(gBSPRenderer.quad_TopRight, 6);
 
 	GL_ShaderProgram::ResetShaderBind();
-	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
+	GL_Mesh::UnbindMesh();
 }
 
 int V_FadeAlpha()
@@ -844,10 +832,10 @@ void DrawFramebufferToScreen()
 	GL_FBOHandler::SetMainGameFBO(0);
 	GL_FBOHandler::ResetToMainFBO();
 
-	gBSPRenderer.m_BlacknwhiteShader->Bind();
-	gBSPRenderer.m_BlacknwhiteShader->Uniform1f(gBSPRenderer.m_BlacknwhiteShader->GetUniformLoc("time"), gEngfuncs.GetAbsoluteTime());
-	gBSPRenderer.m_BlacknwhiteShader->Uniform1i(gBSPRenderer.m_BlacknwhiteShader->GetUniformLoc("grain_strength"), gBSPRenderer.m_pCvarFilmGrainStrength->value);
-	gBSPRenderer.m_pScreenQuadVAO->BindVAO();
+	gBSPRenderer.m_BlacknwhiteShader.Bind();
+	gBSPRenderer.m_BlacknwhiteShader.Uniform1f(gBSPRenderer.m_BlacknwhiteShader.GetUniformLoc("time"), gEngfuncs.GetAbsoluteTime());
+	gBSPRenderer.m_BlacknwhiteShader.Uniform1i(gBSPRenderer.m_BlacknwhiteShader.GetUniformLoc("grain_strength"), gBSPRenderer.m_pCvarFilmGrainStrength->value);
+	gBSPRenderer.m_p2DScreenMesh->BindMesh();
 
 	gBSPRenderer.BindGLTexture(GL_TEXTURE0, gBSPRenderer.m_pMainFBOTexture->GetTextureID());
 
@@ -855,10 +843,10 @@ void DrawFramebufferToScreen()
 	g_GlobalGLState.SetCullFace(false);
 	g_GlobalGLState.SetDepthTest(false);
 
-	glDrawArrays(GL_TRIANGLES, gBSPRenderer.quad_FullScreen, 6);
+	gBSPRenderer.m_p2DScreenMesh->DrawArrays(gBSPRenderer.quad_FullScreen, 6);
 
 	GL_ShaderProgram::ResetShaderBind();
-	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
+	GL_Mesh::UnbindMesh();
 }
 
 /*
@@ -1093,6 +1081,8 @@ void R_Init(void)
 
 	glewInit();
 
+	GL_InitAllShaders();
+
 	g_IGLDebug.Initialize();
 
 	gpTempEnts.clear();
@@ -1153,4 +1143,6 @@ void R_Shutdown(void)
 	gPropManager.Shutdown();
 	gWaterShader.Shutdown();
 	gParticleEngine.Shutdown();
+
+	GL_ShutdownAllShaders();
 }

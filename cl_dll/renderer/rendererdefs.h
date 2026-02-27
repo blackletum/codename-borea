@@ -212,7 +212,6 @@ extern void R_DrawTransparentTriangles(void);
 
 extern int IsEntityMoved(cl_entity_t* e);
 extern int IsEntityTransparent(cl_entity_t* e);
-extern int IsPitchReversed(float pitch);
 extern int BoxOnPlaneSide(Vector emins, Vector emaxs, mplane_t* p);
 
 extern char* strLower(char* str);
@@ -230,6 +229,8 @@ extern byte* ResizeArray(byte* pOriginal, int iSize, int iCount);
 extern void R_Init(void);
 extern void R_VidInit(void);
 extern void R_Shutdown(void);
+
+__forceinline glm::vec3 Vector_GLMvec3(const Vector& vec) { return glm::vec3(vec.x, vec.y, vec.z); }
 
 
 //

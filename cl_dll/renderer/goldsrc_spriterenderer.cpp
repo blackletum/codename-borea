@@ -22,7 +22,7 @@
 #include "renderer/goldsrc_beamrenderer.h"
 #include "opengl_utils/GL_StateHandler.h"
 #include "opengl_utils/GL_ShaderProgram.h"
-#include "opengl_utils/GL_VertexArrayObject.h"
+#include "opengl_utils/GL_Mesh.h"
 
 #include <algorithm> //std::clamp
 #include "client_state.h"
@@ -30,7 +30,6 @@
 
 #include "studio.h"
 #include "StudioModelRenderer.h"
-#include "opengl_utils/GL_Buffers.h"
 
 #include "goldsrc_spriterenderer.h"
 
@@ -61,38 +60,28 @@ struct sprite_quad_t
 static std::vector<cl_entity_s*> m_vSpriteDrawList;
 static std::unordered_map<int, std::vector<sprite_quad_t>> m_vSpriteQuadList;
 
-static GL_BufferHandler* m_pSpriteQuadBuffer;
-static GL_ShaderProgram* m_pSpriteShader;
-static GL_VertexArrayObject* m_pSpriteVAO;
+static GL_Mesh* m_pSpriteQuadBuffer;
+static GL_ShaderProgram m_pSpriteShader(glsl_sprite_vp, glsl_sprite_fp);
 
 static cl_entity_s* m_pCurrentEntity;
 
 GL_BEGIN_ATTRIBLIST(sprite_vertex_t)
-	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, sprite_vertex_t, point)
-	GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Color, 4, GL_UNSIGNED_BYTE, sprite_vertex_t, color)
-GL_END_ATTRIBLIST(sprite_vertex_t)
+	GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, point)
+	GL_DEFINE_NORMALIZEDATTRIB(GL_ShaderProgram::ShaderAttribs::Color, 4, GL_UNSIGNED_BYTE, color)
+GL_END_ATTRIBLIST()
 
 
 
 void CSpriteRenderer::Init()
 {
-	m_pSpriteVAO = new GL_VertexArrayObject();
-	m_pSpriteVAO->BindVAO();
 
-	m_pSpriteQuadBuffer = new GL_BufferHandler();
-	m_pSpriteQuadBuffer->Bind(GL_BufferHandler::ArrayBuffer);
-	//enough space for 8196 sprites. occupies 1 mb in vram
-	m_pSpriteQuadBuffer->BufferData(GL_BufferHandler::ArrayBuffer, (sizeof(sprite_vertex_t) * 4) * 8196, nullptr, GL_BufferHandler::StaticDraw);
+	m_pSpriteQuadBuffer = new GL_Mesh(4 * 8192, sprite_vertex_t::GetAttribLayout(), false);
+	m_pSpriteQuadBuffer->SetDrawMode(GL_QUADS);
 
-	m_pSpriteShader = new GL_ShaderProgram(glsl_sprite_vp, glsl_sprite_fp);
-	m_pSpriteShader->Bind();
-	m_pSpriteShader->Uniform1i(m_pSpriteShader->GetUniformLoc("texture0"), 0);
+	m_pSpriteShader.Bind();
+	m_pSpriteShader.Uniform1i(m_pSpriteShader.GetUniformLoc("texture0"), 0);
 
-	m_pSpriteVAO->SetVertexAttributes(sprite_vertex_t::GetAttribLayout());
-
-	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::ArrayBuffer);
 	GL_ShaderProgram::ResetShaderBind();
-	GL_VertexArrayObject::ResetVAOBinding();
 }
 
 void CSpriteRenderer::VidInit()
@@ -142,7 +131,7 @@ void CSpriteRenderer::DrawSpriteEntities()
 void CSpriteRenderer::DrawSpriteQuads()
 {
 	static std::vector<sprite_vertex_t> verts;
-	static int projviewmatrix_loc = m_pSpriteShader->GetUniformLoc("projviewmatrix");
+	static int projviewmatrix_loc = m_pSpriteShader.GetUniformLoc("projviewmatrix");
 
 	for (auto& entry : m_vSpriteQuadList)
 	{
@@ -154,14 +143,11 @@ void CSpriteRenderer::DrawSpriteQuads()
 			verts.push_back(quads.vert[3]);
 		}
 	}
-	m_pSpriteShader->Bind();
-	m_pSpriteShader->UniformMatrix4fv(projviewmatrix_loc, 1, false, glm::value_ptr(gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix));
+	m_pSpriteShader.Bind();
+	m_pSpriteShader.UniformMatrix4fv(projviewmatrix_loc, 1, false, glm::value_ptr(gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix));
 
-
-	m_pSpriteVAO->BindVAO();
-	m_pSpriteQuadBuffer->Bind(GL_BufferHandler::ArrayBuffer);
-	m_pSpriteQuadBuffer->BufferSubData(GL_BufferHandler::ArrayBuffer, 0, verts.size() * sizeof(sprite_vertex_t), verts.data());
-
+	m_pSpriteQuadBuffer->BindMesh();
+	m_pSpriteQuadBuffer->ModifyMesh(verts.data(), verts.size(), 0);
 
 	int offset = 0;
 	int currendermode = -999;
@@ -211,7 +197,7 @@ void CSpriteRenderer::DrawSpriteQuads()
 			}
 
 			int drawcount = entry.second.size() * 4;
-			glDrawArrays(GL_QUADS, offset, 4);
+			m_pSpriteQuadBuffer->DrawArrays(offset, 4);
 			offset += 4;
 		}
 	}
@@ -224,7 +210,7 @@ void CSpriteRenderer::DrawSpriteQuads()
 	g_GlobalGLState.SetBlend(false);
 
 	GL_ShaderProgram::ResetShaderBind();
-	GL_VertexArrayObject::ResetVAOBinding();
+	GL_Mesh::UnbindMesh();
 }
 
 void CSpriteRenderer::QuadifySpriteEnt(cl_entity_t* e)

@@ -6,28 +6,29 @@ char glsl_gaussianblur_vp[] = R"(
 	out vec2 frag_texcoord;
 
 	uniform bool flipped;
+
+	const vec2 uv[6] = {
+	    vec2(1.0, 1.0),
+	    vec2(0.0, 1.0),
+	    vec2(0.0, 0.0),
+	    vec2(0.0, 0.0),
+	    vec2(1.0, 0.0),
+	    vec2(1.0, 1.0)
+	};
+
+	const vec2 uv_flipped[6] = {
+	    vec2(1.0, 0.0),
+	    vec2(0.0, 0.0),
+	    vec2(0.0, 1.0),
+	    vec2(0.0, 1.0),
+	    vec2(1.0, 1.0),
+	    vec2(1.0, 0.0)
+	};
+
 	
 	void main()
 	{
 		int vertIndex  = gl_VertexID % 6;
-
-		vec2 uv[6] = vec2[](
-		    vec2(1.0, 1.0),
-		    vec2(0.0, 1.0),
-		    vec2(0.0, 0.0),
-		    vec2(0.0, 0.0),
-		    vec2(1.0, 0.0),
-		    vec2(1.0, 1.0)
-		);
-
-		vec2 uv_flipped[6] = vec2[](
-		    vec2(1.0, 0.0),
-		    vec2(0.0, 0.0),
-		    vec2(0.0, 1.0),
-		    vec2(0.0, 1.0),
-		    vec2(1.0, 1.0),
-		    vec2(1.0, 0.0)
-		);
 
 		if(!flipped)
 			frag_texcoord = uv[vertIndex];

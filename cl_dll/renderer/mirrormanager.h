@@ -95,10 +95,6 @@ public:
 
 	int m_iNumPasses;
 
-	GL_FBOHandler* mirrorFBO;
-	GL_RBOHandler* mirrorDepthBuffer;
-	GL_ShaderProgram* m_MirrorShader;
-
 	double m_fRenderTime;
 };
 

@@ -68,7 +68,6 @@ char glsl330_studiomdl_vert[] = R"(
 	
 	out vec4 vertexdiffusecolor;
 	out vec4 vertexspecularcolor;
-	out vec4 projectedCoord;
 	out vec2 texcoord;
 	out vec3 fragPos;
 
@@ -266,7 +265,6 @@ char glsl330_studiomdl_frag[] = R"(
 
 	in vec3 fragPos;
 	in vec2 texcoord;
-	in vec4 projectedCoord;
 	in vec4 vertexdiffusecolor;
 	in vec4 vertexspecularcolor;
 
@@ -316,13 +314,14 @@ char glsl330_studiomdl_frag[] = R"(
 
 
 	uniform sampler2D texture0;
-
 	uniform bool wireframe;
-
+	uniform bool studiodecal;
 	uniform int texture_flags;
 
-	uniform bool studiodecal;
-	uniform vec2 decalsize;
+	const vec4 wireframe_color[2] = {
+		vec4(0, 1, 0, 1),	//solid green for models
+		vec4(1, 0, 0, 1)	//solid red for studiomdl decals
+	};
 
 	float GetFogFactor()
 	{
@@ -336,10 +335,7 @@ char glsl330_studiomdl_frag[] = R"(
 
 	void frag_HandleWireframe()
 	{
-		if(!studiodecal)
-			gl_FragColor = vec4(0, 1, 0, 1); //solid green for models
-		else
-			gl_FragColor = vec4(1, 0, 0, 1); //solid red for studiomdl decals
+		gl_FragColor = studiodecal ? wireframe_color[1] : wireframe_color[0];
 	}
 
 	void main()

@@ -309,7 +309,6 @@ const char glsl330_world_fp[] = R"(
 
 	float sampleShadowVariance(sampler2D shadowMap, vec2 projCoord)
 	{
-		
 		float linearfragdepth = length(fragPos - light_pos) / light_radius;
 
 		vec2 moments = texture(shadowMap, projCoord).xy;
@@ -321,11 +320,6 @@ const char glsl330_world_fp[] = R"(
 		float pMax = variance  / ( variance + sqr(d) );				//(pMax = ( σ² / (σ² + t²) )
 		
 		return min(max(p, pMax), 1.0);
-	}
-
-	float linstep(float mi, float ma, float v)
-	{
-	    return clamp ((v - mi)/(ma - mi), 0, 1);
 	}
 
 	float sampleSunShadow(sampler2D shadowMap, vec2 projCoord)
@@ -380,25 +374,9 @@ const char glsl330_world_fp[] = R"(
 		return min(max(p, pMax), 1.0);
 	}
 
-	float random(vec2 seed) {
-	    return fract(sin(dot(seed.xy, vec2(12.9898, 78.233))) * 43758.5453);
-	}
-
-	vec3 sampleOffsetDirections[20] = vec3[]
-	(
-	   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
-	   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
-	   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
-	   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
-	   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
-	);   
-
 	void DiscardLightFragment()
 	{
-		if(!onlyshadow)
-				gl_FragColor = vec4(0, 0, 0, 0);
-			else
-				gl_FragColor = vec4(1, 1, 1, 1);
+		gl_FragColor = onlyshadow ? vec4(1, 1, 1, 1) : vec4(0, 0, 0, 0);
 	}
 
 	void frag_HandleSunShadow()
@@ -435,6 +413,13 @@ const char glsl330_world_fp[] = R"(
 
 	void frag_HandleSpotlight()
 	{
+		float distance = length(fragPos - light_pos);
+		if(distance > light_radius)
+		{
+			DiscardLightFragment();
+			return;
+		}
+
 		float dotprod = dot(-fragNormal, fragPos - light_pos);
 		if(dotprod <= 0.0)
 		{
@@ -445,8 +430,6 @@ const char glsl330_world_fp[] = R"(
 		vec3 projCoord = projTexCoord.xyz / projTexCoord.w;
 		projCoord.xyz *= 0.5;
 		projCoord.xyz += 0.5;
-		vec4 pixel = texture2D(spotlight_texture, projCoord.xy);
-		pixel.rgb *= pixel.w;
 
 		if (projCoord.x < 0.0 || projCoord.x > 1.0 ||
 			projCoord.y < 0.0 || projCoord.y > 1.0 ||
@@ -456,30 +439,17 @@ const char glsl330_world_fp[] = R"(
 			return;
 		}
 
-		float distance = length(fragPos - light_pos);
-		if(distance > light_radius)
-		{
-			if(!onlyshadow)
-				gl_FragColor = vec4(0, 0, 0, 0);
-			else
-				gl_FragColor = vec4(1, 1, 1, 1);
-			return;
-		}
-
-		float attenuation = 1.0 - (distance / light_radius);
-		
-
+		vec4 pixel = texture2D(spotlight_texture, projCoord.xy);
+		pixel.rgb *= pixel.w;
 		if(shadow)
 		{
 			float shadowPixel = sampleShadowVariance(shadow_texture, projCoord.xy);
 			
 			pixel.rgb *= vec3(shadowPixel);
 		}		
-		
-		attenuation = clamp(attenuation, 0.0, 1.0);
-		
+
+		float attenuation = clamp(1.0 - (distance / light_radius), 0.0, 1.0);
 		pixel.rgb *= vec3(attenuation);
-		
 		pixel.rgb *= light_color;
 
 		gl_FragColor = pixel;
@@ -501,10 +471,7 @@ const char glsl330_world_fp[] = R"(
 			return;
 		}
 		
-		float attenuation = 1.0 - (distance / light_radius);
-
-		attenuation = clamp(attenuation, 0.0, 1.0);
-
+		float attenuation = clamp(1.0 - (distance / light_radius), 0.0, 1.0);
 		vec3 fragtolight = fragPos - light_pos;
 
 		if(shadow)
@@ -517,20 +484,14 @@ const char glsl330_world_fp[] = R"(
 				attenuation = mix(1, shadow, attenuation);
 		}
 		
-		if(!onlyshadow)
-			gl_FragColor = vec4( vec3(light_color * attenuation), 1);
-		else
-			gl_FragColor = vec4( vec3(attenuation), 1);
+		gl_FragColor = onlyshadow ? vec4( vec3(attenuation), 1 ) : vec4(vec3(light_color * attenuation), 1);
 	}
 
 	float GetFogFactor()
 	{
 		float dist = length(renderorigin - fragPos);
-
-		float fogFactor = (fogend - dist) / (fogend - fogstart);
-		fogFactor = clamp(fogFactor, 0.0, 1.0);
 		
-		return fogFactor;
+		return clamp((fogend - dist) / (fogend - fogstart), 0.0, 1.0);
 	}
 
 	void frag_HandleWireframe()
@@ -633,34 +594,13 @@ const char glsl330_world_fp[] = R"(
 	void main()
 	{
 
-		if(wireframe)
-		{
-			frag_HandleWireframe();
-		}
-		else if(spotlight)
-		{
-			frag_HandleSpotlight();
-		}
-		else if(pointlight)
-		{
-			frag_HandleDynLight();
-		}
-		else if(shadow)
-		{
-			frag_HandleSunShadow();
-		}
-		else if (texture_pass && lightmap_pass)
-		{
-			frag_HandleTextureLightMapPass(); //this result is darker than with opengl pipeline multiplication for some reason (glblendfunc(gl_src_color, gl_dst_color);
-		}
-		else if(texture_pass)
-		{
-			frag_HandleTexturePass();
-		}
-		else if(lightmap_pass)
-		{
-			frag_HandleLightmapPass();
-		}
+		if			(wireframe)						frag_HandleWireframe();
+		else if		(spotlight)						frag_HandleSpotlight();
+		else if		(pointlight)					frag_HandleDynLight();
+		else if		(shadow)						frag_HandleSunShadow();
+		else if		(texture_pass && lightmap_pass)	frag_HandleTextureLightMapPass(); //this result is darker than with opengl pipeline multiplication for some reason (glblendfunc(gl_src_color, gl_dst_color);
+		else if		(texture_pass)					frag_HandleTexturePass();
+		else if	(lightmap_pass)						frag_HandleLightmapPass();
 	}
 
 )";

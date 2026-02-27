@@ -37,7 +37,6 @@ D:\hl2c\src\codename-borea\cl_dll\menu.cpp;D:\hl2c\src\codename-borea\projects\v
 D:\hl2c\src\codename-borea\cl_dll\message.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\message.obj
 D:\hl2c\src\codename-borea\cl_dll\mp3.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\mp3.obj
 D:\hl2c\src\codename-borea\cl_dll\openal\OpenAL_System.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\OpenAL_System.obj
-D:\hl2c\src\codename-borea\cl_dll\regs\reGS_enginehook.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\reGS_enginehook.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\bloom.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\bloom.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\blur.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\blur.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\BSPModelGen.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\BSPModelGen.obj
@@ -48,18 +47,17 @@ D:\hl2c\src\codename-borea\cl_dll\renderer\goldsrc_spriterenderer.cpp;D:\hl2c\sr
 D:\hl2c\src\codename-borea\cl_dll\renderer\goldsrc_tracerrenderer.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\goldsrc_tracerrenderer.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\HLHudSprites.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\HLHudSprites.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\imgui_manager.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\imgui_manager.obj
-D:\hl2c\src\codename-borea\cl_dll\renderer\lensflare.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\lensflare.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\mirrormanager.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\mirrormanager.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_Buffers.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_Buffers.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_DebugInterface.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_DebugInterface.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_FBO.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_FBO.obj
+D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_Mesh.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_Mesh.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_ShaderProgram.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_ShaderProgram.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_ShadowMap.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_ShadowMap.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_StateHandler.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_StateHandler.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_TextureHandler.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_TextureHandler.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\opengl_utils\GL_VertexArrayObject.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\GL_VertexArrayObject.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\particle_engine.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\particle_engine.obj
-D:\hl2c\src\codename-borea\cl_dll\renderer\postprocess.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\postprocess.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\propmanager.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\propmanager.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\rendererdefs.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\rendererdefs.obj
 D:\hl2c\src\codename-borea\cl_dll\renderer\StudioMDL_MeshGen.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\StudioMDL_MeshGen.obj
@@ -122,7 +120,6 @@ D:\hl2c\src\codename-borea\external\minhook\hde\hde32.c;D:\hl2c\src\codename-bor
 D:\hl2c\src\codename-borea\external\minhook\hde\hde64.c;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\hde64.obj
 D:\hl2c\src\codename-borea\external\minhook\hook.c;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\hook.obj
 D:\hl2c\src\codename-borea\external\minhook\trampoline.c;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\trampoline.obj
-D:\hl2c\src\codename-borea\external\sptlib\DetoursUtils.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\DetoursUtils.obj
 D:\hl2c\src\codename-borea\game_shared\filesystem_utils.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\filesystem_utils.obj
 D:\hl2c\src\codename-borea\game_shared\vgui_checkbutton2.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\vgui_checkbutton2.obj
 D:\hl2c\src\codename-borea\game_shared\vgui_grid.cpp;D:\hl2c\src\codename-borea\projects\vs2019\Release (pre_hl25)\hl_cdll\int\vgui_grid.obj

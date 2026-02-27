@@ -287,9 +287,6 @@ public:
 	int MsgCreateSystem(const char* pszName, int iSize, void* pbuf);
 
 public:
-	GL_BufferHandler* m_pQuadBuffer;
-	GL_ShaderProgram *m_ParticleShader;
-	GL_VertexArrayObject* m_pParticleVAO;
 
 	particle_system_t* m_pSystemHeader;
 

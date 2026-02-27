@@ -291,6 +291,7 @@ EXIT /B 0</Command>
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_Buffers.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_DebugInterface.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_FBO.cpp" />
+    <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_Mesh.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_ShaderProgram.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_ShadowMap.cpp" />
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_StateHandler.cpp" />
@@ -422,6 +423,7 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_Buffers.h" />
     <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_DebugInterface.h" />
     <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_FBO.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_Mesh.h" />
     <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_ShaderProgram.h" />
     <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_ShadowMap.h" />
     <ClInclude Include="..\..\cl_dll\renderer\opengl_utils\GL_StateHandler.h" />
@@ -430,6 +432,7 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\cl_dll\renderer\particle_engine.h" />
     <ClInclude Include="..\..\cl_dll\renderer\postprocess.h" />
     <ClInclude Include="..\..\cl_dll\renderer\propmanager.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\RenderCamera.h" />
     <ClInclude Include="..\..\cl_dll\renderer\rendererdefs.h" />
     <ClInclude Include="..\..\cl_dll\renderer\stb_image_write.h" />
     <ClInclude Include="..\..\cl_dll\renderer\StudioMDL_MeshGen.h" />

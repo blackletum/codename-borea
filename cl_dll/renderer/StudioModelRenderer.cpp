@@ -53,40 +53,6 @@ Transparency code by Neil "Jed" Jedrzejewski
 #include "Exports.h"
 
 
-
-
-
-
-
-
-static bool m_fDoInterp;// Do interpolation?
-static bool m_fGaitEstimation;// Do gait estimation?
-
-static cl_entity_t* m_pCurrentEntity;
-static entextradata_t* m_pCurrentExtraData;
-static studiohdr_t* m_pStudioHeader;
-
-
-static model_t* m_pRenderModel;
-
-
-player_info_t* CStudioModelRenderer::m_pPlayerInfo;
-
-
-int CStudioModelRenderer::m_nPlayerIndex;
-
-
-mstudiobodyparts_t* CStudioModelRenderer::m_pBodyPart;
-mstudiomodel_t* CStudioModelRenderer::m_pSubModel;
-
-static StudioMDL_Model* m_pCurrentStudioMDL;
-static studioentity_data_t* m_pCurrentStudioEntData;
-
-
-
-model_t* CStudioModelRenderer::m_pChromeSprite;
-
-
 matrix3x4_t(*CStudioModelRenderer::m_protationmatrix);
 matrix3x4_t(*CStudioModelRenderer::m_paliastransform);
 
@@ -97,24 +63,6 @@ matrix3x4_t (*CStudioModelRenderer::m_plighttransform)[MAXSTUDIOBONES];
 int CStudioModelRenderer::m_nCachedBones;
 char CStudioModelRenderer::m_nCachedBoneNames[MAXSTUDIOBONES][32];
 matrix3x4_t CStudioModelRenderer::m_rgCachedBoneTransform[MAXSTUDIOBONES];
-
-
-Vector CStudioModelRenderer::m_vMins;
-Vector CStudioModelRenderer::m_vMaxs;
-
-Vector CStudioModelRenderer::m_vVertexTransform[MAXSTUDIOVERTS]; // transformed vertices
-Vector CStudioModelRenderer::m_vNormalTransform[MAXSTUDIOVERTS]; // transformed normals
-
-Vector* CStudioModelRenderer::m_pVertexTransform; // pointer to vertex transform
-Vector* CStudioModelRenderer::m_pNormalTransform; // pointer to normal transform
-
-lighting_ext CStudioModelRenderer::m_pLighting; // buz
-
-mlight_t* CStudioModelRenderer::m_pModelLights[MAX_MODEL_LIGHTS];
-int CStudioModelRenderer::m_iNumModelLights;
-
-entextrainfo_t CStudioModelRenderer::m_pExtraInfo[MAXRENDERENTS];
-int CStudioModelRenderer::m_iNumExtraInfo;
 
 double CStudioModelRenderer::m_fStudioMDLRenderTime;
 
@@ -139,29 +87,66 @@ cvar_t* CStudioModelRenderer::m_pCvarSkyColorZ;
 
 cvar_t* CStudioModelRenderer::m_pCvarViewmodelFov;
 
+player_info_t*	pPlayerInfo		= nullptr;
+int				nPlayerIndex	= -1;
 
-static std::unordered_map<model_t*, std::vector<cl_entity_t*>> m_vStudioDrawList;
+static cl_entity_t*				m_pCurrentEntity		= nullptr;
+static entextradata_t*			m_pCurrentExtraData		= nullptr;
+static studiohdr_t*				m_pStudioHeader			= nullptr;
+static StudioMDL_Model*			m_pCurrentStudioMDL		= nullptr;
+static studioentity_data_t*		m_pCurrentStudioEntData = nullptr;
+static model_t*					m_pRenderModel			= nullptr;
 
-static bool m_bExternalEntity;
-static bool m_bChromeShell;
+// Pointers to current body part and submodel
+static mstudiobodyparts_t*		m_pBodyPart		= nullptr;
+static mstudiomodel_t*			m_pSubModel		= nullptr;
 
-// glsl start
+static model_t*					m_pChromeSprite = nullptr;// Sprite model used for drawing studio model chrome
 
-static GL_BufferHandler* pModel_PerEntityBuffer;
-static GL_BufferHandler* pModel_PerFrameBuffer;
-static GL_BufferHandler* pModelBones_Buffer;
-static GL_BufferHandler* m_ModelSolid_Buffer;
+static Vector					v_bboxMins;
+static Vector					v_bboxMaxs;
 
-static GL_BufferHandler* m_ModelDecal_Buffer;
-static GL_VertexArrayObject* m_ModelDecal_VAO;
+static Vector					vVertexTransform[MAXSTUDIOVERTS]; // transformed vertices
+static Vector					vNormalTransform[MAXSTUDIOVERTS]; // transformed normals
 
-static GL_ShaderProgram* m_ModelShader;
-static GL_ShaderProgram* m_ModelSolidShader;
+static lighting_ext				m_pLighting; // buz
 
-static glm::mat4 m_VM_ProjectionMatrix;
+static mlight_t*				pModelLights[MAX_MODEL_LIGHTS];
+static int						iNumModelLights;
+static entextrainfo_t			pExtraInfo[MAXRENDERENTS];
+static int						iNumExtraInfo;
 
-enum modelshader_uniforms
-{
+static std::unordered_map<model_t*, std::vector<cl_entity_t*>> vStudioDrawList;
+
+static bool						bExternalEntity = false;
+static bool						bChromeShell	= false;
+static bool						bDoInterp		= true;// Do interpolation?
+static bool						bGaitEstimation = true;// Do gait estimation?
+
+//===========================================
+// OPENGL START
+//
+//===========================================
+
+#include "glshaders/studiomdl_glsl.h"
+#include "glshaders/shadow/studiomdl_solid_glsl.h"
+
+extern GL_Mesh* g_pStaticMeshBuffer; //propmanager.cpp
+
+static GL_BufferHandler*		pModel_PerEntityBuffer	= nullptr;
+static GL_BufferHandler*		pModel_PerFrameBuffer	= nullptr;
+static GL_BufferHandler*		pModel_BonesBuffer		= nullptr;
+static GL_BufferHandler*		pModel_SolidBuffer		= nullptr;
+static GL_BufferHandler*		pModel_DecalBuffer		= nullptr;
+
+static GL_VertexArrayObject*	pModel_DecalVAO			= nullptr;
+
+static GL_ShaderProgram			s_MDLShader(glsl330_studiomdl_vert, glsl330_studiomdl_frag);
+static GL_ShaderProgram			s_MDLSolidShader(glsl330_studiomdlsolid_vert, glsl330_studiomdlsolid_frag);
+
+static glm::mat4				VMProjectionMatrix;
+
+enum{
 	mdlshader_viewmodel,
 
 	mdlshader_texturematrix,
@@ -173,27 +158,22 @@ enum modelshader_uniforms
 	mdlshader_decalsize,
 
 	_mdlshader_uniformsize //must be last
-};
-static GLuint m_ModelShaderLocs[_mdlshader_uniformsize];
+}; static GLuint eModel_ShaderLocs[_mdlshader_uniformsize];
 
-enum modelshadersolid_uniforms
-{
+enum{
 	mdlshadersolid_sunshadow,
 	mdlshadersolid_texture_flags,
 
 	_mdlshadersolid_uniformsize //must be last
-};
-static GLuint m_ModelShaderSolidLocs[_mdlshadersolid_uniformsize];
+}; static GLuint eModel_ShaderSolidLocs[_mdlshadersolid_uniformsize];
 
-struct mdlshadersolid_data_t
-{
+struct mdlshadersolid_data_t{
 	glm::mat4 projviewmatrix;
 	glm::mat4 modelmatrix;
 	glm::vec4 light_pos;
 	glm::ivec4 int_values; // x represents if we're rendering a static model or not
-} m_dSolidModelData;
-struct mdlshader_perframedata_t
-{
+} model_SolidData;
+struct mdlshader_perframedata_t{
 	glm::mat4 projviewmatrix;
 	glm::mat4 VMprojviewmatrix;
 	glm::vec4 fogcolor_n_fogstart; // w = fogstart
@@ -203,9 +183,8 @@ struct mdlshader_perframedata_t
 
 	glm::vec4 renderorigin;
 	glm::vec4 renderright;
-} m_dModelPerFrameData;
-struct mdlshader_perentitydata_t
-{
+} model_PerFrameData;
+struct mdlshader_perentitydata_t{
 	glm::vec4 lightdir;
 	glm::vec4 ambientlight;
 	glm::vec4 diffuselight;
@@ -217,15 +196,18 @@ struct mdlshader_perentitydata_t
 	glm::vec4 rendervalues; //rendercolor.r, rendercolor.g, rendercolor.b, renderamt
 
 	glm::mat3x4 modellight_info[MAX_MODEL_LIGHTS];
-} m_dModelPerEntityData;
+} model_PerEntityData;
 
-// glsl end
+//===========================================
+// OPENGL END
+//
+//===========================================
 
-static vboheader_t* pVBOHeader;
-static vbosubmodel_t* pVBOSubModel;
-static std::vector<studiovert_t> pRefArray;
-static std::vector<brushvertex_t> pVBOVerts;
-static std::vector<unsigned int> usIndexes;
+static vboheader_t*					pVBOHeader		= nullptr;
+static vbosubmodel_t*				pVBOSubModel	= nullptr;
+static std::vector<studiovert_t>	pRefArray;
+static std::vector<Default3DVert_t>	pVBOVerts;
+static std::vector<unsigned int>	usIndexes;
 static int iCurStart = 0;
 
 static std::vector<std::unique_ptr<studiodecal_t>> pStudioDecals;
@@ -262,19 +244,6 @@ extern model_t* cl_sprite_lightning;
 extern model_t* cl_sprite_white;
 extern model_t* cl_sprite_glow;
 
-//===========================================
-// GLSL SHADER START
-//
-//===========================================
-
-#include "glshaders/studiomdl_glsl.h"
-#include "glshaders/shadow/studiomdl_solid_glsl.h"
-
-//===========================================
-// GLSL SHADER END
-//
-//===========================================
-
 
 /*
 ====================
@@ -284,27 +253,6 @@ Init
 */
 void CStudioModelRenderer::Init(void)
 {
-	m_fDoInterp = 1;
-	m_fGaitEstimation = 1;
-	m_pCurrentEntity = NULL;
-	m_pCvarHiModels = NULL;
-	m_pCvarDeveloper = NULL;
-	m_pCvarDrawEntities = NULL;
-	m_pChromeSprite = NULL;
-	m_protationmatrix = NULL;
-	m_paliastransform = NULL;
-	m_pbonetransform = NULL;
-	m_plighttransform = NULL;
-	m_pStudioHeader = NULL;
-	m_pBodyPart = NULL;
-	m_pSubModel = NULL;
-	m_pPlayerInfo = NULL;
-	m_pRenderModel = NULL;
-
-
-
-
-
 	// Set up some variables shared with engine
 	m_pCvarHiModels = IEngineStudio.GetCvar("cl_himodels");
 	m_pCvarDeveloper = IEngineStudio.GetCvar("developer");
@@ -334,7 +282,6 @@ void CStudioModelRenderer::Init(void)
 	cl_sprite_muzzleflash[2] = IEngineStudio.Mod_ForName("sprites/muzzleflash3.spr", false);
 
 	cl_sprite_ricochet = IEngineStudio.Mod_ForName("sprites/richo1.spr", false);
-
 	cl_sprite_dot = IEngineStudio.Mod_ForName("sprites/dot.spr", false);
 
 	// Get pointers to engine data structures
@@ -349,56 +296,53 @@ void CStudioModelRenderer::Init(void)
 	// Load GLSL shader(s)
 	//
 
-	m_ModelShader = new GL_ShaderProgram(glsl330_studiomdl_vert, glsl330_studiomdl_frag);
-	m_ModelSolidShader = new GL_ShaderProgram(glsl330_studiomdlsolid_vert, glsl330_studiomdlsolid_frag);
+	eModel_ShaderLocs[mdlshader_viewmodel] = s_MDLShader.GetUniformLoc("viewmodel");
 
-	m_ModelShaderLocs[mdlshader_viewmodel] = m_ModelShader->GetUniformLoc("viewmodel");
+	//eModel_ShaderLocs[mdlshader_texturematrix] = s_MDLShader.GetUniformLoc("texturematrix");
 
-	//m_ModelShaderLocs[mdlshader_texturematrix] = m_ModelShader->GetUniformLoc("texturematrix");
+	eModel_ShaderLocs[mdlshader_wireframe] = s_MDLShader.GetUniformLoc("wireframe");
+	eModel_ShaderLocs[mdlshader_texture_flags] = s_MDLShader.GetUniformLoc("texture_flags");
 
-	m_ModelShaderLocs[mdlshader_wireframe] = m_ModelShader->GetUniformLoc("wireframe");
-	m_ModelShaderLocs[mdlshader_texture_flags] = m_ModelShader->GetUniformLoc("texture_flags");
+	eModel_ShaderLocs[mdlshader_studiodecal] = s_MDLShader.GetUniformLoc("studiodecal");
+	eModel_ShaderLocs[mdlshader_decalsize] = s_MDLShader.GetUniformLoc("decalsize");
 
-	m_ModelShaderLocs[mdlshader_studiodecal] = m_ModelShader->GetUniformLoc("studiodecal");
-	m_ModelShaderLocs[mdlshader_decalsize] = m_ModelShader->GetUniformLoc("decalsize");
+	eModel_ShaderSolidLocs[mdlshadersolid_sunshadow] = s_MDLSolidShader.GetUniformLoc("bSunShadowMapPass");
+	eModel_ShaderSolidLocs[mdlshadersolid_texture_flags] = s_MDLSolidShader.GetUniformLoc("texture_flags");
 
-	m_ModelShaderSolidLocs[mdlshadersolid_sunshadow] = m_ModelSolidShader->GetUniformLoc("bSunShadowMapPass");
-	m_ModelShaderSolidLocs[mdlshadersolid_texture_flags] = m_ModelSolidShader->GetUniformLoc("texture_flags");
+	s_MDLShader.Bind();
+	s_MDLShader.Uniform1i(s_MDLShader.GetUniformLoc("texture0"), 0);
 
-	m_ModelShader->Bind();
-	m_ModelShader->Uniform1i(m_ModelShader->GetUniformLoc("texture0"), 0);
+	pModel_BonesBuffer = new GL_BufferHandler();
+	pModel_BonesBuffer->Bind(GL_BufferHandler::UniformBuffer);
+	pModel_BonesBuffer->BufferData(GL_BufferHandler::UniformBuffer, (sizeof(matrix3x4_t) * 128) * 2048, nullptr, GL_BufferHandler::DynamicDraw);
+	pModel_BonesBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLShader.GetUBOIndex("BonesUBO"), 0, sizeof(matrix3x4_t) * 128);
 
-	pModelBones_Buffer = new GL_BufferHandler();
-	pModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-	pModelBones_Buffer->BufferData(GL_BufferHandler::UniformBuffer, (sizeof(matrix3x4_t) * 128) * 2048, nullptr, GL_BufferHandler::DynamicDraw);
-	pModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("BonesUBO"), 0, sizeof(matrix3x4_t) * 128);
+	s_MDLSolidShader.Bind();
+	s_MDLSolidShader.Uniform1i(s_MDLSolidShader.GetUniformLoc("texture0"), 0);
 
-	m_ModelSolidShader->Bind();
-	m_ModelSolidShader->Uniform1i(m_ModelSolidShader->GetUniformLoc("texture0"), 0);
-
-	m_ModelSolid_Buffer = new GL_BufferHandler();
-	m_ModelSolid_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-	m_ModelSolid_Buffer->BufferData(GL_BufferHandler::UniformBuffer, sizeof(mdlshadersolid_data_t), nullptr, GL_BufferHandler::DynamicDraw);
-	m_ModelSolid_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelSolidShader->GetUBOIndex("StudioSolidUBO"), 0, sizeof(mdlshadersolid_data_t));
+	pModel_SolidBuffer = new GL_BufferHandler();
+	pModel_SolidBuffer->Bind(GL_BufferHandler::UniformBuffer);
+	pModel_SolidBuffer->BufferData(GL_BufferHandler::UniformBuffer, sizeof(mdlshadersolid_data_t), nullptr, GL_BufferHandler::DynamicDraw);
+	pModel_SolidBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLSolidShader.GetUBOIndex("StudioSolidUBO"), 0, sizeof(mdlshadersolid_data_t));
 
 	pModel_PerFrameBuffer = new GL_BufferHandler();
 	pModel_PerFrameBuffer->Bind(GL_BufferHandler::UniformBuffer);
 	pModel_PerFrameBuffer->BufferData(GL_BufferHandler::UniformBuffer, sizeof(mdlshader_perframedata_t), nullptr, GL_BufferHandler::DynamicDraw);
-	pModel_PerFrameBuffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("studiomdl_PerFrame"), 0, sizeof(mdlshader_perframedata_t));
+	pModel_PerFrameBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLShader.GetUBOIndex("studiomdl_PerFrame"), 0, sizeof(mdlshader_perframedata_t));
 
 	pModel_PerEntityBuffer = new GL_BufferHandler();
 	pModel_PerEntityBuffer->Bind(GL_BufferHandler::UniformBuffer);
 	pModel_PerEntityBuffer->BufferData(GL_BufferHandler::UniformBuffer, sizeof(mdlshader_perentitydata_t), nullptr, GL_BufferHandler::DynamicDraw);
-	pModel_PerEntityBuffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("studiomdl_PerEntity"), 0, sizeof(mdlshader_perentitydata_t));
+	pModel_PerEntityBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLShader.GetUBOIndex("studiomdl_PerEntity"), 0, sizeof(mdlshader_perentitydata_t));
 
-	m_ModelDecal_VAO = new GL_VertexArrayObject();
-	m_ModelDecal_VAO->BindVAO();
+	pModel_DecalVAO = new GL_VertexArrayObject();
+	pModel_DecalVAO->BindVAO();
 
-	m_ModelDecal_Buffer = new GL_BufferHandler();
-	m_ModelDecal_Buffer->Bind(GL_BufferHandler::ArrayBuffer);
-	m_ModelDecal_Buffer->BufferData(GL_BufferHandler::ArrayBuffer, (sizeof(studiomdl_vertbufferdata_t) * 3) * 65536, nullptr, GL_BufferHandler::DynamicDraw);
+	pModel_DecalBuffer = new GL_BufferHandler();
+	pModel_DecalBuffer->Bind(GL_BufferHandler::ArrayBuffer);
+	pModel_DecalBuffer->BufferData(GL_BufferHandler::ArrayBuffer, (sizeof(studiomdl_vertbufferdata_t) * 3) * 65536, nullptr, GL_BufferHandler::DynamicDraw);
 
-	m_ModelDecal_VAO->SetVertexAttributes(studiomdl_vertbufferdata_t::GetAttribLayout());
+	pModel_DecalVAO->SetVertexAttributes(studiomdl_vertbufferdata_t::GetAttribLayout());
 
 	GL_VertexArrayObject::ResetVAOBinding();
 	GL_ShaderProgram::ResetShaderBind();
@@ -433,10 +377,10 @@ void CStudioModelRenderer::VidInit(void)
 
 	iNumStudioDecalVerts = 0;
 
-	if (m_iNumExtraInfo)
+	if (iNumExtraInfo)
 	{
-		memset(m_pExtraInfo, NULL, sizeof(m_pExtraInfo));
-		m_iNumExtraInfo = NULL;
+		memset(pExtraInfo, 0, sizeof(pExtraInfo));
+		iNumExtraInfo = 0;
 	}
 }
 
@@ -613,10 +557,6 @@ void CStudioModelRenderer::StudioCalcBonePosition(int frame, float s, mstudiobon
 		if (panim->offset[j] != 0)
 		{
 			panimvalue = (mstudioanimvalue_t*)((byte*)panim + panim->offset[j]);
-			/*
-			if (i == 0 && j == 0)
-				Con_DPrintf("%d  %d:%d  %f\n", frame, panimvalue->num.valid, panimvalue->num.total, s );
-			*/
 
 			k = frame;
 			// DEBUG
@@ -771,36 +711,27 @@ StudioPreFrame
 */
 void CStudioModelRenderer::StudioPreFrame(ref_params_t* pparams)
 {
-	m_dModelPerFrameData.renderorigin = glm::vec4(pparams->vieworg.x, pparams->vieworg.y, pparams->vieworg.z, 0);
-	m_dModelPerFrameData.renderright = glm::vec4(pparams->right.x, pparams->right.y, pparams->right.z, 0);
-	m_dModelPerFrameData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
-	m_dModelPerFrameData.VMprojviewmatrix = m_VM_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
-	m_dModelPerFrameData.fogcolor_n_fogstart = glm::vec4(gHUD.m_pFogSettings.color.x, gHUD.m_pFogSettings.color.y, gHUD.m_pFogSettings.color.z, gHUD.m_pFogSettings.start);
-	m_dModelPerFrameData.fogend_n_fogactive_n_lightdebug = glm::vec4(gHUD.m_pFogSettings.end, gHUD.m_pFogSettings.active, m_pCvarStudioModelLightDebug->value, 0);
+	model_PerFrameData.renderorigin = glm::vec4(pparams->vieworg.x, pparams->vieworg.y, pparams->vieworg.z, 0);
+	model_PerFrameData.renderright = glm::vec4(pparams->right.x, pparams->right.y, pparams->right.z, 0);
+	model_PerFrameData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
+	model_PerFrameData.VMprojviewmatrix = VMProjectionMatrix * gBSPRenderer.m_ViewMatrix;
+	model_PerFrameData.fogcolor_n_fogstart = glm::vec4(gHUD.m_pFogSettings.color.x, gHUD.m_pFogSettings.color.y, gHUD.m_pFogSettings.color.z, gHUD.m_pFogSettings.start);
+	model_PerFrameData.fogend_n_fogactive_n_lightdebug = glm::vec4(gHUD.m_pFogSettings.end, gHUD.m_pFogSettings.active, m_pCvarStudioModelLightDebug->value, 0);
 
 	pModel_PerFrameBuffer->Bind(GL_BufferHandler::UniformBuffer);
-	pModel_PerFrameBuffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(m_dModelPerFrameData), &m_dModelPerFrameData);
-
+	pModel_PerFrameBuffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(model_PerFrameData), &model_PerFrameData);
 }
 
-int gl_bonearrayoffset = 0;
-std::vector<float> gl_bonetransforms;
+static int gl_bonearrayoffset = 0;
+static std::vector<float> gl_bonetransforms;
 
 inline size_t BoneData_Align(size_t value)
 {
 	return (value + GL_ShaderProgram::GetDriverUBOAlignment()  - 1) & ~(GL_ShaderProgram::GetDriverUBOAlignment() - 1);
 }
 
-void InsertBones(matrix3x4_t* bones, int numbones)
+void InsertBones(const matrix3x4_t* bones, int numbones)
 {
-	//YOU ARE TEARING ME APART LISA
-
-	//gl_bonetransforms.resize(gl_bonetransforms.size() + numbones);
-	//memcpy(gl_bonetransforms.data() + gl_bonetransforms.size() - numbones, bones, sizeof(matrix3x4_t) * numbones);
-	//
-	//g_StudioRenderer.m_pCurrentStudioEntData->bonearrayoffset = gl_bonearrayoffset;
-	//gl_bonearrayoffset += BoneData_Align(numbones * sizeof(matrix3x4_t));
-
 	size_t boneDataSize = numbones * sizeof(matrix3x4_t);
 
 	gl_bonearrayoffset = BoneData_Align(gl_bonearrayoffset);
@@ -824,7 +755,7 @@ void InsertBones(matrix3x4_t* bones, int numbones)
 
 void CStudioModelRenderer::StudioClearDrawList()
 {
-	m_vStudioDrawList.clear();
+	vStudioDrawList.clear();
 	gl_bonetransforms.clear();
 	gl_bonearrayoffset = 0;
 }
@@ -834,13 +765,13 @@ void CStudioModelRenderer::StudioUploadRenderData()
 	StudioSetupViewmodel();
 
 #if _DEBUG
-	if ((gl_bonetransforms.size() * sizeof(matrix3x4_t)) > pModelBones_Buffer->GetBufferSize())
+	if ((gl_bonetransforms.size() * sizeof(matrix3x4_t)) > pModel_BonesBuffer->GetBufferSize())
 		gEngfuncs.Con_Printf("jesus h christ! more than 262 thousand bones are visible on screen! that's about 2048 entities with 128 bones each ! what are you doing ?\n");
 #endif
 
-	pModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
+	pModel_BonesBuffer->Bind(GL_BufferHandler::UniformBuffer);
 	//send all bone data on the scene in one single upload
-	pModelBones_Buffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, V_min(gl_bonetransforms.size() * sizeof(float), 128 * 2048), gl_bonetransforms.data());
+	pModel_BonesBuffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, V_min(gl_bonetransforms.size() * sizeof(float), 128 * 2048), gl_bonetransforms.data());
 
 	GL_BufferHandler::ResetBufferBinding(GL_BufferHandler::UniformBuffer);
 }
@@ -859,16 +790,14 @@ void CStudioModelRenderer::StudioSetupViewmodel()
 	if (!engine_cl->weaponstarttime)
 		engine_cl->weaponstarttime = engine_cl->time;
 
-	engine_cl->viewent.curstate.framerate = 1.0f;
-	engine_cl->viewent.curstate.sequence = engine_cl->weaponsequence;
-	engine_cl->viewent.curstate.animtime = engine_cl->weaponstarttime;
+	m_pCurrentEntity->curstate.framerate = 1.0f;
+	m_pCurrentEntity->curstate.sequence = engine_cl->weaponsequence;
+	m_pCurrentEntity->curstate.animtime = engine_cl->weaponstarttime;
 
 	for (int i = 0; i < 4; i++)
 	{
-		VectorCopy(engine_cl->viewent.origin, engine_cl->viewent.attachment[i]);
+		VectorCopy(m_pCurrentEntity->origin, m_pCurrentEntity->attachment[i]);
 	}
-
-	m_pCurrentStudioMDL->EnableBuffers();
 
 	StudioSetUpTransform(0);
 	StudioSetupBones();
@@ -901,9 +830,9 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 	{
 		pplayer = R_StudioGetPlayerState((m_pCurrentEntity->index - 1));
 
-		m_nPlayerIndex = pplayer->number - 1;
+		nPlayerIndex = pplayer->number - 1;
 
-		if (m_nPlayerIndex < 0 || m_nPlayerIndex >= engine_cl->maxclients)
+		if (nPlayerIndex < 0 || nPlayerIndex >= engine_cl->maxclients)
 			return;
 
 		if (m_pCurrentEntity->index == (engine_cl->playernum + 1))
@@ -916,38 +845,34 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 			VectorCopy(m_pCurrentEntity->origin, m_pCurrentEntity->attachment[3]);
 		}
 
+		pPlayerInfo = pfnPlayerInfo(nPlayerIndex);
+		pPlayerInfo->renderframe = gBSPRenderer.m_iFrameCount;
+
 		if (pplayer->gaitsequence)
 		{
 			Vector orig_angles;
-			m_pPlayerInfo = pfnPlayerInfo(m_nPlayerIndex);
 
 			VectorCopy(m_pCurrentEntity->angles, orig_angles);
 
 			StudioProcessGait(pplayer);
 
 			StudioSetUpTransform(0);
-
 			StudioSetupBones();
 
-			m_pPlayerInfo->gaitsequence = pplayer->gaitsequence;
-			m_pPlayerInfo->renderframe = gBSPRenderer.m_iFrameCount;
-			m_pPlayerInfo = NULL;
+			pPlayerInfo->gaitsequence = pplayer->gaitsequence;
+			pPlayerInfo = NULL;
 
 			VectorCopy(orig_angles, m_pCurrentEntity->angles);
 		}
 		else
 		{
-			memset(m_pCurrentEntity->curstate.controller, 127, sizeof(byte) * 4);
-			memcpy(m_pCurrentEntity->latched.prevcontroller, m_pCurrentEntity->curstate.controller, sizeof(byte) * 4);
+			memset(m_pCurrentEntity->curstate.controller, 127, 4);
+			memcpy(m_pCurrentEntity->latched.prevcontroller, m_pCurrentEntity->curstate.controller, 4);
 
-			m_pPlayerInfo = pfnPlayerInfo(m_nPlayerIndex);
-			m_pPlayerInfo->gaitsequence = 0;
+			pPlayerInfo->gaitsequence = 0;
 
 			StudioSetUpTransform(0);
-
 			StudioSetupBones();
-
-			m_pPlayerInfo->renderframe = gBSPRenderer.m_iFrameCount;
 		}
 
 		StudioSaveBones();
@@ -967,27 +892,24 @@ void CStudioModelRenderer::StudioPushEntityToDraw(cl_entity_s* pEnt)
 
 	InsertBones((*m_pbonetransform), m_pStudioHeader->numbones);
 
-	if (pplayer)
+	if (pplayer && pplayer->weaponmodel)
 	{
-		if (pplayer->weaponmodel)
-		{
-			model_t* savedmdl = m_pRenderModel;
+		model_t* savedmdl = m_pRenderModel;
 
-			model_t* pweaponmodel = CL_GetModelByIndex(pplayer->weaponmodel);
-			SetCurrentMDL(pweaponmodel);
+		model_t* pweaponmodel = CL_GetModelByIndex(pplayer->weaponmodel);
+		SetCurrentMDL(pweaponmodel);
 
-			m_pCurrentEntity->model = pweaponmodel;
+		m_pCurrentEntity->model = pweaponmodel;
 
-			StudioMergeBones(pweaponmodel);
+		StudioMergeBones(pweaponmodel);
 
-			StudioCalcAttachments();
+		StudioCalcAttachments();
 
-			m_pCurrentEntity->model = savedmdl;
-		}
+		m_pCurrentEntity->model = savedmdl;
 	}
 
 
-	m_vStudioDrawList[m_pCurrentEntity->model].push_back(m_pCurrentEntity);
+	vStudioDrawList[m_pCurrentEntity->model].push_back(m_pCurrentEntity);
 }
 
 
@@ -999,16 +921,20 @@ StudioDrawModels
 */
 void CStudioModelRenderer::StudioDrawModels(bool bDrawLocalPlayer)
 {
-	if (m_vStudioDrawList.empty() || !m_pCvarDrawStudioModels->value)
+	if (vStudioDrawList.empty() || !m_pCvarDrawStudioModels->value)
 		return;
 
-	m_bExternalEntity = false;
+	bExternalEntity = false;
 
-	m_ModelShader->Bind();
+	s_MDLShader.Bind();
 
 	g_GlobalGLState.SetBlend(false);
 
- 	for(const auto& model : m_vStudioDrawList)
+#if defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	StudioMDL_Model::BindGlobalMesh();
+#endif
+
+ 	for(const auto& model : vStudioDrawList)
 	{
 		SetCurrentMDL(model.first);
 		for (int i = 0; i < model.second.size(); i++)
@@ -1025,6 +951,10 @@ void CStudioModelRenderer::StudioDrawModels(bool bDrawLocalPlayer)
 				StudioDrawModel(STUDIO_RENDER);
 		}
 	}
+
+#if defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	StudioMDL_Model::UnbindGlobalMesh();
+#endif
 
 	GL_ShaderProgram::ResetShaderBind();
 }
@@ -1050,27 +980,35 @@ void CStudioModelRenderer::StudioDrawViewmodel()
 	SetCurrentEntity(&engine_cl->viewent);
 	SetCurrentMDL(engine_cl->viewent.model);
 
-	m_bExternalEntity = false;
+	bExternalEntity = false;
 
-	m_ModelShader->Bind();
-	pModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
+	s_MDLShader.Bind();
+	pModel_BonesBuffer->Bind(GL_BufferHandler::UniformBuffer);
 	pModel_PerEntityBuffer->Bind(GL_BufferHandler::UniformBuffer);
 	pModel_PerFrameBuffer->Bind(GL_BufferHandler::UniformBuffer);
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_viewmodel], 1);
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_viewmodel], 1);
 
 	g_GlobalGLState.SetBlend(false);
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-	m_pCurrentStudioMDL->EnableBuffers();
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	m_pCurrentStudioMDL->BindMesh();
+#else
+	StudioMDL_Model::BindGlobalMesh();
+#endif
 
 	m_pCurrentStudioEntData = (studioentity_data_t*)m_pCurrentEntity->efrag;
 	m_pStudioHeader = (studiohdr_t*)m_pCurrentEntity->model->cache.data;
 
 	StudioDrawModel(STUDIO_RENDER | STUDIO_EVENTS);
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_viewmodel], 0);
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	StudioMDL_Model::UnbindGlobalMesh();
+#endif
+
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_viewmodel], 0);
 
 
 	//camera anim stuff
@@ -1119,30 +1057,34 @@ StudioDrawModels
 */
 void CStudioModelRenderer::StudioDrawModelsSolid()
 {
-	if (m_vStudioDrawList.empty() || !m_pCvarDrawStudioModels->value)
+	if (vStudioDrawList.empty() || !m_pCvarDrawStudioModels->value)
 		return;
 
-	m_bExternalEntity = false;
-	m_dSolidModelData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
-	m_dSolidModelData.modelmatrix = gBSPRenderer.m_ModelMatrix;
+	bExternalEntity = false;
+	model_SolidData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
+	model_SolidData.modelmatrix = gBSPRenderer.m_ModelMatrix;
 
-	auto dynl = gBSPRenderer.m_pCurrentDynLight;
-	m_dSolidModelData.light_pos = glm::vec4(dynl->origin.x, dynl->origin.y, dynl->origin.z, dynl->radius);
+	cl_dlight_t* dynl = gBSPRenderer.m_pCurrentDynLight;
+	model_SolidData.light_pos = glm::vec4(dynl->origin.x, dynl->origin.y, dynl->origin.z, dynl->radius);
 
-	m_ModelSolidShader->Bind();
-	m_ModelSolid_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-	m_ModelSolid_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelSolidShader->GetUBOIndex("StudioSolidUBO"), 0, sizeof(mdlshadersolid_data_t));
-	m_ModelSolid_Buffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(mdlshadersolid_data_t), &m_dSolidModelData);
+	s_MDLSolidShader.Bind();
+	pModel_SolidBuffer->Bind(GL_BufferHandler::UniformBuffer);
+	pModel_SolidBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLSolidShader.GetUBOIndex("StudioSolidUBO"), 0, sizeof(mdlshadersolid_data_t));
+	pModel_SolidBuffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(mdlshadersolid_data_t), &model_SolidData);
 
 
 	if (gBSPRenderer.m_bSunShadowMapPass)
 	{
 		// flip depth because shadow pixels fade from ground and yada yada
-		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_sunshadow], gBSPRenderer.m_bSunShadowMapPass);
+		s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_sunshadow], gBSPRenderer.m_bSunShadowMapPass);
 		glCullFace(GL_BACK);
 	}
 
-	for (auto& model : m_vStudioDrawList)
+#if defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	StudioMDL_Model::BindGlobalMesh();
+#endif
+
+	for (auto& model : vStudioDrawList)
 	{
 		SetCurrentMDL(model.first);
 		for (auto ents : model.second)
@@ -1160,10 +1102,14 @@ void CStudioModelRenderer::StudioDrawModelsSolid()
 		}
 	}
 
+#if defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	StudioMDL_Model::UnbindGlobalMesh();
+#endif
+
 	if (gBSPRenderer.m_bSunShadowMapPass)
 	{
 		// unflip
-		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_sunshadow], 0);
+		s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_sunshadow], 0);
 		glCullFace(GL_FRONT);
 	}
 }
@@ -1212,7 +1158,7 @@ void CStudioModelRenderer::StudioSetUpTransform(int trivial_accept)
 			// Con_DPrintf("%4.2f %.2f %.2f\n", f, m_pCurrentEntity->curstate.animtime, m_clTime);
 		}
 
-		if (m_fDoInterp)
+		if (bDoInterp)
 		{
 			// ugly hack to interpolate angle, position. current is reached 0.1 seconds after being set
 			f = f - 1.0;
@@ -1284,7 +1230,7 @@ float CStudioModelRenderer::StudioEstimateInterpolant(void)
 {
 	float dadt = 1.0;
 
-	if (m_fDoInterp && (m_pCurrentEntity->curstate.animtime >= m_pCurrentEntity->latched.prevanimtime + 0.01))
+	if (bDoInterp && (m_pCurrentEntity->curstate.animtime >= m_pCurrentEntity->latched.prevanimtime + 0.01))
 	{
 		dadt = (engine_cl->time - m_pCurrentEntity->curstate.animtime) / 0.1;
 		if (dadt > 2.0)
@@ -1325,13 +1271,6 @@ void CStudioModelRenderer::StudioCalcRotations(float pos[][3], vec4_t* q, mstudi
 
 	frame = (int)f;
 
-	// Con_DPrintf("%d %.4f %.4f %.4f %.4f %d\n", m_pCurrentEntity->curstate.sequence, m_clTime, m_pCurrentEntity->animtime, m_pCurrentEntity->frame, f, frame );
-
-	// Con_DPrintf( "%f %f %f\n", m_pCurrentEntity->angles[ROLL], m_pCurrentEntity->angles[PITCH], m_pCurrentEntity->angles[YAW] );
-
-	// Con_DPrintf("frame %d %d\n", frame1, frame2 );
-
-
 	dadt = StudioEstimateInterpolant();
 	s = (f - frame);
 
@@ -1345,8 +1284,6 @@ void CStudioModelRenderer::StudioCalcRotations(float pos[][3], vec4_t* q, mstudi
 		StudioCalcBoneQuaterion(frame, s, pbone, panim, adj, q[i]);
 
 		StudioCalcBonePosition(frame, s, pbone, panim, adj, pos[i]);
-		// if (0 && i == 0)
-		//	Con_DPrintf("%d %d %d %d\n", m_pCurrentEntity->curstate.sequence, frame, j, k );
 	}
 
 	if (pseqdesc->motiontype & STUDIO_X)
@@ -1447,7 +1384,7 @@ float CStudioModelRenderer::StudioEstimateFrame(mstudioseqdesc_t* pseqdesc)
 {
 	double dfdt, f;
 
-	if (m_fDoInterp)
+	if (bDoInterp)
 	{
 		if (engine_cl->time < m_pCurrentEntity->curstate.animtime)
 		{
@@ -1571,7 +1508,7 @@ void CStudioModelRenderer::StudioSetupBones(void)
 		}
 	}
 
-	if (m_fDoInterp &&
+	if (bDoInterp &&
 		m_pCurrentEntity->latched.sequencetime &&
 		(m_pCurrentEntity->latched.sequencetime + 0.2 > engine_cl->time) &&
 		(m_pCurrentEntity->latched.prevsequence < m_pStudioHeader->numseq))
@@ -1622,12 +1559,12 @@ void CStudioModelRenderer::StudioSetupBones(void)
 	pbones = (mstudiobone_t*)((byte*)m_pStudioHeader + m_pStudioHeader->boneindex);
 
 	// calc gait animation
-	if (m_pPlayerInfo && m_pPlayerInfo->gaitsequence != 0)
+	if (pPlayerInfo && pPlayerInfo->gaitsequence != 0)
 	{
-		pseqdesc = (mstudioseqdesc_t*)((byte*)m_pStudioHeader + m_pStudioHeader->seqindex) + m_pPlayerInfo->gaitsequence;
+		pseqdesc = (mstudioseqdesc_t*)((byte*)m_pStudioHeader + m_pStudioHeader->seqindex) + pPlayerInfo->gaitsequence;
 
 		panim = StudioGetAnim(m_pRenderModel, pseqdesc);
-		StudioCalcRotations(pos2, q2, pseqdesc, panim, m_pPlayerInfo->gaitframe);
+		StudioCalcRotations(pos2, q2, pseqdesc, panim, pPlayerInfo->gaitframe);
 
 		for (i = 0; i < m_pStudioHeader->numbones; i++)
 		{
@@ -1705,10 +1642,7 @@ void CStudioModelRenderer::StudioMergeBones(model_t* m_pSubModel)
 	matrix3x4_t bonematrix;
 	static vec4_t q[MAXSTUDIOBONES];
 
-	if (m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq || m_pCurrentEntity->curstate.sequence < 0)
-	{
-		m_pCurrentEntity->curstate.sequence = 0;
-	}
+	m_pCurrentEntity->curstate.sequence = std::clamp(m_pCurrentEntity->curstate.sequence, 0, m_pStudioHeader->numseq);
 
 	pseqdesc = (mstudioseqdesc_t*)((byte*)m_pStudioHeader + m_pStudioHeader->seqindex) + m_pCurrentEntity->curstate.sequence;
 
@@ -1830,14 +1764,16 @@ void CStudioModelRenderer::StudioDrawModel(int flags)
 	}
 
 	//enable buffers here so we dont bind buffers of models we won't draw
-	if (!m_pCurrentStudioMDL->IsBufferEnabled())
-		m_pCurrentStudioMDL->EnableBuffers();
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	if (!m_pCurrentStudioMDL->IsMeshBound())
+		m_pCurrentStudioMDL->BindMesh();
+#endif
 
 	//StudioSetupBones();
 	memcpy((*m_pbonetransform), m_pCurrentStudioEntData->bonematrix, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
-	pModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-	pModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
+	pModel_BonesBuffer->Bind(GL_BufferHandler::UniformBuffer);
+	pModel_BonesBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLShader.GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 	if (flags & STUDIO_EVENTS)
 	{
@@ -1880,12 +1816,12 @@ void CStudioModelRenderer::StudioHandleDeadPlayer(int flags)
 	deadplayer.angles = m_pCurrentEntity->curstate.angles;
 	deadplayer.origin = m_pCurrentEntity->curstate.origin;
 
-	m_fDoInterp = false;
+	bDoInterp = false;
 
 	// draw as though it were a player
 	StudioDrawPlayer(flags, &deadplayer);
 
-	m_fDoInterp = true; //m_fDoInterp is always on
+	bDoInterp = true; //bDoInterp is always on
 }
 
 void CStudioModelRenderer::StudioFreeEntity()
@@ -1914,7 +1850,7 @@ void CStudioModelRenderer::StudioFreeEntity()
 
 		for (int i = 0; i < pStudioDecals.size(); i++)
 		{
-			auto decal = pStudioDecals[i].get();
+			studiodecal_t* decal = pStudioDecals[i].get();
 			if (decal == studiodecal)
 			{
 				pStudioDecals.erase(pStudioDecals.begin() + i);
@@ -1927,7 +1863,7 @@ void CStudioModelRenderer::StudioFreeEntity()
 
 	for (int i = 0; i < pStudioEntityData.size(); i++)
 	{
-		auto entdata = pStudioEntityData[i].get();
+		studioentity_data_t* entdata = pStudioEntityData[i].get();
 		if(entdata == data)
 		{
 			pStudioEntityData.erase(pStudioEntityData.begin() + i);
@@ -1957,17 +1893,17 @@ void CStudioModelRenderer::StudioEstimateGait(entity_state_t* pplayer)
 	else if (dt > 1.0)
 		dt = 1;
 
-	if (dt == 0 || m_pPlayerInfo->renderframe == gBSPRenderer.m_iFrameCount)
+	if (dt == 0 || pPlayerInfo->renderframe == gBSPRenderer.m_iFrameCount)
 	{
 		m_pCurrentStudioEntData->m_flGaitMovement = 0;
 		return;
 	}
 
 	// VectorAdd( pplayer->velocity, pplayer->prediction_error, est_velocity );
-	if (m_fGaitEstimation)
+	if (bGaitEstimation)
 	{
-		VectorSubtract(m_pCurrentEntity->origin, m_pPlayerInfo->prevgaitorigin, est_velocity);
-		VectorCopy(m_pCurrentEntity->origin, m_pPlayerInfo->prevgaitorigin);
+		VectorSubtract(m_pCurrentEntity->origin, pPlayerInfo->prevgaitorigin, est_velocity);
+		VectorCopy(m_pCurrentEntity->origin, pPlayerInfo->prevgaitorigin);
 		m_pCurrentStudioEntData->m_flGaitMovement = Length(est_velocity);
 		if (dt <= 0 || m_pCurrentStudioEntData->m_flGaitMovement / dt < 5)
 		{
@@ -1984,7 +1920,7 @@ void CStudioModelRenderer::StudioEstimateGait(entity_state_t* pplayer)
 
 	if (est_velocity[1] == 0 && est_velocity[0] == 0)
 	{
-		float flYawDiff = m_pCurrentEntity->angles[YAW] - m_pPlayerInfo->gaityaw;
+		float flYawDiff = m_pCurrentEntity->angles[YAW] - pPlayerInfo->gaityaw;
 		flYawDiff = flYawDiff - (int)(flYawDiff / 360) * 360;
 		if (flYawDiff > 180)
 			flYawDiff -= 360;
@@ -1996,18 +1932,18 @@ void CStudioModelRenderer::StudioEstimateGait(entity_state_t* pplayer)
 		else
 			flYawDiff *= dt;
 
-		m_pPlayerInfo->gaityaw += flYawDiff;
-		m_pPlayerInfo->gaityaw = m_pPlayerInfo->gaityaw - (int)(m_pPlayerInfo->gaityaw / 360) * 360;
+		pPlayerInfo->gaityaw += flYawDiff;
+		pPlayerInfo->gaityaw = pPlayerInfo->gaityaw - (int)(pPlayerInfo->gaityaw / 360) * 360;
 
 		m_pCurrentStudioEntData->m_flGaitMovement = 0;
 	}
 	else
 	{
-		m_pPlayerInfo->gaityaw = (atan2(est_velocity[1], est_velocity[0]) * 180 / M_PI);
-		if (m_pPlayerInfo->gaityaw > 180)
-			m_pPlayerInfo->gaityaw = 180;
-		if (m_pPlayerInfo->gaityaw < -180)
-			m_pPlayerInfo->gaityaw = -180;
+		pPlayerInfo->gaityaw = (atan2(est_velocity[1], est_velocity[0]) * 180 / M_PI);
+		if (pPlayerInfo->gaityaw > 180)
+			pPlayerInfo->gaityaw = 180;
+		if (pPlayerInfo->gaityaw < -180)
+			pPlayerInfo->gaityaw = -180;
 	}
 }
 
@@ -2043,10 +1979,10 @@ void CStudioModelRenderer::StudioProcessGait(entity_state_t* pplayer)
 
 	StudioEstimateGait(pplayer);
 
-	// Con_DPrintf("%f %f\n", m_pCurrentEntity->angles[YAW], m_pPlayerInfo->gaityaw );
+	// Con_DPrintf("%f %f\n", m_pCurrentEntity->angles[YAW], pPlayerInfo->gaityaw );
 
 	// calc side to side turning
-	flYaw = m_pCurrentEntity->angles[YAW] - m_pPlayerInfo->gaityaw;
+	flYaw = m_pCurrentEntity->angles[YAW] - pPlayerInfo->gaityaw;
 	flYaw = flYaw - (int)(flYaw / 360) * 360;
 	if (flYaw < -180)
 		flYaw = flYaw + 360;
@@ -2055,13 +1991,13 @@ void CStudioModelRenderer::StudioProcessGait(entity_state_t* pplayer)
 
 	if (flYaw > 120)
 	{
-		m_pPlayerInfo->gaityaw = m_pPlayerInfo->gaityaw - 180;
+		pPlayerInfo->gaityaw = pPlayerInfo->gaityaw - 180;
 		m_pCurrentStudioEntData->m_flGaitMovement *= -1;
 		flYaw = flYaw - 180;
 	}
 	else if (flYaw < -120)
 	{
-		m_pPlayerInfo->gaityaw = m_pPlayerInfo->gaityaw + 180;
+		pPlayerInfo->gaityaw = pPlayerInfo->gaityaw + 180;
 		m_pCurrentStudioEntData->m_flGaitMovement *= -1;
 		flYaw = flYaw + 180;
 	}
@@ -2076,7 +2012,7 @@ void CStudioModelRenderer::StudioProcessGait(entity_state_t* pplayer)
 	m_pCurrentEntity->latched.prevcontroller[2] = m_pCurrentEntity->curstate.controller[2];
 	m_pCurrentEntity->latched.prevcontroller[3] = m_pCurrentEntity->curstate.controller[3];
 
-	m_pCurrentEntity->angles[YAW] = m_pPlayerInfo->gaityaw;
+	m_pCurrentEntity->angles[YAW] = pPlayerInfo->gaityaw;
 	if (m_pCurrentEntity->angles[YAW] < -0)
 		m_pCurrentEntity->angles[YAW] += 360;
 	m_pCurrentEntity->latched.prevangles[YAW] = m_pCurrentEntity->angles[YAW];
@@ -2086,17 +2022,17 @@ void CStudioModelRenderer::StudioProcessGait(entity_state_t* pplayer)
 	// calc gait frame
 	if (pseqdesc->linearmovement[0] > 0)
 	{
-		m_pPlayerInfo->gaitframe += (m_pCurrentStudioEntData->m_flGaitMovement / pseqdesc->linearmovement[0]) * pseqdesc->numframes;
+		pPlayerInfo->gaitframe += (m_pCurrentStudioEntData->m_flGaitMovement / pseqdesc->linearmovement[0]) * pseqdesc->numframes;
 	}
 	else
 	{
-		m_pPlayerInfo->gaitframe += pseqdesc->fps * dt;
+		pPlayerInfo->gaitframe += pseqdesc->fps * dt;
 	}
 
 	// do modulo
-	m_pPlayerInfo->gaitframe = m_pPlayerInfo->gaitframe - (int)(m_pPlayerInfo->gaitframe / pseqdesc->numframes) * pseqdesc->numframes;
-	if (m_pPlayerInfo->gaitframe < 0)
-		m_pPlayerInfo->gaitframe += pseqdesc->numframes;
+	pPlayerInfo->gaitframe = pPlayerInfo->gaitframe - (int)(pPlayerInfo->gaitframe / pseqdesc->numframes) * pseqdesc->numframes;
+	if (pPlayerInfo->gaitframe < 0)
+		pPlayerInfo->gaitframe += pseqdesc->numframes;
 }
 
 /*
@@ -2107,14 +2043,14 @@ StudioDrawPlayer
 */
 void CStudioModelRenderer::StudioDrawPlayerSolid(entity_state_t* pplayer)
 {
-	m_nPlayerIndex = pplayer->number - 1;
+	nPlayerIndex = pplayer->number - 1;
 
 	if (m_pStudioHeader->numbodyparts == 0)
 		return;
 
 	(*m_protationmatrix) = m_pCurrentStudioEntData->rotationmatrix;
-	pModelBones_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-	pModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelSolidShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
+	pModel_BonesBuffer->Bind(GL_BufferHandler::UniformBuffer);
+	pModel_BonesBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLSolidShader.GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 	// local player is always drawn
 	if (StudioCheckBBox())
@@ -2123,21 +2059,20 @@ void CStudioModelRenderer::StudioDrawPlayerSolid(entity_state_t* pplayer)
 	if (m_pStudioHeader->numbodyparts == 0)
 		return;
 
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
 	//enable buffers here so we dont bind buffers of models we won't draw
-	if (!m_pCurrentStudioMDL->IsBufferEnabled())
-		m_pCurrentStudioMDL->EnableBuffers();
+	if (!m_pCurrentStudioMDL->IsMeshBound())
+		m_pCurrentStudioMDL->BindMesh();
+#endif
 
-	m_pPlayerInfo = pfnPlayerInfo(m_nPlayerIndex);
+	pPlayerInfo = pfnPlayerInfo(nPlayerIndex);
 
-	m_pPlayerInfo = NULL;
+	pPlayerInfo = NULL;
 
 	if (!(m_pCurrentEntity->curstate.effects & FL_NOMODEL))
 	{
 
-		m_pPlayerInfo = pfnPlayerInfo(m_nPlayerIndex);
-
-		m_pVertexTransform = &m_vVertexTransform[0];
-		m_pNormalTransform = &m_vNormalTransform[0];
+		pPlayerInfo = pfnPlayerInfo(nPlayerIndex);
 
 		for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
 		{
@@ -2146,7 +2081,7 @@ void CStudioModelRenderer::StudioDrawPlayerSolid(entity_state_t* pplayer)
 		}
 		
 		
-		m_pPlayerInfo = NULL;
+		pPlayerInfo = NULL;
 		
 		if (pplayer->weaponmodel)
 		{
@@ -2158,11 +2093,13 @@ void CStudioModelRenderer::StudioDrawPlayerSolid(entity_state_t* pplayer)
 		
 			m_pCurrentEntity->model = pweaponmodel;
 
-			pModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelSolidShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset + (playermdl_numbones * sizeof(matrix3x4_t)), sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
+			pModel_BonesBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLSolidShader.GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset + (playermdl_numbones * sizeof(matrix3x4_t)), sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 		
 			StudioMergeBones(pweaponmodel);
 		
-			m_pCurrentStudioMDL->EnableBuffers();
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+			m_pCurrentStudioMDL->BindMesh();
+#endif
 
 			for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
 			{
@@ -2186,7 +2123,7 @@ StudioDrawPlayer
 */
 void CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 {
-	m_nPlayerIndex = pplayer->number - 1;
+	nPlayerIndex = pplayer->number - 1;
 
 	if (m_pCurrentEntity == gEngfuncs.GetLocalPlayer())
 	{
@@ -2206,15 +2143,17 @@ void CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 			return;
 	}
 
-	pModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
+	pModel_BonesBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLShader.GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 	//enable buffers here so we dont bind buffers of models we won't draw
-	if (!m_pCurrentStudioMDL->IsBufferEnabled())
-		m_pCurrentStudioMDL->EnableBuffers();
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	if (!m_pCurrentStudioMDL->IsMeshBound())
+		m_pCurrentStudioMDL->BindMesh();
+#endif
 
-	m_pPlayerInfo = pfnPlayerInfo(m_nPlayerIndex);
+	pPlayerInfo = pfnPlayerInfo(nPlayerIndex);
 
-	m_pPlayerInfo = NULL;
+	pPlayerInfo = NULL;
 
 	if (flags & STUDIO_EVENTS)
 	{
@@ -2235,7 +2174,7 @@ void CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 		StudioSetupLighting();
 		StudioEntityLight();
 
-		m_pPlayerInfo = pfnPlayerInfo(m_nPlayerIndex);
+		pPlayerInfo = pfnPlayerInfo(nPlayerIndex);
 
 		StudioRenderModel();
 
@@ -2248,18 +2187,20 @@ void CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 			model_t* pweaponmodel = CL_GetModelByIndex(pplayer->weaponmodel);
 			SetCurrentMDL(pweaponmodel);
 
-			pModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset + (playermdl_numbones * sizeof(matrix3x4_t)), sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
+			pModel_BonesBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLShader.GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset + (playermdl_numbones * sizeof(matrix3x4_t)), sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 			m_pCurrentEntity->model = pweaponmodel;
 
-			m_pCurrentStudioMDL->EnableBuffers();
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+			m_pCurrentStudioMDL->BindMesh();
+#endif
 
 			StudioRenderModel();
 			StudioCalcAttachments();
 
 			m_pCurrentEntity->model = savedmdl;
 		}
-		m_pPlayerInfo = NULL;
+		pPlayerInfo = NULL;
 	}
 
 	return;
@@ -2353,7 +2294,7 @@ void CStudioModelRenderer::CheckVMProjection()
 
 		AdjustFOV(&fov, &fovy, ScreenWidth, ScreenHeight, 0);
 
-		m_VM_ProjectionMatrix = glm::perspective(fov, aspect, VM_NEARPLANE, VM_FARPLANE);
+		VMProjectionMatrix = glm::perspective(fov, aspect, VM_NEARPLANE, VM_FARPLANE);
 
 		flLastVMFov = m_pCvarViewmodelFov->value;
 	}
@@ -2371,15 +2312,15 @@ void CStudioModelRenderer::StudioRenderModel(void)
 	{
 		int oldfx = m_pCurrentEntity->curstate.renderfx;
 		m_pCurrentEntity->curstate.renderfx = kRenderFxNone;
-		m_bChromeShell = false;
+		bChromeShell = false;
 		StudioRenderFinal();
 
-		m_bChromeShell = true;
+		bChromeShell = true;
 
 		m_pCurrentEntity->curstate.renderfx = oldfx;
 		StudioRenderFinal();
 
-		m_bChromeShell = false;
+		bChromeShell = false;
 	}
 	else
 	{
@@ -2398,7 +2339,7 @@ StudioRenderFinal
 */
 void CStudioModelRenderer::StudioRenderFinal(void)
 {
-	StudioSetupRenderer(m_pCurrentEntity->curstate.rendermode);
+	StudioSetupRenderer();
 
 	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
 	{
@@ -2428,7 +2369,7 @@ void CStudioModelRenderer::StudioDrawWireframe(void)
 	glLineWidth(1);
 
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_wireframe], 1);
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_wireframe], 1);
 
 	if (gBSPRenderer.m_pCvarWireFrame->value > 2)
 	{
@@ -2445,12 +2386,12 @@ void CStudioModelRenderer::StudioDrawWireframe(void)
 	studioentity_data_t* pentitydata = (studioentity_data_t*)m_pCurrentEntity->efrag;
 	if (!pentitydata->m_vStudioDecals.empty())
 	{
-		m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_studiodecal], 1);
+		s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_studiodecal], 1);
 
 		glPolygonOffset(-1, -1);
 		g_GlobalGLState.SetPolygonOffsetFill(true);
-		auto prev_vao = GL_VertexArrayObject::GetBoundVAO();
-		m_ModelDecal_VAO->BindVAO();
+		GL_VertexArrayObject* prev_vao = GL_VertexArrayObject::GetBoundVAO();
+		pModel_DecalVAO->BindVAO();
 
 		int vbo;
 		glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &vbo);
@@ -2464,7 +2405,7 @@ void CStudioModelRenderer::StudioDrawWireframe(void)
 		prev_vao->BindVAO();
 		g_GlobalGLState.SetPolygonOffsetFill(false);
 
-		m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_studiodecal], 0);
+		s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_studiodecal], 0);
 	}
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -2475,7 +2416,7 @@ void CStudioModelRenderer::StudioDrawWireframe(void)
 		g_GlobalGLState.SetDepthTest(true);
 	}
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_wireframe], 0);
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_wireframe], 0);
 }
 
 void CStudioModelRenderer::SetCurrentEntity(cl_entity_t* pEnt, bool bStaticProp /* = false */)
@@ -2551,18 +2492,18 @@ StudioAllocExtraInfo
 */
 entextrainfo_t* CStudioModelRenderer::StudioAllocExtraInfo(void)
 {
-	if (m_iNumExtraInfo == MAXRENDERENTS)
-		m_iNumExtraInfo = NULL;
+	if (iNumExtraInfo == MAXRENDERENTS)
+		iNumExtraInfo = NULL;
 
-	if (m_pExtraInfo[m_iNumExtraInfo].pEntity)
+	if (pExtraInfo[iNumExtraInfo].pEntity)
 	{
-		m_pExtraInfo[m_iNumExtraInfo].pEntity->topnode = NULL;
-		m_pExtraInfo[m_iNumExtraInfo].pEntity = NULL;
-		memset(&m_pExtraInfo[m_iNumExtraInfo], 0, sizeof(entextrainfo_t));
+		pExtraInfo[iNumExtraInfo].pEntity->topnode = NULL;
+		pExtraInfo[iNumExtraInfo].pEntity = NULL;
+		memset(&pExtraInfo[iNumExtraInfo], 0, sizeof(entextrainfo_t));
 	}
 
-	m_iNumExtraInfo++;
-	return &m_pExtraInfo[m_iNumExtraInfo - 1];
+	iNumExtraInfo++;
+	return &pExtraInfo[iNumExtraInfo - 1];
 }
 
 /*
@@ -2635,60 +2576,52 @@ StudioSetupRenderer
 
 ====================
 */
-void CStudioModelRenderer::StudioSetupRenderer(int rendermode)
+void CStudioModelRenderer::StudioSetupRenderer()
 {
-	m_pVertexTransform = &m_vVertexTransform[0];
-	m_pNormalTransform = &m_vNormalTransform[0];
+	memset(&model_PerEntityData, 0, sizeof(model_PerEntityData));
 
-	memset(&m_dModelPerEntityData, 0, sizeof(m_dModelPerEntityData));
+	model_PerEntityData.modelmatrix = gBSPRenderer.m_ModelMatrix;
+	model_PerEntityData.int_values.y = bChromeShell;
+	model_PerEntityData.int_values.z = bExternalEntity;
 
-	m_dModelPerEntityData.modelmatrix = gBSPRenderer.m_ModelMatrix;
-	m_dModelPerEntityData.int_values.y = m_bChromeShell;
-	m_dModelPerEntityData.int_values.z = m_bExternalEntity;
+	color24 colors = m_pCurrentEntity->curstate.rendercolor;
 
-	auto colors = m_pCurrentEntity->curstate.rendercolor;
-
-	m_dModelPerEntityData.rendervalues = glm::vec4(colors.r / 255.f, colors.g / 255.f, colors.b / 255.f, m_pCurrentEntity->curstate.renderamt / 255.f);
+	model_PerEntityData.rendervalues = glm::vec4(colors.r / 255.f, colors.g / 255.f, colors.b / 255.f, m_pCurrentEntity->curstate.renderamt / 255.f);
 
 
-	if (!m_bChromeShell) //dont bother with light data if doing chrome shell
+	if (!bChromeShell) //dont bother with light data if doing chrome shell
 	{
 		// lightmap light
-		m_dModelPerEntityData.lightdir = glm::vec4(m_pLighting.lightdir.x, m_pLighting.lightdir.y, m_pLighting.lightdir.z, 0);
-		m_dModelPerEntityData.ambientlight = glm::vec4(m_pLighting.ambientlight.x, m_pLighting.ambientlight.y, m_pLighting.ambientlight.z, 0);
-		m_dModelPerEntityData.diffuselight = glm::vec4(m_pLighting.diffuselight.x, m_pLighting.diffuselight.y, m_pLighting.diffuselight.z, 0);
+		model_PerEntityData.lightdir = glm::vec4(m_pLighting.lightdir.x, m_pLighting.lightdir.y, m_pLighting.lightdir.z, 0);
+		model_PerEntityData.ambientlight = glm::vec4(m_pLighting.ambientlight.x, m_pLighting.ambientlight.y, m_pLighting.ambientlight.z, 0);
+		model_PerEntityData.diffuselight = glm::vec4(m_pLighting.diffuselight.x, m_pLighting.diffuselight.y, m_pLighting.diffuselight.z, 0);
 		//
 
-		m_dModelPerEntityData.int_values.x =  m_iNumModelLights;
+		model_PerEntityData.int_values.x =  iNumModelLights;
 
-		for (int i = 0; i < m_iNumModelLights; i++)
+		for (int i = 0; i < iNumModelLights; i++)
 		{
-			auto &mdlight = m_pModelLights[i];
+			auto &mdlight = pModelLights[i];
 
 			Vector flPosition(mdlight->origin[0], mdlight->origin[1], mdlight->origin[2]);
 			Vector flForward(mdlight->forward[0], mdlight->forward[1], mdlight->forward[2]);
 
 			bool spotlight = mdlight->spotcos > 0 ? 1 : 0;
 
-			m_dModelPerEntityData.modellight_info[i][0] = glm::vec4(flPosition.x, flPosition.y, flPosition.z, spotlight);
-			m_dModelPerEntityData.modellight_info[i][1] = glm::vec4(mdlight->color.x, mdlight->color.y, mdlight->color.z, mdlight->radius);
-			m_dModelPerEntityData.modellight_info[i][2] = glm::vec4(flForward[0], flForward[1], flForward[2], cos((mdlight->spotcos * 2) * 0.3 * (M_PI2 / 360)));
+			model_PerEntityData.modellight_info[i][0] = glm::vec4(flPosition.x, flPosition.y, flPosition.z, spotlight);
+			model_PerEntityData.modellight_info[i][1] = glm::vec4(mdlight->color.x, mdlight->color.y, mdlight->color.z, mdlight->radius);
+			model_PerEntityData.modellight_info[i][2] = glm::vec4(flForward[0], flForward[1], flForward[2], cos((mdlight->spotcos * 2) * 0.3 * (M_PI2 / 360)));
 		}
 	}
 
 	pModel_PerEntityBuffer->Bind(GL_BufferHandler::UniformBuffer);
-	pModel_PerEntityBuffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(mdlshader_perentitydata_t), &m_dModelPerEntityData);
+	pModel_PerEntityBuffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(mdlshader_perentitydata_t), &model_PerEntityData);
 
-	if (rendermode == kRenderTransTexture)
+	int rendermode = m_pCurrentEntity->curstate.rendermode;
+	if (rendermode == kRenderTransTexture || rendermode == kRenderTransTexture)
 	{
 		g_GlobalGLState.SetBlend(true);
-		g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		g_GlobalGLState.SetDepthWrite(false);
-	}
-	else if (rendermode == kRenderTransAdd)
-	{
-		g_GlobalGLState.SetBlend(true);
-		g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		g_GlobalGLState.SetBlendFunc(GL_SRC_ALPHA, rendermode == kRenderTransTexture ? GL_ONE_MINUS_SRC_ALPHA : GL_ONE);
 		g_GlobalGLState.SetDepthWrite(false);
 	}
 }
@@ -2939,22 +2872,22 @@ StudioCullBBox
 */
 bool CStudioModelRenderer::StudioCullBBox(const Vector& mins, const Vector& maxs)
 {
-	if (m_vMins[0] > maxs[0])
+	if (v_bboxMins[0] > maxs[0])
 		return true;
 
-	if (m_vMins[1] > maxs[1])
+	if (v_bboxMins[1] > maxs[1])
 		return true;
 
-	if (m_vMins[2] > maxs[2])
+	if (v_bboxMins[2] > maxs[2])
 		return true;
 
-	if (m_vMaxs[0] < mins[0])
+	if (v_bboxMaxs[0] < mins[0])
 		return true;
 
-	if (m_vMaxs[1] < mins[1])
+	if (v_bboxMaxs[1] < mins[1])
 		return true;
 
-	if (m_vMaxs[2] < mins[2])
+	if (v_bboxMaxs[2] < mins[2])
 		return true;
 
 	return false;
@@ -2972,17 +2905,17 @@ void CStudioModelRenderer::StudioEntityLight(void)
 	EV_SetTraceHull(2);
 
 	Vector vCenter;
-	VectorAdd(m_vMins, m_vMaxs, vCenter);
+	VectorAdd(v_bboxMins, v_bboxMaxs, vCenter);
 	VectorScale(vCenter, 0.5, vCenter);
 
-	m_iNumModelLights = NULL;
+	iNumModelLights = NULL;
 	mlight_t* mlight = &gBSPRenderer.m_pModelLights[0];
 
 	for (int i = 0; i < gBSPRenderer.m_iNumModelLights; i++, mlight++)
 	{
 		if (!mlight->flashlight)
 		{
-			if (m_iNumModelLights == MAX_MODEL_LIGHTS)
+			if (iNumModelLights == MAX_MODEL_LIGHTS)
 				continue;
 		}
 
@@ -2990,7 +2923,7 @@ void CStudioModelRenderer::StudioEntityLight(void)
 		{
 			if (mlight->spotcos)
 			{
-				if (mlight->frustum->CullBox(m_vMins, m_vMaxs))
+				if (mlight->frustum->CullBox(v_bboxMins, v_bboxMaxs))
 					continue;
 			}
 			else
@@ -3005,15 +2938,15 @@ void CStudioModelRenderer::StudioEntityLight(void)
 			if (pmtrace.fraction < 1.0 && !pmtrace.startsolid)
 				continue; // blocked
 
-			if (mlight->flashlight && m_iNumModelLights == MAX_MODEL_LIGHTS)
+			if (mlight->flashlight && iNumModelLights == MAX_MODEL_LIGHTS)
 			{
 				// Flashlight must get on this list.
-				m_pModelLights[(m_iNumModelLights - 1)] = mlight;
+				pModelLights[(iNumModelLights - 1)] = mlight;
 			}
 			else
 			{
-				m_pModelLights[m_iNumModelLights] = mlight;
-				m_iNumModelLights++;
+				pModelLights[iNumModelLights] = mlight;
+				iNumModelLights++;
 			}
 		}
 	}
@@ -3027,7 +2960,6 @@ StudioDrawPoints
 */
 void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 {
-
 	int index = m_pCurrentEntity->curstate.body / bodypart->GetBase();
 	index = index % bodypart->GetNumModels();
 
@@ -3035,35 +2967,26 @@ void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 	if (!submodel->GetMeshNum())
 		return;
 
-	int skinnum = m_pCurrentEntity->curstate.skin;
-	if (skinnum < 0)
-		skinnum = 0;
+	int numskinfamilies = m_pCurrentStudioMDL->GetNumSkinIndexes();
 
-	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes();
 
-	if (skinnum != 0 && skinnum < m_pCurrentStudioMDL->GetNumSkinFamilies())
-		pskinref += (skinnum * m_pCurrentStudioMDL->GetNumSkinIndexes());
-
-	bool hasadditive = false;
+	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, numskinfamilies) * numskinfamilies;
+	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes() + skinindex;
 
 	//
 	// Render normal textures
 	//
-	for (int j = 0; j < submodel->GetMeshNum(); j++)
+	std::vector<int> specialmeshes;
+	for (int i = 0; i < submodel->GetMeshNum(); i++)
 	{
-		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(j);
+		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(i);
 
-		int meshskinref = pmesh->GetSkinReference();
-
-		if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+		int meshskinref = std::clamp(pmesh->SkinReference(), 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
-		auto ptexflags = ptex->GetTextureFlags();
-
-		if (ptexflags & STUDIO_NF_ADDITIVE)
+		if (ptex->GetTextureFlags() & STUDIO_NF_ADDITIVE)
 		{
-			hasadditive = true;
+			specialmeshes.push_back(i);
 			continue;
 		}
 
@@ -3071,7 +2994,7 @@ void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 
 	}
 
-	if (!hasadditive)
+	if (specialmeshes.empty())
 		return;
 
 	//render textures that require blending
@@ -3080,23 +3003,15 @@ void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 	g_GlobalGLState.SetBlendFunc(GL_ONE, GL_ONE);
 	g_GlobalGLState.SetDepthWrite(false);
 
-	for (int j = 0; j < submodel->GetMeshNum(); j++)
+	//render textures that require blending
+	for (int i = 0; i < specialmeshes.size(); i++)
 	{
-		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(j);
+		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(specialmeshes[i]);
 
-		int meshskinref = pmesh->GetSkinReference();
-
-		if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+		int meshskinref = std::clamp(pmesh->SkinReference(), 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
-		auto ptexflags = ptex->GetTextureFlags();
-
-		if (!(ptexflags & STUDIO_NF_ADDITIVE))
-			continue;
-
 		StudioDrawMesh(pmesh, ptex);
-
 	}
 
 	g_GlobalGLState.SetBlend(false);
@@ -3111,20 +3026,14 @@ StudioDrawMesh
 */
 void CStudioModelRenderer::StudioDrawMesh(StudioMDL_Mesh* pmesh, StudioMDL_Texture *ptex)
 {
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_texture_flags], ptex->GetTextureFlags());
 
-	auto texinfo = ptex->GetTextureInfo();
+	if (!bChromeShell)
+		gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptex->GetTextureInfo().iIndex);
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_texture_flags], ptex->GetTextureFlags());
+	pmesh->DrawMesh();
 
-	if (!m_bChromeShell)
-	{
-		gBSPRenderer.BindGLTexture(GL_TEXTURE0, texinfo.iIndex);
-	}
-
-	// draw
-	m_pCurrentStudioMDL->DrawElements(pmesh->GetNumTriangles(), pmesh->GetMeshBufferOffset());
-
-	gBSPRenderer.m_iStudioPolyCounter += pmesh->GetNumTriangles();
+	gBSPRenderer.m_iStudioPolyCounter += pmesh->NumIndices();
 }
 
 void R_ComputeBBox(const Vector& origin,int sequence, Vector& mins, Vector& maxs)
@@ -3160,8 +3069,6 @@ void R_ComputeBBox(const Vector& origin,int sequence, Vector& mins, Vector& maxs
 
 	mstudioseqdesc_t* pseqdesc = (mstudioseqdesc_t*)((byte*)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
 
-#if 1
-
 	Vector localCenter = (pseqdesc->bbmin + pseqdesc->bbmax) * 0.5;
 
 	Vector localExtents = pseqdesc->bbmax - localCenter;
@@ -3170,36 +3077,11 @@ void R_ComputeBBox(const Vector& origin,int sequence, Vector& mins, Vector& maxs
 	VectorTransform(localCenter, (*g_StudioRenderer.m_protationmatrix), worldCenter);
 	Vector worldExtents;
 
-	//worldExtents.x = DotProductAbs(localExtents, (*g_StudioRenderer.m_protationmatrix)[0]);
-	//worldExtents.y = DotProductAbs(localExtents, (*g_StudioRenderer.m_protationmatrix)[1]);
-	//worldExtents.z = DotProductAbs(localExtents, (*g_StudioRenderer.m_protationmatrix)[2]);
 	VectorRotateAbs(localExtents, (*g_StudioRenderer.m_protationmatrix), worldExtents);
-
 
 	//use worldCenter, not the entity's origin, to account for un-centered bounding boxes
 	VectorMin(mins, worldCenter - worldExtents, mins);
 	VectorMax(maxs, worldCenter + worldExtents, maxs);
-
-
-#else //old method
-  	for (int i=0; i<8 ; i++)
-  	{
-  		Vector p1, p2;
-   
-  		p1[0] = (i & 1) ? pseqdesc->bbmin[0] : pseqdesc->bbmax[0];
-  		p1[1] = (i & 2) ? pseqdesc->bbmin[1] : pseqdesc->bbmax[1];
-  		p1[2] = (i & 4) ? pseqdesc->bbmin[2] : pseqdesc->bbmax[2];
-  
-  		VectorTransform(p1, (*g_StudioRenderer.m_protationmatrix), p2);
-  
-  		if (p2[0] < mins[0]) mins[0] = p2[0];
-  		if (p2[0] > maxs[0]) maxs[0] = p2[0];
-  		if (p2[1] < mins[1]) mins[1] = p2[1];
-  		if (p2[1] > maxs[1]) maxs[1] = p2[1];
-  		if (p2[2] < mins[2]) mins[2] = p2[2];
-  		if (p2[2] > maxs[2]) maxs[2] = p2[2];
-  	}
-#endif
 }
 
 /*
@@ -3210,20 +3092,19 @@ StudioCheckBBox
 */
 qboolean CStudioModelRenderer::StudioCheckBBox(void)
 {
-
-	m_vMins = m_vMaxs = vec3_origin;
-
-	R_ComputeBBox(m_pCurrentEntity->origin, m_pCurrentEntity->curstate.sequence, m_vMins, m_vMaxs);
-
 	// View entity is always present
 	if (m_pCurrentEntity == &engine_cl->viewent)
 		return false;
 
-	// Copy it over to the entity
-	VectorCopy(m_vMins, m_pCurrentEntity->curstate.mins);
-	VectorCopy(m_vMaxs, m_pCurrentEntity->curstate.maxs);
+	v_bboxMins = v_bboxMaxs = vec3_origin;
 
-	return gHUD.viewFrustum.CullBox(m_vMins, m_vMaxs);
+	R_ComputeBBox(m_pCurrentEntity->origin, m_pCurrentEntity->curstate.sequence, v_bboxMins, v_bboxMaxs);
+
+	// Copy it over to the entity
+	VectorCopy(v_bboxMins, m_pCurrentEntity->curstate.mins);
+	VectorCopy(v_bboxMaxs, m_pCurrentEntity->curstate.maxs);
+
+	return gHUD.viewFrustum.CullBox(v_bboxMins, v_bboxMaxs);
 }
 
 /*
@@ -3236,31 +3117,31 @@ void CStudioModelRenderer::StudioDrawBBox(void)
 {
 	Vector v[8];
 
-	v[0][0] = m_vMins[0];
-	v[0][1] = m_vMaxs[1];
-	v[0][2] = m_vMins[2];
-	v[1][0] = m_vMins[0];
-	v[1][1] = m_vMins[1];
-	v[1][2] = m_vMins[2];
-	v[2][0] = m_vMaxs[0];
-	v[2][1] = m_vMaxs[1];
-	v[2][2] = m_vMins[2];
-	v[3][0] = m_vMaxs[0];
-	v[3][1] = m_vMins[1];
-	v[3][2] = m_vMins[2];
+	v[0][0] = v_bboxMins[0];
+	v[0][1] = v_bboxMaxs[1];
+	v[0][2] = v_bboxMins[2];
+	v[1][0] = v_bboxMins[0];
+	v[1][1] = v_bboxMins[1];
+	v[1][2] = v_bboxMins[2];
+	v[2][0] = v_bboxMaxs[0];
+	v[2][1] = v_bboxMaxs[1];
+	v[2][2] = v_bboxMins[2];
+	v[3][0] = v_bboxMaxs[0];
+	v[3][1] = v_bboxMins[1];
+	v[3][2] = v_bboxMins[2];
 
-	v[4][0] = m_vMaxs[0];
-	v[4][1] = m_vMaxs[1];
-	v[4][2] = m_vMaxs[2];
-	v[5][0] = m_vMaxs[0];
-	v[5][1] = m_vMins[1];
-	v[5][2] = m_vMaxs[2];
-	v[6][0] = m_vMins[0];
-	v[6][1] = m_vMaxs[1];
-	v[6][2] = m_vMaxs[2];
-	v[7][0] = m_vMins[0];
-	v[7][1] = m_vMins[1];
-	v[7][2] = m_vMaxs[2];
+	v[4][0] = v_bboxMaxs[0];
+	v[4][1] = v_bboxMaxs[1];
+	v[4][2] = v_bboxMaxs[2];
+	v[5][0] = v_bboxMaxs[0];
+	v[5][1] = v_bboxMins[1];
+	v[5][2] = v_bboxMaxs[2];
+	v[6][0] = v_bboxMins[0];
+	v[6][1] = v_bboxMaxs[1];
+	v[6][2] = v_bboxMaxs[2];
+	v[7][0] = v_bboxMins[0];
+	v[7][1] = v_bboxMins[1];
+	v[7][2] = v_bboxMaxs[2];
 
 	g_GlobalGLState.SetCullFace(false);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -3300,7 +3181,7 @@ void CStudioModelRenderer::StudioDrawBBox(void)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	g_GlobalGLState.SetCullFace(true);
 
-	m_ModelShader->Bind();
+	s_MDLShader.Bind();
 }
 
 /*
@@ -3323,10 +3204,10 @@ void CStudioModelRenderer::StudioDrawPropEntity(cl_entity_t* pEntity, bool bSkyb
 	if (m_pStudioHeader->numbodyparts == 0)
 		return;
 
-	VectorCopy(m_pCurrentExtraData->absmin, m_vMins);
-	VectorCopy(m_pCurrentExtraData->absmax, m_vMaxs);
+	VectorCopy(m_pCurrentExtraData->absmin, v_bboxMins);
+	VectorCopy(m_pCurrentExtraData->absmax, v_bboxMaxs);
 
-	if (gHUD.viewFrustum.CullBox(m_vMins, m_vMaxs) && !bSkybox)
+	if (gHUD.viewFrustum.CullBox(v_bboxMins, v_bboxMaxs) && !bSkybox)
 		return;
 
 	StudioSetupPropLighting();
@@ -3456,14 +3337,11 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 	pVBOHeader->submodels = new vbosubmodel_t[n];
 	memset(pVBOHeader->submodels, 0, sizeof(vbosubmodel_t) * n);
 
-	m_pVertexTransform = &m_vVertexTransform[0];
-	m_pNormalTransform = &m_vNormalTransform[0];
-
 	n = 0;
 	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
 	{
 		m_pSubModel = (mstudiomodel_t*)((byte*)m_pStudioHeader + bp[i].modelindex);
-		auto bodypart = m_pCurrentStudioMDL->GetBodyPartbyIndex(i);
+		StudioMDL_BodyPart* bodypart = m_pCurrentStudioMDL->GetBodyPartbyIndex(i);
 		for (int k = 0; k < bp[i].nummodels; k++)
 		{
 			vbosubmodel_t* pvbosubmodel = &pExtraData->pVBOHeader.submodels[n];
@@ -3482,10 +3360,10 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 			Vector* pstudioverts = (Vector*)((byte*)m_pStudioHeader + m_pSubModel[k].vertindex);
 
 			for (int j = 0; j < m_pSubModel[k].numnorms; j++)
-				VectorRotate(pstudionorms[j], (*m_pbonetransform)[pnormbone[j]], m_pNormalTransform[j]);
+				VectorRotate(pstudionorms[j], (*m_pbonetransform)[pnormbone[j]], vNormalTransform[j]);
 
 			for (int j = 0; j < m_pSubModel[k].numverts; j++)
-				VectorTransform(pstudioverts[j], (*m_pbonetransform)[pvertbone[j]], m_pVertexTransform[j]);
+				VectorTransform(pstudioverts[j], (*m_pbonetransform)[pvertbone[j]], vVertexTransform[j]);
 
 			for (int l = 0; l < m_pSubModel[k].nummesh; l++)
 			{
@@ -3494,10 +3372,9 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 
 				short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes();
 
-				int meshskinref = bodypart->GetModelbyIndex(k)->GetMeshbyIndex(l)->GetSkinReference();
+				int meshskinref = bodypart->GetModelbyIndex(k)->GetMeshbyIndex(l)->SkinReference();
 
-				if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-					meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+				meshskinref = std::clamp(meshskinref, 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 				auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
 				auto ptexinfo = ptex->GetTextureInfo();
@@ -3634,8 +3511,8 @@ void CStudioModelRenderer::StudioSaveModelData(modeldata_t* pExtraData)
 
 	// Copy over all VBO vertexes
 	pVBOHeader->numverts = pVBOVerts.size();
-	pVBOHeader->pBufferData = new brushvertex_t[pVBOVerts.size()];
-	memcpy(pVBOHeader->pBufferData, pVBOVerts.data(), sizeof(brushvertex_t) * pVBOVerts.size());
+	pVBOHeader->pBufferData = new Default3DVert_t[pVBOVerts.size()];
+	memcpy(pVBOHeader->pBufferData, pVBOVerts.data(), sizeof(Default3DVert_t) * pVBOVerts.size());
 
 	// Copy over index array
 	pVBOHeader->numindexes = usIndexes.size();
@@ -3673,9 +3550,9 @@ void CStudioModelRenderer::StudioManageVertex(studiovert_t* pvert)
 		{pvert->texcoord[0], pvert->texcoord[1]},
 		pvert->boneindex});
 
-	brushvertex_t vert{};
-	vert.pos = m_pVertexTransform[pvert->vertindex];
-	vert.normal = m_pNormalTransform[pvert->normindex];
+	Default3DVert_t vert{};
+	vert.pos = vVertexTransform[pvert->vertindex];
+	vert.normal = vNormalTransform[pvert->normindex];
 	vert.texcoord[0] = pvert->texcoord[0];
 	vert.texcoord[1] = pvert->texcoord[1];
 
@@ -3741,12 +3618,12 @@ void CStudioModelRenderer::StudioSaveUniqueData(entextradata_t* pExtraData)
 		baseindex += m_pBodyPart->nummodels;
 	}
 
-	m_bExternalEntity = true;
+	bExternalEntity = true;
 	StudioSetUpTransform(0);
 	StudioSetupBones();
 
 	//memcpy(pExtraData->pbones, m_pbonetransform, sizeof(float) * 12 * pExtraData->pModelData->pHdr->numbones);
-	m_bExternalEntity = false;
+	bExternalEntity = false;
 
 	VectorCopy(vMins, m_pCurrentEntity->curstate.mins);
 	VectorCopy(vMaxs, m_pCurrentEntity->curstate.maxs);
@@ -3782,7 +3659,7 @@ void CStudioModelRenderer::StudioDrawPropModel(void)
 
 	gBSPRenderer.m_ModelMatrix = m_pCurrentExtraData->modelmatrix;
 
-	StudioSetupRenderer(m_pCurrentEntity->curstate.rendermode);
+	StudioSetupRenderer();
 
 	gBSPRenderer.m_ModelMatrix = oldmdlmatrix;
 
@@ -3835,15 +3712,11 @@ void CStudioModelRenderer::StudioDrawPointsProp(void)
 
 	for (int i = 0; i < m_pSubModel->nummesh; i++)
 	{
-		int meshskinref = pmesh[i].skinref;
-		if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+		int meshskinref = std::clamp(pmesh[i].skinref, 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 		vbomesh_t* pvbomesh = &pVBOSubModel->meshes[i];
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
-		auto ptexflags = ptex->GetTextureFlags();
-
-		if (ptexflags & STUDIO_NF_ADDITIVE)
+		if (ptex->GetTextureFlags() & STUDIO_NF_ADDITIVE)
 		{
 			hasadditive = true;
 			continue;
@@ -3865,15 +3738,11 @@ void CStudioModelRenderer::StudioDrawPointsProp(void)
 
 	for (int i = 0; i < m_pSubModel->nummesh; i++)
 	{
-		int meshskinref = pmesh[i].skinref;
-		if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+		int meshskinref = std::clamp(pmesh[i].skinref, 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 		vbomesh_t* pvbomesh = &pVBOSubModel->meshes[i];
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
-		auto ptexflags = ptex->GetTextureFlags();
-
-		if (!(ptexflags & STUDIO_NF_ADDITIVE))
+		if (!(ptex->GetTextureFlags() & STUDIO_NF_ADDITIVE))
 			continue;
 
 		StudioDrawMeshProp(ptex, pvbomesh);
@@ -3895,13 +3764,11 @@ StudioDrawMeshProp
 */
 void CStudioModelRenderer::StudioDrawMeshProp(StudioMDL_Texture *ptex, vbomesh_t* pmesh)
 {
-	auto texinfo = ptex->GetTextureInfo();
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_texture_flags], ptex->GetTextureFlags());
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_texture_flags], ptex->GetTextureFlags());
+	gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptex->GetTextureInfo().iIndex);
 
-	gBSPRenderer.BindGLTexture(GL_TEXTURE0, texinfo.iIndex);
-
-	glDrawElements(GL_TRIANGLES, pmesh->num_vertexes, GL_UNSIGNED_INT, BUFFER_OFFSET(pmesh->start_vertex));
+	g_pStaticMeshBuffer->DrawElements(pmesh->start_vertex, pmesh->num_vertexes);
 }
 
 /*
@@ -3916,7 +3783,7 @@ void CStudioModelRenderer::StudioDrawWireframeProp(void)
 	g_GlobalGLState.SetCullFace(false);
 	glLineWidth(1);
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_wireframe], 1);
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_wireframe], 1);
 
 	if (gBSPRenderer.m_pCvarWireFrame->value >= 3)
 	{
@@ -3947,7 +3814,7 @@ void CStudioModelRenderer::StudioDrawWireframeProp(void)
 		g_GlobalGLState.SetDepthTest(true);
 	}
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_wireframe], 0);
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_wireframe], 0);
 }
 
 studioentity_data_t* CStudioModelRenderer::StudioAllocEntityData(void)
@@ -4100,8 +3967,8 @@ void CStudioModelRenderer::StudioDecalForEntity(Vector position, Vector normal, 
 		iNumStudioDecalVerts = 0; //uh oh, this is bad, ran out of space ! start from beginning. gonna cause some problems :(
 	}
 
-	m_ModelDecal_Buffer->Bind(GL_BufferHandler::ArrayBuffer);
-	m_ModelDecal_Buffer->BufferSubData(GL_BufferHandler::ArrayBuffer, iNumStudioDecalVerts * structsize, numverts * structsize, decalverts.data());
+	pModel_DecalBuffer->Bind(GL_BufferHandler::ArrayBuffer);
+	pModel_DecalBuffer->BufferSubData(GL_BufferHandler::ArrayBuffer, iNumStudioDecalVerts * structsize, numverts * structsize, decalverts.data());
 	pDecal->vertstart = iNumStudioDecalVerts;
 	iNumStudioDecalVerts += numverts;
 
@@ -4120,8 +3987,8 @@ void CStudioModelRenderer::StudioDecalTriangle(studiotri_t* tri, Vector position
 	Vector dverts2[10];
 
 	Vector norm, v1, v2, v3;
-	VectorSubtract(m_vVertexTransform[tri->verts[1].vertindex], m_vVertexTransform[tri->verts[0].vertindex], v1);
-	VectorSubtract(m_vVertexTransform[tri->verts[2].vertindex], m_vVertexTransform[tri->verts[1].vertindex], v2);
+	VectorSubtract(vVertexTransform[tri->verts[1].vertindex], vVertexTransform[tri->verts[0].vertindex], v1);
+	VectorSubtract(vVertexTransform[tri->verts[2].vertindex], vVertexTransform[tri->verts[1].vertindex], v2);
 	CrossProduct(v2, v1, norm);
 
 	if (DotProduct(normal, norm) < 0.0)
@@ -4136,7 +4003,7 @@ void CStudioModelRenderer::StudioDecalTriangle(studiotri_t* tri, Vector position
 	int ysize = decal->texture->ysize;
 
 	for (int i = 0; i < 3; i++)
-		VectorCopy(m_vVertexTransform[tri->verts[i].vertindex], dverts1[i]);
+		VectorCopy(vVertexTransform[tri->verts[i].vertindex], dverts1[i]);
 
 	int nv;
 	Vector planepoint;
@@ -4169,11 +4036,11 @@ void CStudioModelRenderer::StudioDecalTriangle(studiotri_t* tri, Vector position
 		return;
 
 	// Check if the poly was cut
-	if ((dverts1[0] != m_vVertexTransform[tri->verts[2].vertindex] || dverts1[1] != m_vVertexTransform[tri->verts[0].vertindex] || dverts1[2] != m_vVertexTransform[tri->verts[1].vertindex]) && (tri->verts[0].boneindex != tri->verts[1].boneindex || tri->verts[0].boneindex != tri->verts[2].boneindex || tri->verts[1].boneindex != tri->verts[2].boneindex))
+	if ((dverts1[0] != vVertexTransform[tri->verts[2].vertindex] || dverts1[1] != vVertexTransform[tri->verts[0].vertindex] || dverts1[2] != vVertexTransform[tri->verts[1].vertindex]) && (tri->verts[0].boneindex != tri->verts[1].boneindex || tri->verts[0].boneindex != tri->verts[2].boneindex || tri->verts[1].boneindex != tri->verts[2].boneindex))
 		return;
 
 	byte indexes[10];
-	if (nv == 3 && dverts1[0] == m_vVertexTransform[tri->verts[2].vertindex] && dverts1[1] == m_vVertexTransform[tri->verts[0].vertindex] && dverts1[2] == m_vVertexTransform[tri->verts[1].vertindex])
+	if (nv == 3 && dverts1[0] == vVertexTransform[tri->verts[2].vertindex] && dverts1[1] == vVertexTransform[tri->verts[0].vertindex] && dverts1[2] == vVertexTransform[tri->verts[1].vertindex])
 	{
 		indexes[0] = tri->verts[2].boneindex;
 		indexes[1] = tri->verts[0].boneindex;
@@ -4239,7 +4106,7 @@ void CStudioModelRenderer::StudioDecalForSubModel(Vector position, Vector normal
 	Vector* pstudioverts = (Vector*)((byte*)m_pStudioHeader + m_pSubModel->vertindex);
 
 	for (int i = 0; i < m_pSubModel->numverts; i++)
-		VectorTransform(pstudioverts[i], (*m_pbonetransform)[pvertbone[i]], m_vVertexTransform[i]);
+		VectorTransform(pstudioverts[i], (*m_pbonetransform)[pvertbone[i]], vVertexTransform[i]);
 
 	for (int i = 0; i < m_pSubModel->nummesh; i++)
 	{
@@ -4340,7 +4207,7 @@ void CStudioModelRenderer::StudioDrawDecals(void)
 	if (!m_pCurrentEntity->efrag)
 		return;
 
-	auto pentitydata = (studioentity_data_t*)m_pCurrentEntity->efrag;
+	studioentity_data_t* pentitydata = (studioentity_data_t*)m_pCurrentEntity->efrag;
 
 	if (pentitydata->m_vStudioDecals.empty())
 		return;
@@ -4356,19 +4223,19 @@ void CStudioModelRenderer::StudioDrawDecals(void)
 	g_GlobalGLState.SetPolygonOffsetFill(true);
 
 	auto prev_vao = GL_VertexArrayObject::GetBoundVAO();
-	m_ModelDecal_VAO->BindVAO();
+	pModel_DecalVAO->BindVAO();
 
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_studiodecal], 1);
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_studiodecal], 1);
 	for (auto& studiodecal : pentitydata->m_vStudioDecals)
 	{
-		m_ModelShader->Uniform2f(m_ModelShaderLocs[mdlshader_decalsize], studiodecal->texture->xsize, studiodecal->texture->ysize);
+		s_MDLShader.Uniform2f(eModel_ShaderLocs[mdlshader_decalsize], studiodecal->texture->xsize, studiodecal->texture->ysize);
 		gBSPRenderer.BindGLTexture(GL_TEXTURE0, studiodecal->texture->gl_texid);
 
 		int startvert = studiodecal->vertstart;
 		glDrawArrays(GL_TRIANGLES, startvert, studiodecal->numverts);
 		
 	}
-	m_ModelShader->Uniform1i(m_ModelShaderLocs[mdlshader_studiodecal], 0);
+	s_MDLShader.Uniform1i(eModel_ShaderLocs[mdlshader_studiodecal], 0);
 
 	prev_vao->BindVAO();
 
@@ -4429,8 +4296,8 @@ void CStudioModelRenderer::StudioDecalExternal(Vector vpos, Vector vnorm, const 
 			continue;
 
 		entextrainfo_t* pInfo = m_pCurrentStudioEntData->entity_extrainfo;
-		VectorCopy(pInfo->pExtraData->absmax, m_vMaxs);
-		VectorCopy(pInfo->pExtraData->absmin, m_vMins);
+		VectorCopy(pInfo->pExtraData->absmax, v_bboxMaxs);
+		VectorCopy(pInfo->pExtraData->absmin, v_bboxMins);
 
 		if (StudioCullBBox(vdecalmins, vdecalmaxs))
 			continue;
@@ -4479,9 +4346,7 @@ void CStudioModelRenderer::StudioDecalExternal(Vector vpos, Vector vnorm, const 
 
 			for (int k = 0; k < pVBOSubModel->nummeshes; k++)
 			{
-				int meshskinref = pmesh[k].skinref;
-				if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-					meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+				int meshskinref = std::clamp(pmesh[k].skinref, 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 				auto ptexture = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
 
@@ -4491,9 +4356,9 @@ void CStudioModelRenderer::StudioDecalExternal(Vector vpos, Vector vnorm, const 
 				vbomesh_t* pmesh = &pVBOSubModel->meshes[k];
 				for (int l = 0; l < pmesh->num_vertexes; l += 3)
 				{
-					brushvertex_t* pv1 = &gPropManager.m_pVertexData[gPropManager.m_pIndexBuffer[(pmesh->start_vertex + l)]];
-					brushvertex_t* pv2 = &gPropManager.m_pVertexData[gPropManager.m_pIndexBuffer[(pmesh->start_vertex + l + 1)]];
-					brushvertex_t* pv3 = &gPropManager.m_pVertexData[gPropManager.m_pIndexBuffer[(pmesh->start_vertex + l + 2)]];
+					Default3DVert_t* pv1 = &gPropManager.m_pVertexData[gPropManager.m_pIndexBuffer[(pmesh->start_vertex + l)]];
+					Default3DVert_t* pv2 = &gPropManager.m_pVertexData[gPropManager.m_pIndexBuffer[(pmesh->start_vertex + l + 1)]];
+					Default3DVert_t* pv3 = &gPropManager.m_pVertexData[gPropManager.m_pIndexBuffer[(pmesh->start_vertex + l + 2)]];
 
 					VectorSubtract(pv2->pos, pv1->pos, v1);
 					VectorSubtract(pv3->pos, pv2->pos, v2);
@@ -4596,10 +4461,12 @@ void CStudioModelRenderer::StudioDrawModelSolid(void)
 		return;
 
 	//enable buffers here so we dont bind buffers of models we won't draw
-	if (!m_pCurrentStudioMDL->IsBufferEnabled())
-		m_pCurrentStudioMDL->EnableBuffers();
+#if !defined(GL_ONE_BIG_BUFFER_FOR_STUDIOMDLS)
+	if (!m_pCurrentStudioMDL->IsMeshBound())
+		m_pCurrentStudioMDL->BindMesh();
+#endif
 
-	pModelBones_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelSolidShader->GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
+	pModel_BonesBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLSolidShader.GetUBOIndex("BonesUBO"), m_pCurrentStudioEntData->bonearrayoffset, sizeof(matrix3x4_t) * m_pStudioHeader->numbones);
 
 	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
 	{
@@ -4616,7 +4483,6 @@ StudioDrawPointsSolid
 */
 void CStudioModelRenderer::StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart)
 {
-
 	int index = m_pCurrentEntity->curstate.body / bodypart->GetBase();
 	index = index % bodypart->GetNumModels();
 
@@ -4624,49 +4490,39 @@ void CStudioModelRenderer::StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart)
 	if (!submodel->GetMeshNum())
 		return;
 
-	int skinnum = m_pCurrentEntity->curstate.skin; // for short..
-	if (skinnum < 0)
-		skinnum = 0;
-
-	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes();
-
-	if (skinnum != 0 && skinnum < m_pCurrentStudioMDL->GetNumSkinFamilies())
-		pskinref += (skinnum * m_pCurrentStudioMDL->GetNumSkinIndexes());
+	int numskinfamilies = m_pCurrentStudioMDL->GetNumSkinIndexes();
+	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, numskinfamilies) * numskinfamilies;
+	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes() + skinindex;
 
 	//
 	// Render meshes
 	//
 
 	bool hasalpha_oradditive = false;
-	int numtris = 0;
+	int indexcount = 0;
 
-	for (int j = 0; j < submodel->GetMeshNum(); j++)
+	for (int i = 0; i < submodel->GetMeshNum(); i++)
 	{
-		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(j);
+		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(i);
 
-		int meshskinref = pmesh->GetSkinReference();
-		int numtextures = m_pCurrentStudioMDL->GetNumTextures() - 1;
+		int meshskinref = std::clamp(pmesh->SkinReference(), 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
-		if (meshskinref > numtextures)
-			meshskinref = numtextures;
-
-		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
-		auto ptexinfo = ptex->GetTextureInfo();
-		auto ptexflags = ptex->GetTextureFlags();
-
-		numtris += pmesh->GetNumTriangles();
+		StudioMDL_Texture* ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
+		int ptexflags = ptex->GetTextureFlags();
 
 		if ((ptexflags & STUDIO_NF_MASKED) || (ptexflags & STUDIO_NF_ADDITIVE))
 		{
 			hasalpha_oradditive = true;
 			break;
 		}
+
+		indexcount += pmesh->NumIndices();
 	}
 
 	if (!hasalpha_oradditive)
 	{
-		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_texture_flags], 0);
-		m_pCurrentStudioMDL->DrawElements(numtris, submodel->GetMeshbyIndex(0)->GetMeshBufferOffset());
+		s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_texture_flags], 0);
+		m_pCurrentStudioMDL->DrawElements(submodel->GetMeshbyIndex(0)->MeshBufferOffset(), indexcount);
 		return;
 	}
 
@@ -4675,73 +4531,66 @@ void CStudioModelRenderer::StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart)
 	{
 		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(j);
 
-		int meshskinref = pmesh->GetSkinReference();
-		int numtextures = m_pCurrentStudioMDL->GetNumTextures() - 1;
+		int meshskinref = std::clamp(pmesh->SkinReference(), 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
-		if (meshskinref > numtextures)
-			meshskinref = numtextures;
-
-		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
-		auto ptexinfo = ptex->GetTextureInfo();
-		auto ptexflags = ptex->GetTextureFlags();
+		StudioMDL_Texture* ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
+		int ptexflags = ptex->GetTextureFlags();
 
 		if (ptexflags & STUDIO_NF_ADDITIVE)
 			continue;
 
-		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_texture_flags], ptexflags);
+		s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_texture_flags], ptexflags);
 
 		if (ptexflags & STUDIO_NF_MASKED)
-		{
-			gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptexinfo.iIndex);
-		}
+			gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptex->GetTextureInfo().iIndex);
 
-		m_pCurrentStudioMDL->DrawElements(pmesh->GetNumTriangles(), pmesh->GetMeshBufferOffset());
+		pmesh->DrawMesh();
 	}
 	
 }
 
 void CStudioModelRenderer::StudioSetupPropDraw(bool solidpass)
 {
-	m_bExternalEntity = true;
+	bExternalEntity = true;
 
 	if (solidpass)
 	{
-		m_ModelSolidShader->Bind();
+		s_MDLSolidShader.Bind();
 
-		m_dSolidModelData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
+		model_SolidData.projviewmatrix = gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix;
 
 		auto dynl = gBSPRenderer.m_pCurrentDynLight;
-		m_dSolidModelData.light_pos = glm::vec4(dynl->origin.x, dynl->origin.y, dynl->origin.z, dynl->radius);
-		m_dSolidModelData.int_values.x = 1;
+		model_SolidData.light_pos = glm::vec4(dynl->origin.x, dynl->origin.y, dynl->origin.z, dynl->radius);
+		model_SolidData.int_values.x = 1;
 
-		m_ModelSolid_Buffer->Bind(GL_BufferHandler::UniformBuffer);
+		pModel_SolidBuffer->Bind(GL_BufferHandler::UniformBuffer);
 
 		if (gBSPRenderer.m_bSunShadowMapPass)
 		{
 			// flip
-			m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_sunshadow], 1);
+			s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_sunshadow], 1);
 			glCullFace(GL_BACK);
 		}
 	}
 	else
 	{
-		m_ModelShader->Bind();
+		s_MDLShader.Bind();
 	}
 }
 
 void CStudioModelRenderer::StudioFinishPropDraw(bool solidpass)
 {
-	m_bExternalEntity = false;
+	bExternalEntity = false;
 
 	if(solidpass)
 	{
 		if (gBSPRenderer.m_bSunShadowMapPass)
 		{
 			// flip
-			m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_sunshadow], 0);
+			s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_sunshadow], 0);
 			glCullFace(GL_FRONT);
 		}
-		m_dSolidModelData.int_values.x = 0;
+		model_SolidData.int_values.x = 0;
 	}
 }
 
@@ -4759,17 +4608,17 @@ void CStudioModelRenderer::StudioDrawPropModelSolid(cl_entity_t* pEntity)
 	if (!m_pStudioHeader || !m_pCurrentStudioMDL || !pVBOHeader)
 		return;
 
-	m_vMins = m_pCurrentExtraData->absmin;
-	m_vMaxs = m_pCurrentExtraData->absmax;
+	v_bboxMins = m_pCurrentExtraData->absmin;
+	v_bboxMaxs = m_pCurrentExtraData->absmax;
 
-	if (gHUD.viewFrustum.CullBox(m_vMins, m_vMaxs))
+	if (gHUD.viewFrustum.CullBox(v_bboxMins, v_bboxMaxs))
 		return;
 
-	m_dSolidModelData.modelmatrix = m_pCurrentExtraData->modelmatrix;
+	model_SolidData.modelmatrix = m_pCurrentExtraData->modelmatrix;
 
-	m_ModelSolid_Buffer->Bind(GL_BufferHandler::UniformBuffer);
-	m_ModelSolid_Buffer->BindRange(GL_BufferHandler::UniformBuffer, m_ModelSolidShader->GetUBOIndex("StudioSolidUBO"), 0, sizeof(mdlshadersolid_data_t));
-	m_ModelSolid_Buffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(mdlshadersolid_data_t), &m_dSolidModelData);
+	pModel_SolidBuffer->Bind(GL_BufferHandler::UniformBuffer);
+	pModel_SolidBuffer->BindRange(GL_BufferHandler::UniformBuffer, s_MDLSolidShader.GetUBOIndex("StudioSolidUBO"), 0, sizeof(mdlshadersolid_data_t));
+	pModel_SolidBuffer->BufferSubData(GL_BufferHandler::UniformBuffer, 0, sizeof(mdlshadersolid_data_t), &model_SolidData);
 
 	int baseindex = 0;
 	for (int i = 0; i < m_pStudioHeader->numbodyparts; i++)
@@ -4814,9 +4663,7 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 	{
 		StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(i);
 
-		int meshskinref = pmesh->GetSkinReference();
-		if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-			meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+		int meshskinref = std::clamp(pmesh->SkinReference(), 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 		auto ptex = m_pCurrentStudioMDL->GetTextureByIndex(pskinref[meshskinref]);
 		auto ptexinfo = ptex->GetTextureInfo();
@@ -4836,8 +4683,8 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 	if (!hasalpha_oradditive)
 	{
 		//optimization attempt: just draw the entire submodel with 1 draw call
-		m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_texture_flags], 0);
-		glDrawElements(GL_TRIANGLES, numverts, GL_UNSIGNED_INT, BUFFER_OFFSET(pVBOSubModel->meshes[0].start_vertex));
+		s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_texture_flags], 0);
+		g_pStaticMeshBuffer->DrawElements(pVBOSubModel->meshes[0].start_vertex, numverts);
 	}
 	else
 	{
@@ -4845,9 +4692,7 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 		{
 			StudioMDL_Mesh* pmesh = submodel->GetMeshbyIndex(i);
 
-			int meshskinref = pmesh->GetSkinReference();
-			if (meshskinref > (m_pCurrentStudioMDL->GetNumTextures() - 1))
-				meshskinref = (m_pCurrentStudioMDL->GetNumTextures() - 1);
+			int meshskinref = std::clamp(pmesh->SkinReference(), 0, m_pCurrentStudioMDL->GetNumTextures() - 1);
 
 			vbomesh_t* pvbomesh = &pVBOSubModel->meshes[i];
 
@@ -4855,7 +4700,7 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 			auto ptexinfo = ptex->GetTextureInfo();
 			auto ptexflags = ptex->GetTextureFlags();
 
-			m_ModelSolidShader->Uniform1i(m_ModelShaderSolidLocs[mdlshadersolid_texture_flags], ptexflags);
+			s_MDLSolidShader.Uniform1i(eModel_ShaderSolidLocs[mdlshadersolid_texture_flags], ptexflags);
 
 
 			if (ptexflags & STUDIO_NF_ADDITIVE)
@@ -4866,7 +4711,7 @@ void CStudioModelRenderer::StudioDrawPointsSolidEXT(StudioMDL_BodyPart* bodypart
 				gBSPRenderer.BindGLTexture(GL_TEXTURE0, ptex->GetTextureInfo().iIndex);
 			}
 
-			glDrawElements(GL_TRIANGLES, pvbomesh->num_vertexes, GL_UNSIGNED_INT, BUFFER_OFFSET(pvbomesh->start_vertex));
+			g_pStaticMeshBuffer->DrawElements(pvbomesh->start_vertex, pvbomesh->num_vertexes);
 		}
 	}
 }
