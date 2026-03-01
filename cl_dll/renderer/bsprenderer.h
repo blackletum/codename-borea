@@ -57,7 +57,7 @@ Extended and/or recoded by Andrew Lucas
 #define MAX_MAP_DETAILOBJECTS 512
 #define MAX_MAP_LEAFS 65534
 #define DEPTHMAP_RESOLUTION 256
-#define MAX_MAP_TEXTURES 512
+#define MAX_MAP_TEXTURES 1024
 #define LIGHTMAP_RESOLUTION 1024
 
 #define BLOCK_SIZE 128

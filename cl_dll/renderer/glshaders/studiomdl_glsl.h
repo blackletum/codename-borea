@@ -237,7 +237,7 @@ char glsl330_studiomdl_vert[] = R"(
 		if(int_values.z == 0)
 		{
 			translated_vertpos = VectorTransform(aPosition, bonematrixes[vertbone]);
-			translated_normal = VectorRotate(aNormal, bonematrixes[vertbone]);
+			translated_normal = normalize(VectorRotate(aNormal, bonematrixes[vertbone]));
 		}
 		else //static prop
 		{
