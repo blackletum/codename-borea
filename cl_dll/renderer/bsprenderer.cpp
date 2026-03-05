@@ -2695,6 +2695,9 @@ void CBSPRenderer::SurfaceToChain(clientmsurface_t* psurfbase, clientmsurface_t*
 	int surfaceIndex = s - psurfbase;
 	brushface_t* pbrushface = m_pSurfacePointersArray[surfaceIndex];
 
+	if (!m_pSurfaces[pbrushface->index].regtexture)
+		return;
+
 	//	this is horrid.
 	//	the most efficient way to do this would be to make a glsl shader that does what the code below does, so there's no cpu -> gpu data transfering.
 	//	not sure when i'll do that
