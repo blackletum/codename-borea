@@ -4638,7 +4638,7 @@ void CMonsterGangster::HandleAnimEvent( MonsterEvent_t *pEvent )
 			CGrenade::ShootTimed( pev, GetGunPosition(), m_vecTossVelocity, 3.5 );
 
 		m_fThrowGrenade = FALSE;
-		m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
+		m_flNextGrenadeCheck = gpGlobals->time + 4;// wait six seconds before even looking again to see if a grenade can be thrown.
 		// !!!LATER - when in a group, only try to throw grenade if ordered.
 	}
 	break;
