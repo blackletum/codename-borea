@@ -198,7 +198,7 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 	}
 	else
 	{
-		pOther->TakeDamage ( pev, VARS(pev->owner), gSkillData.spiderDmgSpit, DMG_POISON );
+		pOther->TakeDamage ( pev, pev->owner ? VARS(pev->owner) : pev, gSkillData.spiderDmgSpit, DMG_POISON );
 	}
 
 	SetThink ( &CSquidSpit::SUB_Remove );

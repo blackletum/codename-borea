@@ -2607,18 +2607,18 @@ void CBasePlayer::CheckTimeBasedDamage()
 				break;
 			case itbd_NerveGas:
 				if (CVAR_GET_FLOAT ("timed_damage") != 0) //AJH re enable time based Nervegas/radiation
-					TakeDamage(m_pevInflictor, m_hActivator->pev, NERVEGAS_DAMAGE, DMG_GENERIC);
+					TakeDamage(m_pevInflictor ? m_pevInflictor : pev, m_hActivator ? m_hActivator->pev : pev, NERVEGAS_DAMAGE, DMG_GENERIC);
 					//AJH Use the activator of the trigger_hurt as attacker, and the trigger_hurt as the inflictor
 					bDuration = NERVEGAS_DURATION;
 				break;
 			case itbd_Poison:
-					TakeDamage(m_pevInflictor, m_hActivator->pev, POISON_DAMAGE, DMG_GENERIC); 
+					TakeDamage( m_pevInflictor ? m_pevInflictor : pev, m_hActivator ? m_hActivator->pev : pev, POISON_DAMAGE, DMG_GENERIC);
 					//AJH Use the activator of the trigger_hurt as attacker, and the trigger_hurt as the inflictor
 				bDuration = POISON_DURATION;
 				break;
 			case itbd_Radiation:
 					if (CVAR_GET_FLOAT ("timed_damage") != 0) //AJH re enable time based Nervegas/radiation
-					TakeDamage(m_pevInflictor, m_hActivator->pev, RADIATION_DAMAGE, DMG_GENERIC);
+					TakeDamage( m_pevInflictor ? m_pevInflictor : pev, m_hActivator ? m_hActivator->pev : pev, RADIATION_DAMAGE, DMG_GENERIC);
 				//AJH Use the activator of the trigger_hurt as attacker, and the trigger_hurt as the inflictor
 				bDuration = RADIATION_DURATION;
 				break;
