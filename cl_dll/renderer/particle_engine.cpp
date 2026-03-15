@@ -577,6 +577,9 @@ CreateParticle
 */
 void CParticleEngine::CreateParticle(particle_system_t* pSystem, float* flOrigin, float* flNormal)
 {
+	if( !pSystem )
+		return; // Aynekko - this causes crash!
+	
 	Vector vBaseOrigin;
 	Vector vForward, vUp, vRight;
 
