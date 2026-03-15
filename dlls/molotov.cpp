@@ -50,7 +50,8 @@ void CMolotov::Precache()
 	PRECACHE_MODEL("models/p_molotov.mdl");
 
 	PRECACHE_SOUND( "weapons/molotov_break.wav" );
-	PRECACHE_SOUND( "props/burning4.wav" );
+	PRECACHE_SOUND( "weapons/molotov_flame.wav" );
+	PRECACHE_SOUND( "props/burning3.wav" );
 
 	UTIL_PrecacheOther( "fire" );
 }
@@ -225,8 +226,9 @@ void CMolotov::WeaponIdle()
 
 #ifndef  CLIENT_DLL // sigh...
 
-
+//---------------------------------------------------------------------------------------------
 // fire entity!!!
+//---------------------------------------------------------------------------------------------
 class CFire : public CPointEntity
 {
 public:
@@ -241,9 +243,6 @@ public:
 	int	Restore( CRestore &restore ) override;
 	static	TYPEDESCRIPTION m_SaveData[];
 };
-
-const int BurningTime = 10; // tune this if needed - fire burns for 10 seconds then dies
-// also change it in CGrenade::MolotovExplode !!!
 
 LINK_ENTITY_TO_CLASS( fire, CFire );
 
@@ -285,10 +284,10 @@ void CFire::Precache()
 void CFire::Think( void )
 {
 	// time's up or hit water, extinguish
-	if( pev->waterlevel > 0 || gpGlobals->time > BurnStartTime + BurningTime )
+	if( pev->waterlevel > 0 || gpGlobals->time > BurnStartTime + MOLOTOV_BURNING_TIME )
 	{
-		if( pev->fuser1 > 0.0f )
-			STOP_SOUND( ENT( pev ), CHAN_BODY, "props/burning4.wav" );
+	//	if( pev->fuser1 > 0.0f )
+	//		STOP_SOUND( ENT( pev ), CHAN_BODY, "weapons/molotov_flame.wav" );
 		DontThink();
 		UTIL_Remove( this );
 		return;
@@ -307,19 +306,20 @@ void CFire::Think( void )
 		InsertSoundTime = gpGlobals->time + RANDOM_FLOAT( 1.5, 3.0 );
 	}
 
-	if( pev->fuser1 > 0.0f && gpGlobals->time > pev->fuser1 )
-		EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "props/burning4.wav", 1.0, ATTN_NORM, SND_CHANGE_PITCH | SND_CHANGE_VOL, 100 );
+	// UPD March 2026 - only one sound will be spawned at the point of impact
+//	if( pev->fuser1 > 0.0f && gpGlobals->time > pev->fuser1 )
+//		EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "weapons/molotov_flame.wav", 1.0, ATTN_NORM, SND_CHANGE_PITCH | SND_CHANGE_VOL, 100 );
 
 	// set monsters on fire
 	if( gpGlobals->time > pev->dmgtime )
 	{
 		CBaseEntity *pOther = nullptr;
-		while( (pOther = UTIL_FindEntityInSphere( pOther, pev->origin, 80 )) != nullptr )
+		while( (pOther = UTIL_FindEntityInSphere( pOther, pev->origin, 45 )) != nullptr )
 		{
 			if( pOther->IsPlayer() )
 			{
 				// smash the player with fire damage
-				pOther->TakeDamage( VARS( eoNullEntity ), VARS( eoNullEntity ), gSkillData.firepersecDmg * 0.01f, DMG_BURN );
+				pOther->TakeDamage( VARS( eoNullEntity ), VARS( eoNullEntity ), gSkillData.firepersecDmg * 0.2f, DMG_BURN ); // entity thinks every 0.2 seconds
 				continue;
 			}
 
@@ -330,7 +330,7 @@ void CFire::Think( void )
 		}
 	}
 
-	pev->nextthink = gpGlobals->time + RANDOM_FLOAT(0.1,0.2);
+	pev->nextthink = gpGlobals->time + 0.2f;
 }
 
 #endif // ! CLIENT_DLL

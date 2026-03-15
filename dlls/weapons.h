@@ -43,6 +43,8 @@ bool UTIL_DefaultUseDecrement();
 
 bool UTIL_UseOldWeapons();
 
+#define MOLOTOV_BURNING_TIME 10.0f
+
 // Contact Grenade / Timed grenade / Satchel Charge
 class CGrenade : public CBaseMonster
 {

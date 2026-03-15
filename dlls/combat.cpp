@@ -784,7 +784,8 @@ void CBaseMonster::CheckFire( void )
 			Vector vecOrg = pev->origin;
 			vecOrg.z += RANDOM_LONG( 36, 69 ); // randomize fire position on the body
 
-			UTIL_Particle( "flames_tlg.txt", vecOrg, g_vecZero, 0 );
+			UTIL_Particle( "flames_tlg_npc.txt", vecOrg, g_vecZero, 0 );
+			EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "props/burning3.wav", 1.0, ATTN_NORM, SND_CHANGE_PITCH | SND_CHANGE_VOL, 100 );
 
 			// every 0.1 second (monster think interval) monster takes damage from fire
 			TakeDamage( VARS( eoNullEntity ), VARS( eoNullEntity ), gSkillData.firepersecDmg * 0.1f, DMG_BURN );
@@ -806,6 +807,7 @@ void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib )
 	// Aynekko: clear fire
 	if( IsOnFire )
 	{
+		STOP_SOUND( ENT( pev ), CHAN_BODY, "props/burning3.wav" );
 		pev->effects &= ~EF_DIMLIGHT;
 		IsOnFire = false;
 		m_iLFlags &= ~LF_BURNING;

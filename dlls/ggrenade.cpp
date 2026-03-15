@@ -32,6 +32,7 @@
 #include "pm_shared.h"
 #include "pm_defs.h"
 #include <FranUtils.hpp>
+#include "explode.h"
 
 #define NadeVectorSubtract(a,b,c) {(c)[0]=(a)[0]-(b)[0];(c)[1]=(a)[1]-(b)[1];(c)[2]=(a)[2]-(b)[2];}
 
@@ -789,11 +790,8 @@ void CGrenade::MolotovExplode( void )
 	
 	EMIT_SOUND( ENT( pev ), CHAN_VOICE, "weapons/molotov_break.wav", 1.0, ATTN_NORM );
 
-	const int BurningTime = 10; // tune this if needed - fire burns for 10 seconds then dies, so same for the light
-	// also change this value in molotov.cpp if you do so here
-
 	// light the fire!
-	FranUtils::EmitDlight( Vector( pev->origin.x, pev->origin.y, pev->origin.z ), 14, { 255, 180, 0 }, BurningTime, 0 );
+	FranUtils::EmitDlight( Vector( pev->origin.x, pev->origin.y, pev->origin.z ), 14, { 255, 180, 0 }, MOLOTOV_BURNING_TIME, 0 );
 
 	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
 	WRITE_BYTE(TE_SPRITE);
@@ -809,7 +807,11 @@ void CGrenade::MolotovExplode( void )
 	bool FireSoundCreated = false;
 	int sound_count = 0;
 	TraceResult tr;
-	for( int i = 0; i < 24; i++ )
+
+	EMIT_SOUND( ENT( pev ), CHAN_BODY, "weapons/molotov_flame.wav", 1.0, ATTN_NORM );
+	ExplosionCreate( Center(), pev->angles, edict(), 0.0f, FALSE ); // just to make an explosion sprite
+
+	for( int i = 0; i < 10; i++ )
 	{
 		// trace a point in random direction, with 128 radius
 		const int radius = 128;
@@ -824,6 +826,7 @@ void CGrenade::MolotovExplode( void )
 
 		CBaseEntity *pFire = CBaseEntity::Create( "fire", FireOrigin, pev->angles, edict() );
 
+		/* // March 2026 - only one sound will be spawned now.
 		if( pFire && sound_count < 3 )
 		{
 			// there must be at least one guaranteed sound to be audible
@@ -841,7 +844,7 @@ void CGrenade::MolotovExplode( void )
 					sound_count++;
 				}
 			}
-		}
+		}*/
 	}
 
 	// the bottle magically disappears (breaks)
