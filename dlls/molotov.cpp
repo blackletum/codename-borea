@@ -283,8 +283,12 @@ void CFire::Precache()
 
 void CFire::Think( void )
 {
+	const float offset = MOLOTOV_PARTICLE_OFFSET;
+	float BurnEndTime = BurnStartTime + MOLOTOV_BURNING_TIME;
+	float flDamage = gSkillData.firepersecDmg * 0.2f;
+
 	// time's up or hit water, extinguish
-	if( pev->waterlevel > 0 || gpGlobals->time > BurnStartTime + MOLOTOV_BURNING_TIME )
+	if( pev->waterlevel > 0 || gpGlobals->time > BurnEndTime + offset ) // offset 2 seconds to let the particles fade
 	{
 	//	if( pev->fuser1 > 0.0f )
 	//		STOP_SOUND( ENT( pev ), CHAN_BODY, "weapons/molotov_flame.wav" );
@@ -294,7 +298,8 @@ void CFire::Think( void )
 	}
 	
 	// send particle here
-	UTIL_Particle("flames_tlg.txt", pev->origin, g_vecZero, 0);
+	if( gpGlobals->time < BurnEndTime )
+		UTIL_Particle("flames_tlg.txt", pev->origin, g_vecZero, 0);
 //	if( pev->frame >= pev->iuser1 )
 //		pev->frame = 0;
 //	pev->frame++;
@@ -319,7 +324,7 @@ void CFire::Think( void )
 			if( pOther->IsPlayer() )
 			{
 				// smash the player with fire damage
-				pOther->TakeDamage( VARS( eoNullEntity ), VARS( eoNullEntity ), gSkillData.firepersecDmg * 0.2f, DMG_BURN ); // entity thinks every 0.2 seconds
+				pOther->TakeDamage( VARS( eoNullEntity ), VARS( eoNullEntity ), flDamage, DMG_BURN ); // entity thinks every 0.2 seconds
 				continue;
 			}
 

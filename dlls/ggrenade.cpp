@@ -791,14 +791,17 @@ void CGrenade::MolotovExplode( void )
 	EMIT_SOUND( ENT( pev ), CHAN_VOICE, "weapons/molotov_break.wav", 1.0, ATTN_NORM );
 
 	// light the fire!
-	FranUtils::EmitDlight( Vector( pev->origin.x, pev->origin.y, pev->origin.z ), 14, { 255, 180, 0 }, MOLOTOV_BURNING_TIME, 0 );
+	FranUtils::EmitDlight( Vector( pev->origin.x, pev->origin.y, pev->origin.z ), 14, { 255, 180, 0 }, MOLOTOV_BURNING_TIME + MOLOTOV_PARTICLE_OFFSET, 0 );
 
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+	Vector vecSpot = pev->origin;
+	vecSpot.z += 10;
+	//  Aynekko - this does NOT render. Why?
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecSpot );
 	WRITE_BYTE(TE_SPRITE);
-	WRITE_COORD( pev->origin.x );
-	WRITE_COORD( pev->origin.y );
-	WRITE_COORD( pev->origin.z );
-	WRITE_SHORT( g_sModelIndexFireball );
+	WRITE_COORD( vecSpot.x );
+	WRITE_COORD( vecSpot.y );
+	WRITE_COORD( vecSpot.z + 10 );
+	WRITE_SHORT( g_sModelIndexMolotovExplode );
 	WRITE_BYTE( 25 ); // scale * 10
 	WRITE_BYTE( 255 );
 	MESSAGE_END();
@@ -809,7 +812,6 @@ void CGrenade::MolotovExplode( void )
 	TraceResult tr;
 
 	EMIT_SOUND( ENT( pev ), CHAN_BODY, "weapons/molotov_flame.wav", 1.0, ATTN_NORM );
-	ExplosionCreate( Center(), pev->angles, edict(), 0.0f, FALSE ); // just to make an explosion sprite
 
 	for( int i = 0; i < 10; i++ )
 	{
