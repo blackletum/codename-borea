@@ -2970,7 +2970,7 @@ void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 	int numskinfamilies = m_pCurrentStudioMDL->GetNumSkinIndexes();
 
 
-	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, numskinfamilies) * numskinfamilies;
+	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, numskinfamilies - 1) * numskinfamilies;
 	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes() + skinindex;
 
 	//
@@ -4491,7 +4491,7 @@ void CStudioModelRenderer::StudioDrawPointsSolid(StudioMDL_BodyPart* bodypart)
 		return;
 
 	int numskinfamilies = m_pCurrentStudioMDL->GetNumSkinIndexes();
-	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, numskinfamilies) * numskinfamilies;
+	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, numskinfamilies - 1) * numskinfamilies;
 	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes() + skinindex;
 
 	//

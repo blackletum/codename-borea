@@ -136,7 +136,7 @@ GLuint noise2 = 0;
 
 std::vector<subtitlelist_t> subtitles_vector_client;
 
-void LoadSubtitles()
+void ReloadSubtitles()
 {
 	int iFlags = 0;
 	char szFlag[32];
@@ -145,15 +145,21 @@ void LoadSubtitles()
 	char szTime[32];
 
 	int iSize = NULL;
-	std::vector<std::byte> textfile = FileSystem_LoadFileIntoBuffer("sound/subtitles.txt", FileContentFormat::Text);
+
+	std::string path = "sound/";
+	path += gEngfuncs.pfnGetCvarString("r_subtitleslang");
+
+	std::vector<std::byte> textfile = FileSystem_LoadFileIntoBuffer(path.c_str(), FileContentFormat::Text);
 	iSize = textfile.size();
 	char* pFile = (char*)textfile.data();
 
 	if (textfile.empty())
 	{
-		gEngfuncs.Con_Printf("Could not load sound/subtitles.txt!\n");
+		gEngfuncs.Con_Printf("Could not load subtitles!\n");
 		return;
 	}
+
+	subtitles_vector_client.clear();
 
 	int i = NULL;
 
@@ -363,8 +369,7 @@ bool CImguiManager::Init()
 	ImGui::StyleColorsDark();
 
 	r_subtitles = CVAR_CREATE("r_subtitles", "1", FCVAR_ARCHIVE);
-
-	LoadSubtitles();
+	r_subtitleslang = CVAR_CREATE("r_subtitleslang", "subtitles_en.txt", FCVAR_ARCHIVE);
 
 	return true;
 }
@@ -373,6 +378,9 @@ bool CImguiManager::VidInit()
 {
 	m_iNumTexts = 0;
 	memset(m_sTexts, 0, sizeof(m_sTexts));
+
+	ReloadSubtitles();
+
 	return true;
 }
 

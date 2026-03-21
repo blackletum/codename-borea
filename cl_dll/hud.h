@@ -648,6 +648,7 @@ public:
 
 	int m_iNumTexts;
 	cvar_t* r_subtitles;
+	cvar_t* r_subtitleslang;
 	subtitles_t m_sTexts[MAX_SUBTITLES_AT_ONCE];
 };
 

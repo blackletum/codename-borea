@@ -43,6 +43,7 @@
 #include "movewith.h"
 #include "items.h"
 
+#include "filesystem_utils.h"
 #include "ctf/CTFGoal.h"
 #include "ctf/CTFGoalFlag.h"
 #include "ctf/ctfplay_gamerules.h"
@@ -940,6 +941,132 @@ void ServerDeactivate()
 	//
 }
 
+std::vector<subtitlelist_t> subtitles_vector;
+
+void ReloadSubtitles()
+{
+	int iFlags = 0;
+	char szFlag[32];
+	char szSentence[32];
+	char szText[256];
+	char szTime[32];
+
+	int iSize = NULL;
+
+	std::string path = "sound/";
+	path += g_engfuncs.pfnCVarGetString("r_subtitleslang");
+
+	std::vector<std::byte> vFileBuffer = FileSystem_LoadFileIntoBuffer(path.c_str(), FileContentFormat::Text);
+	iSize = vFileBuffer.size();
+	char* pFile = (char*)vFileBuffer.data();
+
+	if (vFileBuffer.empty())
+	{
+		ALERT(at_console, "Could not load subtitles!\n");
+		return;
+	}
+
+	subtitles_vector.clear();
+
+	int i = NULL;
+
+	auto ReadToken = [&](char* dest, int maxlen) -> bool
+		{
+			int j = 0;
+
+			if (i >= iSize || pFile[i] == '\n' || pFile[i] == '\r')
+				return false;
+
+			if (pFile[i] == '/' && pFile[i + 1] == '/')
+			{
+				if (i == 0)
+					return false;
+				else if (pFile[i - 1] == '\n')
+					return false;
+			}
+
+			// Skip whitespace — but stop at newlines
+			while (i < iSize && (pFile[i] == ' ' || pFile[i] == '\t'))
+				i++;
+
+			if (i >= iSize || pFile[i] == '\n' || pFile[i] == '\r')
+				return false;
+
+			bool quoted = false;
+
+			if (pFile[i] == '"')
+			{
+				quoted = true;
+				i++;
+			}
+
+			while (i < iSize)
+			{
+				if (quoted)
+				{
+					if (pFile[i] == '"')
+					{
+						i++;
+						break;
+					}
+				}
+				else
+				{
+					if (pFile[i] == ' ' || pFile[i] == '\n' || pFile[i] == '\r')
+						break;
+				}
+
+				if (j < maxlen - 1)
+					dest[j++] = pFile[i];
+				i++;
+			}
+
+			dest[j] = 0;
+
+			//while (i < iSize && (pFile[i] == ' ' || pFile[i] == '\n' || pFile[i] == '\r'))
+			//	i++;
+
+			return true;
+		};
+
+	while (1)
+	{
+		// Reset
+		iFlags = 0;
+
+		if (i >= iSize)
+			break;
+
+		if (!ReadToken(szSentence, sizeof(szSentence)))
+		{
+			if (pFile[i] == '/')
+			{
+				while (i < iSize)
+				{
+					if (pFile[i] != '\n' && pFile[i] != '\r')
+						i++;
+					else
+						break;
+				}
+				continue;
+			}
+
+			while (i < iSize && (pFile[i] == '\n' || pFile[i] == '\r'))
+				i++;
+			continue;
+		}
+
+		if (!ReadToken(szText, sizeof(szText))) break;
+		if (!ReadToken(szTime, sizeof(szTime))) break;
+
+		subtitlelist_t newsubtitle{};
+		strcpy_s(newsubtitle.sentence, szSentence);
+		strcpy_s(newsubtitle.text, szText);
+		newsubtitle.staytime = atof(szTime);
+		subtitles_vector.push_back(newsubtitle);
+	}
+}
+
 void ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
 {
 	int				i;
@@ -947,6 +1074,8 @@ void ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
 
 	// Every call to ServerActivate should be matched by a call to ServerDeactivate
 	g_serveractive = 1;
+
+	ReloadSubtitles();
 
 	// Clients have not been initialized yet
 	for ( i = 0; i < edictCount; i++ )
