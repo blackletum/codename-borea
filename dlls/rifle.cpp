@@ -186,8 +186,8 @@ void CMP5::RifleFireBullet( void )
 			Cone = 0.02;
 	}
 
-	if( m_pPlayer->targetFov != 0 ) // scoped
-		Cone *= 0.75;
+	if( m_pPlayer->isScoping ) // scoped
+		Cone *= 0.35;
 
 	// single player spread
 	vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, Vector( Cone, Cone, Cone ), 8192, BULLET_PLAYER_MP5, 2, 0, m_pPlayer->pev, m_pPlayer->random_seed );
