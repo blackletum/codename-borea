@@ -1373,6 +1373,8 @@ void ClientPrecache()
 		UTIL_PrecacheOther("monster_human_grunt");
 
 	PRECACHE_SOUND( "player/playerslide.wav" );
+
+	UTIL_PrecacheOther( "monster_citizen_male" );
 }
 
 /*

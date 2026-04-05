@@ -1504,6 +1504,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( monster_worker, CWorker );
 LINK_ENTITY_TO_CLASS( monster_tramp, CWorker );
+LINK_ENTITY_TO_CLASS( monster_citizen_male, CWorker );
 
 void CWorker::PainSound( void )
 {
@@ -1514,6 +1515,8 @@ void CWorker::OnCatchFire( void )
 {
 	if( FClassnameIs( pev, "monster_worker" ) )
 		PlaySentence( "WORK_BURN", 3, VOL_NORM, ATTN_NORM );
+	else if( FClassnameIs( pev, "monster_citizen_male" ) )
+		PlaySentence( "MCIT_BURN", 3, VOL_NORM, ATTN_NORM );
 	else // monster_tramp
 		PlaySentence( "TRA_BURN", 3, VOL_NORM, ATTN_NORM );
 }
@@ -1527,7 +1530,11 @@ void CWorker::DeathSound( void )
 	sentence_name[0] = '\0';
 	
 	// figure out the hitgroup and use appropriate sounds
-	if( FClassnameIs( pev, "monster_worker" ) )
+	if( FClassnameIs( pev, "monster_malenpc" ) )
+	{
+		sprintf_s( sentence_name, "MCIT_DEAD" );
+	}
+	else if( FClassnameIs( pev, "monster_worker" ) )
 	{
 		switch( m_LastHitGroup )
 		{
@@ -1576,7 +1583,9 @@ void CWorker::Precache( void )
 		PRECACHE_MODEL( (char *)STRING( pev->model ) ); //LRC
 	else
 	{
-		if( FClassnameIs( pev, "monster_worker" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+			PRECACHE_MODEL( "models/citizen_male01.mdl" );
+		else if( FClassnameIs( pev, "monster_worker" ) )
 			PRECACHE_MODEL( "models/worker.mdl" );
 		else
 			PRECACHE_MODEL( "models/tramp01a.mdl" );
@@ -1589,11 +1598,21 @@ void CWorker::Precache( void )
 	// override for worker
 	if( !m_iszSpeakAs )
 	{
-		m_szGrp[TLK_ANSWER] = nullptr;
-		m_szGrp[TLK_QUESTION] = nullptr;
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+		{
+			m_szGrp[TLK_ANSWER] = "MCIT_ANS";
+			m_szGrp[TLK_QUESTION] = "MCIT_QUES";
+		}
+		else
+		{
+			m_szGrp[TLK_ANSWER] = nullptr;
+			m_szGrp[TLK_QUESTION] = nullptr;
+		}
 
 		// idle
-		if( FClassnameIs( pev, "monster_worker" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+			m_szGrp[TLK_IDLE] = nullptr;
+		else if( FClassnameIs( pev, "monster_worker" ) )
 			m_szGrp[TLK_IDLE] = "WORK_IDLE";
 		else
 			m_szGrp[TLK_IDLE] = "TRA_IDLE";
@@ -1603,36 +1622,44 @@ void CWorker::Precache( void )
 		// reaction to +use
 		if( pev->spawnflags & SF_MONSTER_PREDISASTER )
 		{
-			if( FClassnameIs( pev, "monster_worker" ) )
+			if( FClassnameIs( pev, "monster_citizen_male" ) )
+			{
+				m_szGrp[TLK_USE] = "MCIT_BOTH";
+				m_szGrp[TLK_UNUSE] = "MCIT_BOTH";
+			}
+			else if( FClassnameIs( pev, "monster_worker" ) )
+			{
 				m_szGrp[TLK_USE] = "WORK_BOTH";
-			else
-				m_szGrp[TLK_USE] = "TRA_BOTH";
-		}
-		else
-		{
-			if( FClassnameIs( pev, "monster_worker" ) )
-				m_szGrp[TLK_USE] = "WORK_FOL";
-			else
-				m_szGrp[TLK_USE] = "TRA_FOL";
-		}
-
-		// reaction to +use
-		if( pev->spawnflags & SF_MONSTER_PREDISASTER )
-		{
-			if( FClassnameIs( pev, "monster_worker" ) )
 				m_szGrp[TLK_UNUSE] = "WORK_BOTH";
+			}
 			else
+			{
+				m_szGrp[TLK_USE] = "TRA_BOTH";
 				m_szGrp[TLK_UNUSE] = "TRA_BOTH";
+			}
 		}
 		else
 		{
-			if( FClassnameIs( pev, "monster_worker" ) )
+			if( FClassnameIs( pev, "monster_citizen_male" ) )
+			{
+				m_szGrp[TLK_USE] = "MCIT_BOTH";
+				m_szGrp[TLK_UNUSE] = "MCIT_BOTH";
+			}
+			else if( FClassnameIs( pev, "monster_worker" ) )
+			{
+				m_szGrp[TLK_USE] = "WORK_FOL";
 				m_szGrp[TLK_UNUSE] = "WORK_UFOL";
+			}
 			else
+			{
+				m_szGrp[TLK_USE] = "TRA_FOL";
 				m_szGrp[TLK_UNUSE] = "TRA_UFOL";
+			}
 		}
 
-		if( FClassnameIs( pev, "monster_worker" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+			m_szGrp[TLK_DECLINE] = "MCIT_BOTH";
+		else if( FClassnameIs( pev, "monster_worker" ) )
 			m_szGrp[TLK_DECLINE] = "WORK_BOTH";
 		else
 			m_szGrp[TLK_DECLINE] = "TRA_BOTH";
@@ -1644,7 +1671,9 @@ void CWorker::Precache( void )
 			m_szGrp[TLK_STOP] = "TRA_HALT";
 
 		// don't shoot!
-		if( FClassnameIs( pev, "monster_worker" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+			m_szGrp[TLK_NOSHOOT] = "MCIT_WIT";
+		else if( FClassnameIs( pev, "monster_worker" ) )
 			m_szGrp[TLK_NOSHOOT] = "WORK_WIT";
 		else
 			m_szGrp[TLK_NOSHOOT] = "TRA_WIT";
@@ -1668,13 +1697,13 @@ void CWorker::Precache( void )
 	{
 		m_szFriends[0] = "monster_worker";
 		m_szFriends[1] = "monster_tramp";
-		m_szFriends[2] = "monster_barney";
+		m_szFriends[2] = "monster_citizen_male";
 	}
 	else // tramp
 	{
 		m_szFriends[0] = "monster_tramp";
 		m_szFriends[1] = "monster_worker";
-		m_szFriends[2] = "monster_barney";
+		m_szFriends[2] = "monster_citizen_male";
 	}
 
 	CTalkMonster::Precache();
@@ -1688,6 +1717,8 @@ void CWorker::Spawn( void )
 		SET_MODEL( ENT( pev ), STRING( pev->model ) ); //LRC
 	else
 	{
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+			SET_MODEL( ENT( pev ), "models/citizen_male01.mdl" );
 		if( FClassnameIs( pev, "monster_worker" ) )
 			SET_MODEL( ENT( pev ), "models/worker.mdl" );
 		else
@@ -1702,7 +1733,9 @@ void CWorker::Spawn( void )
 
 	if( !pev->health )
 	{
-		if( FClassnameIs( pev, "monster_worker" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+			pev->health = gSkillData.malenpcHealth;
+		else if( FClassnameIs( pev, "monster_worker" ) )
 			pev->health = gSkillData.workerHealth;
 		else
 			pev->health = gSkillData.trampHealth;
@@ -2015,7 +2048,11 @@ int CWorker::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float 
 		m_painTime = gpGlobals->time + RANDOM_FLOAT( 0.5, 0.75 );
 
 		// figure out the hitgroup and use appropriate sounds
-		if( FClassnameIs( pev, "monster_worker" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+		{
+			sprintf_s( sentence_name, "MCIT_PAIN" );
+		}
+		else if( FClassnameIs( pev, "monster_worker" ) )
 		{
 			switch( m_LastHitGroup )
 			{
@@ -2108,7 +2145,9 @@ void CWorker::StartTask( Task_t *pTask )
 
 	case TASK_RUN_PATH_SCARED:
 		m_movementActivity = ACT_RUN_SCARED;
-		if( FClassnameIs( pev, "monster_worker" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) )
+			PlaySentence( "MCIT_FLEE", 5, VOL_NORM, ATTN_NORM );
+		else if( FClassnameIs( pev, "monster_worker" ) )
 			PlaySentence( "WORK_FLEE", 5, VOL_NORM, ATTN_NORM );
 		else // monster_tramp
 			PlaySentence( "TRA_FLEE", 5, VOL_NORM, ATTN_NORM );
