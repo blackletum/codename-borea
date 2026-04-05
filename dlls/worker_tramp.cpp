@@ -1598,10 +1598,25 @@ void CWorker::Precache( void )
 	// override for worker
 	if( !m_iszSpeakAs )
 	{
+		m_szGrp[TLK_HELLO] = nullptr;
+
+		m_szGrp[TLK_PLHURT1] = "!SC_CUREA";
+		m_szGrp[TLK_PLHURT2] = "!SC_CUREB";
+		m_szGrp[TLK_PLHURT3] = "!SC_CUREC";
+
+		m_szGrp[TLK_PHELLO] = "SC_PHELLO";
+		m_szGrp[TLK_PIDLE] = "SC_PIDLE";
+		m_szGrp[TLK_PQUESTION] = "SC_PQUEST";
+		m_szGrp[TLK_SMELL] = "SC_SMELL";
+
+		m_szGrp[TLK_WOUND] = "SC_WOUND";
+		m_szGrp[TLK_MORTAL] = "SC_MORTAL";
+
 		if( FClassnameIs( pev, "monster_citizen_male" ) )
 		{
 			m_szGrp[TLK_ANSWER] = "MCIT_ANS";
 			m_szGrp[TLK_QUESTION] = "MCIT_QUES";
+			m_szGrp[TLK_PQUESTION] = "MCIT_QUES";
 		}
 		else
 		{
@@ -1677,20 +1692,6 @@ void CWorker::Precache( void )
 			m_szGrp[TLK_NOSHOOT] = "WORK_WIT";
 		else
 			m_szGrp[TLK_NOSHOOT] = "TRA_WIT";
-
-		m_szGrp[TLK_HELLO] = nullptr;
-
-		m_szGrp[TLK_PLHURT1] = "!SC_CUREA";
-		m_szGrp[TLK_PLHURT2] = "!SC_CUREB";
-		m_szGrp[TLK_PLHURT3] = "!SC_CUREC";
-
-		m_szGrp[TLK_PHELLO] = "SC_PHELLO";
-		m_szGrp[TLK_PIDLE] = "SC_PIDLE";
-		m_szGrp[TLK_PQUESTION] = "SC_PQUEST";
-		m_szGrp[TLK_SMELL] = "SC_SMELL";
-
-		m_szGrp[TLK_WOUND] = "SC_WOUND";
-		m_szGrp[TLK_MORTAL] = "SC_MORTAL";
 	}
 
 	if( FClassnameIs( pev, "monster_worker" ) )
