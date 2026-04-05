@@ -1530,7 +1530,7 @@ void CWorker::DeathSound( void )
 	sentence_name[0] = '\0';
 	
 	// figure out the hitgroup and use appropriate sounds
-	if( FClassnameIs( pev, "monster_malenpc" ) )
+	if( FClassnameIs( pev, "monster_citizen_male" ) )
 	{
 		sprintf_s( sentence_name, "MCIT_DEAD" );
 	}
