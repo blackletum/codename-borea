@@ -889,7 +889,7 @@ void CBullsquid :: Spawn()
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	m_bloodColor		= BLOOD_COLOR_YELLOW;
 	pev->effects		= 0;
 	if (pev->health == 0)
 		pev->health			= gSkillData.spiderHealth;

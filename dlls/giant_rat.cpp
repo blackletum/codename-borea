@@ -1370,7 +1370,8 @@ void CPitdrone::GibMonster()
 	if( CVAR_GET_FLOAT( "violence_agibs" ) != 0 )	// Should never get here, but someone might call it directly
 	{
 		//Note: the original doesn't check for German censorship
-		CGib::SpawnRandomGibs( pev, 6, PitDroneGibs );	// Throw alien gibs
+	//	CGib::SpawnRandomGibs( pev, 6, PitDroneGibs );	// Throw alien gibs
+		CGib::SpawnRandomGibs( pev, 4, 1 );	// throw some human gibs. // Aynekko - TEMP
 	}
 
 	// don't remove players!
