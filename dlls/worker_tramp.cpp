@@ -731,6 +731,7 @@ void CScientist :: TalkInit()
 	m_szFriends[0] = "monster_scientist";
 	m_szFriends[1] = "monster_sitting_scientist";
 	m_szFriends[2] = "monster_barney";
+	m_szFriends[3] = "monster_barney";
 
 	// scientists speach group names (group names are in sentences.txt)
 
@@ -1505,6 +1506,7 @@ public:
 LINK_ENTITY_TO_CLASS( monster_worker, CWorker );
 LINK_ENTITY_TO_CLASS( monster_tramp, CWorker );
 LINK_ENTITY_TO_CLASS( monster_citizen_male, CWorker );
+LINK_ENTITY_TO_CLASS( monster_citizen_female, CWorker );
 
 void CWorker::PainSound( void )
 {
@@ -1517,6 +1519,8 @@ void CWorker::OnCatchFire( void )
 		PlaySentence( "WORK_BURN", 3, VOL_NORM, ATTN_NORM );
 	else if( FClassnameIs( pev, "monster_citizen_male" ) )
 		PlaySentence( "MCIT_BURN", 3, VOL_NORM, ATTN_NORM );
+	else if( FClassnameIs( pev, "monster_citizen_female" ) )
+		PlaySentence( "FCIT_BURN", 3, VOL_NORM, ATTN_NORM );
 	else // monster_tramp
 		PlaySentence( "TRA_BURN", 3, VOL_NORM, ATTN_NORM );
 }
@@ -1533,6 +1537,10 @@ void CWorker::DeathSound( void )
 	if( FClassnameIs( pev, "monster_citizen_male" ) )
 	{
 		sprintf_s( sentence_name, "MCIT_DEAD" );
+	}
+	else if( FClassnameIs( pev, "monster_citizen_female" ) )
+	{
+		sprintf_s( sentence_name, "FCIT_DEAD" );
 	}
 	else if( FClassnameIs( pev, "monster_worker" ) )
 	{
@@ -1585,6 +1593,8 @@ void CWorker::Precache( void )
 	{
 		if( FClassnameIs( pev, "monster_citizen_male" ) )
 			PRECACHE_MODEL( "models/citizen_male01.mdl" );
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			PRECACHE_MODEL( "models/citizen_female01.mdl" );
 		else if( FClassnameIs( pev, "monster_worker" ) )
 			PRECACHE_MODEL( "models/worker.mdl" );
 		else
@@ -1618,6 +1628,12 @@ void CWorker::Precache( void )
 			m_szGrp[TLK_QUESTION] = "MCIT_QUES";
 			m_szGrp[TLK_PQUESTION] = "MCIT_QUES";
 		}
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+		{
+			m_szGrp[TLK_ANSWER] = "FCIT_ANS";
+			m_szGrp[TLK_QUESTION] = "FCIT_QUES";
+			m_szGrp[TLK_PQUESTION] = "FCIT_QUES";
+		}
 		else
 		{
 			m_szGrp[TLK_ANSWER] = nullptr;
@@ -1625,7 +1641,7 @@ void CWorker::Precache( void )
 		}
 
 		// idle
-		if( FClassnameIs( pev, "monster_citizen_male" ) )
+		if( FClassnameIs( pev, "monster_citizen_male" ) || FClassnameIs( pev, "monster_citizen_female" ) )
 			m_szGrp[TLK_IDLE] = nullptr;
 		else if( FClassnameIs( pev, "monster_worker" ) )
 			m_szGrp[TLK_IDLE] = "WORK_IDLE";
@@ -1641,6 +1657,11 @@ void CWorker::Precache( void )
 			{
 				m_szGrp[TLK_USE] = "MCIT_BOTH";
 				m_szGrp[TLK_UNUSE] = "MCIT_BOTH";
+			}
+			else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			{
+				m_szGrp[TLK_USE] = "FCIT_BOTH";
+				m_szGrp[TLK_UNUSE] = "FCIT_BOTH";
 			}
 			else if( FClassnameIs( pev, "monster_worker" ) )
 			{
@@ -1660,6 +1681,11 @@ void CWorker::Precache( void )
 				m_szGrp[TLK_USE] = "MCIT_BOTH";
 				m_szGrp[TLK_UNUSE] = "MCIT_BOTH";
 			}
+			else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			{
+				m_szGrp[TLK_USE] = "FCIT_BOTH";
+				m_szGrp[TLK_UNUSE] = "FCIT_BOTH";
+			}
 			else if( FClassnameIs( pev, "monster_worker" ) )
 			{
 				m_szGrp[TLK_USE] = "WORK_FOL";
@@ -1674,6 +1700,8 @@ void CWorker::Precache( void )
 
 		if( FClassnameIs( pev, "monster_citizen_male" ) )
 			m_szGrp[TLK_DECLINE] = "MCIT_BOTH";
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			m_szGrp[TLK_DECLINE] = "FCIT_BOTH";
 		else if( FClassnameIs( pev, "monster_worker" ) )
 			m_szGrp[TLK_DECLINE] = "WORK_BOTH";
 		else
@@ -1688,24 +1716,18 @@ void CWorker::Precache( void )
 		// don't shoot!
 		if( FClassnameIs( pev, "monster_citizen_male" ) )
 			m_szGrp[TLK_NOSHOOT] = "MCIT_WIT";
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			m_szGrp[TLK_NOSHOOT] = "FCIT_WIT";
 		else if( FClassnameIs( pev, "monster_worker" ) )
 			m_szGrp[TLK_NOSHOOT] = "WORK_WIT";
 		else
 			m_szGrp[TLK_NOSHOOT] = "TRA_WIT";
 	}
 
-	if( FClassnameIs( pev, "monster_worker" ) )
-	{
-		m_szFriends[0] = "monster_worker";
-		m_szFriends[1] = "monster_tramp";
-		m_szFriends[2] = "monster_citizen_male";
-	}
-	else // tramp
-	{
-		m_szFriends[0] = "monster_tramp";
-		m_szFriends[1] = "monster_worker";
-		m_szFriends[2] = "monster_citizen_male";
-	}
+	m_szFriends[0] = "monster_tramp";
+	m_szFriends[1] = "monster_worker";
+	m_szFriends[2] = "monster_citizen_male";
+	m_szFriends[3] = "monster_citizen_female";
 
 	CTalkMonster::Precache();
 }
@@ -1720,7 +1742,9 @@ void CWorker::Spawn( void )
 	{
 		if( FClassnameIs( pev, "monster_citizen_male" ) )
 			SET_MODEL( ENT( pev ), "models/citizen_male01.mdl" );
-		if( FClassnameIs( pev, "monster_worker" ) )
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			SET_MODEL( ENT( pev ), "models/citizen_female01.mdl" );
+		else if( FClassnameIs( pev, "monster_worker" ) )
 			SET_MODEL( ENT( pev ), "models/worker.mdl" );
 		else
 			SET_MODEL( ENT( pev ), "models/tramp01a.mdl" );
@@ -1736,6 +1760,8 @@ void CWorker::Spawn( void )
 	{
 		if( FClassnameIs( pev, "monster_citizen_male" ) )
 			pev->health = gSkillData.malenpcHealth;
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			pev->health = gSkillData.femalenpcHealth;
 		else if( FClassnameIs( pev, "monster_worker" ) )
 			pev->health = gSkillData.workerHealth;
 		else
@@ -2053,6 +2079,10 @@ int CWorker::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float 
 		{
 			sprintf_s( sentence_name, "MCIT_PAIN" );
 		}
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+		{
+			sprintf_s( sentence_name, "FCIT_PAIN" );
+		}
 		else if( FClassnameIs( pev, "monster_worker" ) )
 		{
 			switch( m_LastHitGroup )
@@ -2148,6 +2178,8 @@ void CWorker::StartTask( Task_t *pTask )
 		m_movementActivity = ACT_RUN_SCARED;
 		if( FClassnameIs( pev, "monster_citizen_male" ) )
 			PlaySentence( "MCIT_FLEE", 5, VOL_NORM, ATTN_NORM );
+		else if( FClassnameIs( pev, "monster_citizen_female" ) )
+			PlaySentence( "FCIT_FLEE", 5, VOL_NORM, ATTN_NORM );
 		else if( FClassnameIs( pev, "monster_worker" ) )
 			PlaySentence( "WORK_FLEE", 5, VOL_NORM, ATTN_NORM );
 		else // monster_tramp
