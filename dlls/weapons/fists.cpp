@@ -206,7 +206,9 @@ CBaseMonster *CFists::GetNPCForKarateChop( void )
 	{
 		pNPC = CBaseEntity::Instance( KarateTr.pHit )->MyMonsterPointer();
 
-		if( pNPC->pev->deadflag == DEAD_NO && !pNPC->HasConditions( bits_COND_SEE_CLIENT ) && pNPC->m_hEnemy != m_pPlayer )
+		bool bNotInView = ( !pNPC->HasConditions( bits_COND_SEE_CLIENT ) && !pNPC->FInViewCone( m_pPlayer ) );
+
+		if( pNPC->pev->deadflag == DEAD_NO && bNotInView && pNPC->m_hEnemy != m_pPlayer )
 		{
 			// all good, we got the guy
 		}
