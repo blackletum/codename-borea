@@ -317,7 +317,7 @@ void CPitdrone::LeapTouch( CBaseEntity *pOther )
 		else
 			UTIL_ScreenShake( pOther->pev->origin, 15.0, 1.5, 0.7, 2 );
 
-		float dmg = bBlocked ? gSkillData.ratDmg * 0.5f : gSkillData.dogDmg;
+		float dmg = bBlocked ? gSkillData.ratDmg * 0.5f : gSkillData.ratDmg;
 		pOther->TakeDamage( pev, pev, dmg, DMG_CLUB );
 
 		pOther->pev->punchangle.x -= bBlocked ? 5 : 15;
@@ -402,6 +402,10 @@ BOOL CPitdrone :: CheckRangeAttack1 ( float flDot, float flDist )
 
 BOOL CPitdrone :: CheckMeleeAttack1 ( float flDot, float flDist )
 {
+	// Aynekko: don't attack when low hp and enemy facing us
+	if( pev->health < pev->max_health * 0.4f && HasConditions( bits_COND_ENEMY_FACING_ME ) )
+		return FALSE;
+	
 	if ( flDist <= 64 && flDot >= 0.7 )
 	{
 		return TRUE;
@@ -413,6 +417,10 @@ BOOL CPitdrone :: CheckMeleeAttack1 ( float flDot, float flDist )
 BOOL CPitdrone :: CheckMeleeAttack2 ( float flDot, float flDist )
 {
 	if( gpGlobals->time < m_flNextAttack )
+		return FALSE;
+
+	// Aynekko: don't attack when low hp and enemy facing us
+	if( pev->health < pev->max_health * 0.4f && HasConditions( bits_COND_ENEMY_FACING_ME ) )
 		return FALSE;
 	
 	if( FBitSet( pev->flags, FL_ONGROUND ) && flDist <= 256 && flDot >= 0.65 )
@@ -1204,6 +1212,16 @@ Schedule_t *CPitdrone :: GetSchedule()
 			if ( HasConditions(bits_COND_NEW_ENEMY) )
 			{
 				return GetScheduleOfType ( SCHED_WAKE_ANGRY );
+			}
+
+			// Aynekko: if the enemy has a flashlight on, is close, visible and looks at us - run away
+			if( m_hEnemy != NULL
+				&& RANDOM_LONG( 0, 100 ) > 25
+				&& HasConditions( bits_COND_ENEMY_FACING_ME )
+				&& (m_hEnemy->pev->effects & EF_DIMLIGHT)
+				&& (pev->origin - m_hEnemy->pev->origin).Length() < 600 )
+			{
+				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
 			}
 
 		//	if( HasConditions(bits_COND_NO_AMMO_LOADED) && m_iInitialAmmo != -1 )
