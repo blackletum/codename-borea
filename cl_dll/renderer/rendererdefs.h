@@ -221,6 +221,7 @@ extern inline void DotProductSub(float* result, Vector* v0, Vector* v1, float* s
 
 extern void VectorRotate(const Vector& in1, const matrix3x4_t &in2, Vector& out);
 extern void VectorIRotate(const Vector& in1, const matrix3x4_t &in2, Vector& out);
+extern void VectorIRotateNormalized(const Vector& in1, const matrix3x4_t& in2, Vector& out); //normalizes matrix before rotating vert
 extern void VectorRotateAbs(const Vector& in1, const matrix3x4_t& in2, Vector& out);
 extern void SV_FindTouchedLeafs(entextradata_t* ent, clientmnode_t* node);
 

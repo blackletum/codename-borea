@@ -58,6 +58,7 @@ matrix3x4_t(*CStudioModelRenderer::m_paliastransform);
 
 
 matrix3x4_t (*CStudioModelRenderer::m_pbonetransform)[MAXSTUDIOBONES];
+matrix3x4_t m_unscaledbonetrans[MAXSTUDIOBONES];
 matrix3x4_t (*CStudioModelRenderer::m_plighttransform)[MAXSTUDIOBONES];
 
 int CStudioModelRenderer::m_nCachedBones;
@@ -1132,9 +1133,7 @@ void CStudioModelRenderer::StudioSetUpTransform(int trivial_accept)
 	// TODO: should really be stored with the entity instead of being reconstructed
 	// TODO: should use a look-up table
 	// TODO: could cache lazily, stored in the entity
-	angles[ROLL] = m_pCurrentEntity->curstate.angles[ROLL];
-	angles[PITCH] = m_pCurrentEntity->curstate.angles[PITCH];
-	angles[YAW] = m_pCurrentEntity->curstate.angles[YAW];
+	angles = m_pCurrentEntity->curstate.angles;
 
 	// Con_DPrintf("Angles %4.2f prev %4.2f for %i\n", angles[PITCH], m_pCurrentEntity->index);
 	// Con_DPrintf("movetype %d %d\n", m_pCurrentEntity->movetype, m_pCurrentEntity->aiment );
@@ -1282,37 +1281,18 @@ void CStudioModelRenderer::StudioCalcRotations(float pos[][3], vec4_t* q, mstudi
 	for (i = 0; i < m_pStudioHeader->numbones; i++, pbone++, panim++)
 	{
 		StudioCalcBoneQuaterion(frame, s, pbone, panim, adj, q[i]);
-
 		StudioCalcBonePosition(frame, s, pbone, panim, adj, pos[i]);
 	}
 
-	if (pseqdesc->motiontype & STUDIO_X)
-	{
-		pos[pseqdesc->motionbone][0] = 0.0;
-	}
-	if (pseqdesc->motiontype & STUDIO_Y)
-	{
-		pos[pseqdesc->motionbone][1] = 0.0;
-	}
-	if (pseqdesc->motiontype & STUDIO_Z)
-	{
-		pos[pseqdesc->motionbone][2] = 0.0;
-	}
+	if (pseqdesc->motiontype & STUDIO_X) pos[pseqdesc->motionbone][0] = 0.0;
+	if (pseqdesc->motiontype & STUDIO_Y) pos[pseqdesc->motionbone][1] = 0.0;
+	if (pseqdesc->motiontype & STUDIO_Z) pos[pseqdesc->motionbone][2] = 0.0;
 
 	s = 0 * ((1.0 - (f - (int)(f))) / (pseqdesc->numframes)) * m_pCurrentEntity->curstate.framerate;
 
-	if (pseqdesc->motiontype & STUDIO_LX)
-	{
-		pos[pseqdesc->motionbone][0] += s * pseqdesc->linearmovement[0];
-	}
-	if (pseqdesc->motiontype & STUDIO_LY)
-	{
-		pos[pseqdesc->motionbone][1] += s * pseqdesc->linearmovement[1];
-	}
-	if (pseqdesc->motiontype & STUDIO_LZ)
-	{
-		pos[pseqdesc->motionbone][2] += s * pseqdesc->linearmovement[2];
-	}
+	if (pseqdesc->motiontype & STUDIO_LX) pos[pseqdesc->motionbone][0] += s * pseqdesc->linearmovement[0];
+	if (pseqdesc->motiontype & STUDIO_LY) pos[pseqdesc->motionbone][1] += s * pseqdesc->linearmovement[1];
+	if (pseqdesc->motiontype & STUDIO_LZ) pos[pseqdesc->motionbone][2] += s * pseqdesc->linearmovement[2];
 }
 
 /*
@@ -1321,9 +1301,9 @@ Studio_FxTransform
 
 ====================
 */
-void CStudioModelRenderer::StudioFxTransform(cl_entity_t* ent, matrix3x4_t &transform)
+void CStudioModelRenderer::StudioFxTransform(cl_entity_t* ent, matrix3x4_t &transform, bool applyscale)
 {
-	if (ent->curstate.renderfx != kRenderFxExplode && ent->curstate.scale > 0)
+	if (ent->curstate.renderfx != kRenderFxExplode && ent->curstate.scale > 0 && applyscale)
 	{
 		transform[0][0] *= ent->curstate.scale;
 		transform[1][0] *= ent->curstate.scale;
@@ -1382,29 +1362,15 @@ StudioEstimateFrame
 */
 float CStudioModelRenderer::StudioEstimateFrame(mstudioseqdesc_t* pseqdesc)
 {
-	double dfdt, f;
+	double dfdt = 0;
+	double f = 0;
 
-	if (bDoInterp)
+	if (bDoInterp && (engine_cl->time >= m_pCurrentEntity->curstate.animtime))
 	{
-		if (engine_cl->time < m_pCurrentEntity->curstate.animtime)
-		{
-			dfdt = 0;
-		}
-		else
-		{
-			dfdt = (engine_cl->time - m_pCurrentEntity->curstate.animtime) * m_pCurrentEntity->curstate.framerate * pseqdesc->fps;
-		}
-	}
-	else
-	{
-		dfdt = 0;
+		dfdt = (engine_cl->time - m_pCurrentEntity->curstate.animtime) * m_pCurrentEntity->curstate.framerate * pseqdesc->fps;
 	}
 
-	if (pseqdesc->numframes <= 1)
-	{
-		f = 0;
-	}
-	else
+	if (pseqdesc->numframes > 1)
 	{
 		f = (m_pCurrentEntity->curstate.frame * (pseqdesc->numframes - 1)) / 256.0;
 	}
@@ -1442,7 +1408,7 @@ StudioSetupBones
 
 ====================
 */
-void CStudioModelRenderer::StudioSetupBones(void)
+void CStudioModelRenderer::StudioSetupBones(bool applyscale)
 {
 	int i;
 	double f;
@@ -1589,7 +1555,7 @@ void CStudioModelRenderer::StudioSetupBones(void)
 			ConcatTransforms((*m_protationmatrix), bonematrix, (*m_pbonetransform)[i]);
 
 			// Apply client-side effects to the transformation matrix
-			StudioFxTransform(m_pCurrentEntity, (*m_pbonetransform)[i]);
+			StudioFxTransform(m_pCurrentEntity, (*m_pbonetransform)[i], applyscale);
 		}
 		else
 		{
@@ -1887,11 +1853,7 @@ void CStudioModelRenderer::StudioEstimateGait(entity_state_t* pplayer)
 	float dt;
 	Vector est_velocity;
 
-	dt = (engine_cl->time - engine_cl->oldtime);
-	if (dt < 0)
-		dt = 0;
-	else if (dt > 1.0)
-		dt = 1;
+	dt = std::clamp(engine_cl->time - engine_cl->oldtime, 0.0, 1.0);
 
 	if (dt == 0 || pPlayerInfo->renderframe == gBSPRenderer.m_iFrameCount)
 	{
@@ -2170,7 +2132,6 @@ void CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 
 	if (flags & STUDIO_RENDER && !(m_pCurrentEntity->curstate.effects & FL_NOMODEL))
 	{
-
 		StudioSetupLighting();
 		StudioEntityLight();
 
@@ -2967,10 +2928,9 @@ void CStudioModelRenderer::StudioDrawPoints(StudioMDL_BodyPart* bodypart)
 	if (!submodel->GetMeshNum())
 		return;
 
-	int numskinfamilies = m_pCurrentStudioMDL->GetNumSkinIndexes();
+	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, m_pCurrentStudioMDL->GetNumSkinFamilies() - 1);
+	skinindex *= m_pCurrentStudioMDL->GetNumSkinIndexes();
 
-
-	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, numskinfamilies - 1) * numskinfamilies;
 	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes() + skinindex;
 
 	//
@@ -3654,7 +3614,6 @@ StudioDrawPropModel
 */
 void CStudioModelRenderer::StudioDrawPropModel(void)
 {
-
 	glm::mat4 oldmdlmatrix = gBSPRenderer.m_ModelMatrix;
 
 	gBSPRenderer.m_ModelMatrix = m_pCurrentExtraData->modelmatrix;
@@ -3697,14 +3656,10 @@ StudioDrawPointsProp
 void CStudioModelRenderer::StudioDrawPointsProp(void)
 {
 
-	int skinnum = m_pCurrentEntity->curstate.skin; // for short..
-	if (skinnum < 0)
-		skinnum = 0;
+	int skinindex = std::clamp((int)m_pCurrentEntity->curstate.skin, 0, m_pCurrentStudioMDL->GetNumSkinFamilies() - 1);
+	skinindex *= m_pCurrentStudioMDL->GetNumSkinIndexes();
 
-	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes();
-
-	if (skinnum != 0 && skinnum < m_pCurrentStudioMDL->GetNumSkinFamilies())
-		pskinref += (skinnum * m_pCurrentStudioMDL->GetNumSkinIndexes());
+	short* pskinref = m_pCurrentStudioMDL->GetSkinIndexes() + skinindex;
 
 	mstudiomesh_t* pmesh = (mstudiomesh_t*)((byte*)m_pStudioHeader + m_pSubModel->meshindex);
 
@@ -3901,7 +3856,9 @@ void CStudioModelRenderer::StudioDecalForEntity(Vector position, Vector normal, 
 	pDecal->texture = texptr;
 
 	StudioSetUpTransform(0);
-	StudioSetupBones();
+	StudioSetupBones(false);
+	memcpy(m_unscaledbonetrans, (*m_pbonetransform), sizeof(matrix3x4_t) * m_pCurrentStudioMDL->GetNumBones());
+	StudioSetupBones(true);
 
 	for (int i = 0; i < m_pCurrentStudioMDL->GetNumBodyParts(); i++)
 	{
@@ -3912,7 +3869,7 @@ void CStudioModelRenderer::StudioDecalForEntity(Vector position, Vector normal, 
 	std::vector<studiomdl_vertbufferdata_t> decalverts;
 
 	int numverts = 0;
-
+	float invscale = 1.0 / (pEntity->curstate.scale ? pEntity->curstate.scale : 1);
 	for (int i = 0; i < pDecal->numpolys; i++)
 	{
 		decalvert_t* verts = &pDecal->polys[i].verts[0];
@@ -3922,6 +3879,11 @@ void CStudioModelRenderer::StudioDecalForEntity(Vector position, Vector normal, 
 			v0.pos = pDecal->verts[verts[0].vertindex].position;
 			v1.pos = pDecal->verts[verts[j].vertindex].position;
 			v2.pos = pDecal->verts[verts[j + 1].vertindex].position;
+
+			//undo scale
+			v0.pos = v0.pos * invscale;
+			v1.pos = v1.pos * invscale;
+			v2.pos = v2.pos * invscale;
 
 			int width = pDecal->texture->xsize;
 			int height = pDecal->texture->ysize;
@@ -4070,7 +4032,7 @@ void CStudioModelRenderer::StudioDecalTriangle(studiotri_t* tri, Vector position
 		temp[0] = dverts1[i][0] - (*m_pbonetransform)[indexes[i]][0][3];
 		temp[1] = dverts1[i][1] - (*m_pbonetransform)[indexes[i]][1][3];
 		temp[2] = dverts1[i][2] - (*m_pbonetransform)[indexes[i]][2][3];
-		VectorIRotate(temp, (*m_pbonetransform)[indexes[i]], fpos);
+		VectorIRotateNormalized(temp, (*m_pbonetransform)[indexes[i]], fpos);
 
 		int j = 0;
 		for (; j < decal->numverts; j++)

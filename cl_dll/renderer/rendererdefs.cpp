@@ -181,6 +181,26 @@ void VectorIRotate(const Vector& in1, const matrix3x4_t &in2, Vector& out)
 
 /*
 ====================
+VectorIRotateNormalized
+
+====================
+*/
+void VectorIRotateNormalized(const Vector& in1, const matrix3x4_t& in2, Vector& out)
+{
+	matrix3x4_t temp = in2;
+	Vector col0 = Vector(in2[0][0], in2[0][1], in2[0][2]);
+	Vector col1 = Vector(in2[1][0], in2[1][1], in2[1][2]);
+	Vector col2 = Vector(in2[2][0], in2[2][1], in2[2][2]);
+	col0 = col0.Normalize();
+	col1 = col1.Normalize();
+	col2 = col2.Normalize();
+	out[0] = in1[0] * col0.x + in1[1] * col1.x + in1[2] * col2.x;
+	out[1] = in1[0] * col0.y + in1[1] * col1.y + in1[2] * col2.y;
+	out[2] = in1[0] * col0.z + in1[1] * col1.z + in1[2] * col2.z;
+}
+
+/*
+====================
 VectorRotate
 
 ====================

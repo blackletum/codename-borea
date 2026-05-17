@@ -114,7 +114,7 @@ public:
 
 	static void StudioHandleDeadPlayer(int flags);	// just so StudioDrawModels is a bit smaller and compact
 
-	static void StudioSetupBones(void);	// Set up model bone positions
+	static void StudioSetupBones(bool applyscale = true);	// Set up model bone positions
 
 	static void StudioCalcAttachments(void);	// Find final attachment points
 
@@ -122,7 +122,7 @@ public:
 
 	static float StudioEstimateFrame(mstudioseqdesc_t* pseqdesc);	// Determine current frame for rendering
 
-	static void StudioFxTransform(cl_entity_t* ent, matrix3x4_t &transform);	// Apply special effects to transform matrix
+	static void StudioFxTransform(cl_entity_t* ent, matrix3x4_t &transform, bool applyscale = true);	// Apply special effects to transform matrix
 
 	// Spherical interpolation of bones
 	static void StudioSlerpBones(vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s);

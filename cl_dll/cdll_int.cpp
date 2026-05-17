@@ -59,6 +59,8 @@ extern engine_studio_api_t IEngineStudio;
 
 #include "openal/OpenAL_System.h"
 
+#include "tmessage.h"
+
 
 model_t dummymodel;
 msprite_t dummysprite;
@@ -647,6 +649,9 @@ int DLLEXPORT HUD_VidInit()
 	gHUD.VidInit();
 
 	VGui_Startup();
+
+	//restart textmessageinit every level load. no need to do TextMessageShutdown since Init already does that
+	TextMessageInit();
 
 	return 1;
 }

@@ -30,6 +30,29 @@ typedef struct client_textmessage_s
 } client_textmessage_t;
 
 
+//---------------------------------------------------------------------------
+// client_textmessagecustom_t
+//---------------------------------------------------------------------------
+typedef struct client_textmessagecustom_s
+{
+	int effect;
+	byte r1, g1, b1, a1; // 2 colors for effects
+	byte r2, g2, b2, a2;
+	float x;
+	float y;
+	float fadein;
+	float fadeout;
+	float holdtime;
+	float fxtime;
+	const char* pName;
+	const char* pMessage;
+	bool bRoundedRectBackdropBox;
+	float flBoxSize; // as a function of font height
+	byte boxcolor[4];
+	char const* pClearMessage; // message to clear
+} client_textmessagecustom_t;
+
+
 //--------------------------------------------------------------------------
 // sequenceDefaultBits_e
 //	

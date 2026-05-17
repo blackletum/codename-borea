@@ -23,12 +23,13 @@
 #include <string.h>
 #include <stdio.h>
 #include "parsemsg.h"
+#include "tmessage.h"
 
 DECLARE_MESSAGE( m_Message, HudText )
 DECLARE_MESSAGE( m_Message, GameTitle )
 
-// 1 Global client_textmessage_t for custom messages that aren't in the titles.txt
-client_textmessage_t	g_pCustomMessage;
+// 1 Global client_textmessagecustom_t for custom messages that aren't in the titles.txt
+client_textmessagecustom_t	g_pCustomMessage;
 const char *g_pCustomName = "Custom";
 char g_pCustomText[1024];
 
@@ -244,7 +245,7 @@ void CHudMessage::MessageScanStart()
 }
 
 
-void CHudMessage::MessageDrawScan( client_textmessage_t *pMessage, float time )
+void CHudMessage::MessageDrawScan( client_textmessagecustom_t *pMessage, float time )
 {
 	int i, j, length, width;
 	const char *pText;
@@ -319,7 +320,7 @@ void CHudMessage::MessageDrawScan( client_textmessage_t *pMessage, float time )
 int CHudMessage::Draw( float fTime )
 {
 	int i, drawn;
-	client_textmessage_t *pMessage;
+	client_textmessagecustom_t *pMessage;
 	float endTime;
 
 	drawn = 0;
@@ -427,7 +428,7 @@ int CHudMessage::Draw( float fTime )
 void CHudMessage::MessageAdd( const char *pName, float time )
 {
 	int i,j;
-	client_textmessage_t *tempMessage;
+	client_textmessagecustom_t *tempMessage;
 
 	for ( i = 0; i < maxHUDMessages; i++ )
 	{
@@ -522,7 +523,7 @@ int CHudMessage::MsgFunc_GameTitle( const char *pszName,  int iSize, void *pbuf 
 	return 1;
 }
 
-void CHudMessage::MessageAdd(client_textmessage_t * newMessage )
+void CHudMessage::MessageAdd(client_textmessagecustom_t * newMessage )
 {
 	m_parms.time = gHUD.m_flTime;
 

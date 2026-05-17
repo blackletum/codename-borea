@@ -430,7 +430,7 @@ private:
 const int maxHUDMessages = 16;
 struct message_parms_t
 {
-	client_textmessage_t	*pMessage;
+	client_textmessagecustom_t	*pMessage;
 	float	time;
 	int x, y;
 	int	totalWidth, totalHeight;
@@ -478,18 +478,18 @@ public:
 	int YPosition( float y, int height );
 
 	void MessageAdd( const char *pName, float time );
-	void MessageAdd(client_textmessage_t * newMessage );
-	void MessageDrawScan( client_textmessage_t *pMessage, float time );
+	void MessageAdd(client_textmessagecustom_t * newMessage );
+	void MessageDrawScan( client_textmessagecustom_t *pMessage, float time );
 	void MessageScanStart();
 	void MessageScanNextChar();
 	void Reset() override;
 
 private:
-	client_textmessage_t		*m_pMessages[maxHUDMessages];
+	client_textmessagecustom_t		*m_pMessages[maxHUDMessages];
 	float						m_startTime[maxHUDMessages];
 	message_parms_t				m_parms;
 	float						m_gameTitleTime;
-	client_textmessage_t		*m_pGameTitle;
+	client_textmessagecustom_t		*m_pGameTitle;
 
 	int m_HUD_title_life;
 	int m_HUD_title_half;

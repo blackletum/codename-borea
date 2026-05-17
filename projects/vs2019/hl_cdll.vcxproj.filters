@@ -513,6 +513,9 @@
     <ClCompile Include="..\..\cl_dll\renderer\opengl_utils\GL_Mesh.cpp">
       <Filter>Source Files\cl_dll\renderer\opengl_utils</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\cl_dll\tmessage.cpp">
+      <Filter>Source Files\cl_dll</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cl_dll\kbutton.h">
@@ -1123,6 +1126,9 @@
     </ClInclude>
     <ClInclude Include="..\..\cl_dll\renderer\RenderCamera.h">
       <Filter>Header Files\cl_dll\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\cl_dll\tmessage.h">
+      <Filter>Header Files\cl_dll</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

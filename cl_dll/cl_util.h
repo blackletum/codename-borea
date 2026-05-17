@@ -92,7 +92,6 @@ extern void FillRGBA(float x, float y, float w, float h, int r, int g, int b, in
 #define		BLOOD_COLOR_GREEN	BLOOD_COLOR_YELLOW
 
 
-inline 	client_textmessage_t	*TextMessageGet( const char *pName ) { return gEngfuncs.pfnTextMessageGet( pName ); }
 inline 	int						TextMessageDrawChar( int x, int y, int number, int r, int g, int b ) 
 { 
 	return gEngfuncs.pfnDrawCharacter( x, y, number, r, g, b ); 

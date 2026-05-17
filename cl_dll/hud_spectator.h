@@ -103,7 +103,7 @@ public:
 
 
 	int m_iDrawCycle;
-	client_textmessage_t m_HUDMessages[MAX_SPEC_HUD_MESSAGES];
+	client_textmessagecustom_t m_HUDMessages[MAX_SPEC_HUD_MESSAGES];
 	char				m_HUDMessageText[MAX_SPEC_HUD_MESSAGES][128];
 	int					m_lastHudMessage;
 	overviewInfo_t		m_OverviewData;

@@ -738,6 +738,7 @@ void CHud :: Init()
 	CVAR_CREATE("r_glowstrength", "1", FCVAR_ARCHIVE );
 	CVAR_CREATE("r_glowblur", "4", FCVAR_ARCHIVE );
 	CVAR_CREATE("r_glowdark", "2", FCVAR_ARCHIVE );
+	CVAR_CREATE("r_titleslang", "titles.txt", FCVAR_ARCHIVE);
 	//end glow effect
 
 	viewEntityIndex = 0; // trigger_viewset stuff

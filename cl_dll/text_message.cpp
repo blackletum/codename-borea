@@ -27,6 +27,7 @@
 #include "parsemsg.h"
 
 #include "vgui_TeamFortressViewport.h"
+#include "tmessage.h"
 
 DECLARE_MESSAGE( m_TextMessage, TextMsg );
 
@@ -61,7 +62,7 @@ char *CHudTextMessage::LocaliseTextString( const char *msg, char *dst_buffer, in
 			*wdst = 0;
 
 			// lookup msg name in titles.txt
-			client_textmessage_t *clmsg = TextMessageGet( word_buf );
+			client_textmessagecustom_t *clmsg = TextMessageGet( word_buf );
 			if ( !clmsg || !(clmsg->pMessage) )
 			{
 				src = word_start;
@@ -107,7 +108,7 @@ const char *CHudTextMessage::LookupString( const char *msg, int *msg_dest )
 	if ( msg[0] == '#' ) 
 	{
 		// this is a message name, so look up the real message
-		client_textmessage_t *clmsg = TextMessageGet( msg+1 );
+		client_textmessagecustom_t *clmsg = TextMessageGet( msg+1 );
 
 		if ( !clmsg || !(clmsg->pMessage) )
 			return msg; // lookup failed, so return the original string

@@ -750,7 +750,7 @@ void CHudSpectator::DirectorMessage( int iSize, void *pbuf )
 
 		case DRC_CMD_MESSAGE:
 							{
-								client_textmessage_t * msg = &m_HUDMessages[m_lastHudMessage];
+								client_textmessagecustom_t * msg = &m_HUDMessages[m_lastHudMessage];
 								
 								msg->effect = READ_BYTE();		// effect
 
