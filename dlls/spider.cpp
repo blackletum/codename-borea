@@ -65,6 +65,7 @@ public:
 	void Spawn() override;
 
 	static void Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
+	static void Toss( entvars_t *pevOwner, Vector vecStart, Vector vecEnemyOrigin, float speed );
 	void Touch( CBaseEntity *pOther ) override;
 	void EXPORT Animate();
 
@@ -148,6 +149,21 @@ void CSquidSpit::Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity
 	pSpit->pev->owner = ENT(pevOwner);
 
 	pSpit->SetThink ( &CSquidSpit::Animate );
+	pSpit->SetNextThink( 0.1 );
+}
+
+void CSquidSpit::Toss( entvars_t *pevOwner, Vector vecStart, Vector vecEnemyOrigin, float speed )
+{	
+	CSquidSpit *pSpit = GetClassPtr( (CSquidSpit *)nullptr );
+	pSpit->Spawn();
+	pSpit->pev->movetype = MOVETYPE_TOSS;
+	pSpit->pev->gravity = 0.5;
+
+	UTIL_SetOrigin( pSpit, vecStart );
+	pSpit->pev->velocity = VecCheckThrow( pevOwner, vecStart, vecEnemyOrigin, speed, 0.5 );
+	pSpit->pev->owner = ENT( pevOwner );
+
+	pSpit->SetThink( &CSquidSpit::Animate );
 	pSpit->SetNextThink( 0.1 );
 }
 
@@ -756,7 +772,8 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 					WRITE_BYTE ( 25 );			// noise ( client will divide by 100 )
 				MESSAGE_END();
 
-				CSquidSpit::Shoot( pev, vecSpitOffset, vecSpitDir * 900 );
+			//	CSquidSpit::Shoot( pev, vecSpitOffset, vecSpitDir * 900 );
+				CSquidSpit::Toss( pev, vecSpitOffset, m_hEnemy->pev->origin, 900 );
 			}
 		}
 		break;
