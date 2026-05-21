@@ -255,6 +255,7 @@ public:
 	Schedule_t *GetScheduleOfType ( int Type ) override;
 	int IRelationship ( CBaseEntity *pTarget ) override;
 	int IgnoreConditions () override;
+	bool CheckForNearbyRat();
 
 	void CheckAmmo() override;
 	void GibMonster() override;
@@ -400,10 +401,33 @@ BOOL CPitdrone :: CheckRangeAttack1 ( float flDot, float flDist )
 	return FALSE;*/
 }
 
+// Aynekko: returns true if a rat was found in a certain radius, with a faction check too.
+// if a rat is found, then we become brave and attack the player regardless of the flashlight
+bool CPitdrone::CheckForNearbyRat( void )
+{
+	CBaseMonster *pEntity = NULL;
+
+	while( (pEntity = (CBaseMonster*)UTIL_FindEntityByClassname( pEntity, "monster_giantrat" )) != nullptr )
+	{
+		if( !pEntity->IsAlive() )
+			continue;
+
+		if( pEntity->m_iClass != m_iClass )
+			continue;
+
+		if( (pEntity->pev->origin - pev->origin).Length() > 768 )
+			continue;
+
+		return true;
+	}
+
+	return false;
+}
+
 BOOL CPitdrone :: CheckMeleeAttack1 ( float flDot, float flDist )
 {
 	// Aynekko: don't attack when low hp and enemy facing us
-	if( pev->health < pev->max_health * 0.4f && HasConditions( bits_COND_ENEMY_FACING_ME ) )
+	if( !CheckForNearbyRat() && pev->health < pev->max_health * 0.4f && HasConditions( bits_COND_ENEMY_FACING_ME ) )
 		return FALSE;
 	
 	if ( flDist <= 64 && flDot >= 0.7 )
@@ -420,7 +444,7 @@ BOOL CPitdrone :: CheckMeleeAttack2 ( float flDot, float flDist )
 		return FALSE;
 
 	// Aynekko: don't attack when low hp and enemy facing us
-	if( pev->health < pev->max_health * 0.4f && HasConditions( bits_COND_ENEMY_FACING_ME ) )
+	if( !CheckForNearbyRat() && pev->health < pev->max_health * 0.4f && HasConditions( bits_COND_ENEMY_FACING_ME ) )
 		return FALSE;
 	
 	if( FBitSet( pev->flags, FL_ONGROUND ) && flDist <= 256 && flDot >= 0.65 )
@@ -1219,6 +1243,7 @@ Schedule_t *CPitdrone :: GetSchedule()
 				&& RANDOM_LONG( 0, 100 ) > 25
 				&& HasConditions( bits_COND_ENEMY_FACING_ME )
 				&& (m_hEnemy->pev->effects & EF_DIMLIGHT)
+				&& !CheckForNearbyRat()
 				&& (pev->origin - m_hEnemy->pev->origin).Length() < 600 )
 			{
 				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
