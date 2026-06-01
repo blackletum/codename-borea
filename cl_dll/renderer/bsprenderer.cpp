@@ -122,6 +122,8 @@ enum worldshader_uniforms
 
 	world_wireframe,
 
+	world_clipplane,
+
 	world_shaderlocs_size, //must be last
 }; static GLuint eWorldShader_locs[world_shaderlocs_size];
 
@@ -370,6 +372,8 @@ void CBSPRenderer::Init(void)
 	eWorldShader_locs[world_specular] = s_BSPShader.GetUniformLoc("specular");
 	eWorldShader_locs[world_fltime] = s_BSPShader.GetUniformLoc("fltime");
 	eWorldShader_locs[world_alphatest] = s_BSPShader.GetUniformLoc("alphatest");
+
+	eWorldShader_locs[world_clipplane] = s_BSPShader.GetUniformLoc("clipplane");
 
 
 	eWorldSolidShader_locs[worldsolid_projviewmatrix] = s_BSPSolidShader.GetUniformLoc("projviewmatrix");
@@ -2053,6 +2057,15 @@ void CBSPRenderer::DrawWorld(bool m_bSkyBox)
 
 	GL_Mesh::UnbindMesh();
 };
+
+
+void CBSPRenderer::SetClippingPlane(const mplane_t& plane)
+{
+	s_BSPShader.Bind();
+	s_BSPShader.Uniform4fv(eWorldShader_locs[world_clipplane], 1, glm::value_ptr(glm::vec4(plane.normal.x, plane.normal.y, plane.normal.z, plane.dist)));
+}
+
+
 
 //transform a point in world space to screen space
 

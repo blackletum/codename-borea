@@ -76,7 +76,7 @@ static GL_ShaderProgram s_MirrorShader(mirror_vertex, mirror_fragment);
 
 
 extern glm::mat4 oldviewmatrix;
-extern glm::mat4 oldprojectionmatrix;
+glm::mat4 oldprojectionmatrix;
 Vector m_vRestoreRenderOrigin;
 Vector m_vRestoreViewAngles;
 

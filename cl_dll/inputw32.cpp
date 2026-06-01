@@ -367,21 +367,27 @@ void IN_StartupMouse ()
 
 	if (mouseparmsvalid)
 	{
+#ifndef _DEBUG
 		if ( gEngfuncs.CheckParm ("-noforcemspd", nullptr ) ) 
 			newmouseparms[2] = originalmouseparms[2];
-
+		
 		if ( gEngfuncs.CheckParm ("-noforcemaccel", nullptr ) ) 
 		{
 			newmouseparms[0] = originalmouseparms[0];
 			newmouseparms[1] = originalmouseparms[1];
 		}
-
+		
 		if ( gEngfuncs.CheckParm ("-noforcemparms", nullptr ) ) 
 		{
 			newmouseparms[0] = originalmouseparms[0];
 			newmouseparms[1] = originalmouseparms[1];
 			newmouseparms[2] = originalmouseparms[2];
 		}
+#else // dont force-enable windows mouse acceleration. its annoying
+		newmouseparms[0] = originalmouseparms[0];
+		newmouseparms[1] = originalmouseparms[1];
+		newmouseparms[2] = originalmouseparms[2];
+#endif
 	}
 #endif
 	

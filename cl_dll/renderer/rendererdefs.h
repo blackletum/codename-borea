@@ -231,6 +231,9 @@ extern void R_Init(void);
 extern void R_VidInit(void);
 extern void R_Shutdown(void);
 
+extern void R_SetClippingPlane(const mplane_t& plane);
+extern void R_DisableClippingPlane();
+
 __forceinline glm::vec3 Vector_GLMvec3(const Vector& vec) { return glm::vec3(vec.x, vec.y, vec.z); }
 
 

@@ -29,6 +29,8 @@ char glsl330_world_vp[] = R"(
 	uniform bool scrollingpolys;
 	uniform bool specular;
 
+	uniform vec4 clipplane;
+
 
 	out vec2 frag_texcoord_lightmap;
 	out vec2 frag_texcoord_texture;
@@ -248,6 +250,8 @@ char glsl330_world_vp[] = R"(
 
 		fragPos = worldPos.xyz;
 		fragNormal = normalize( transpose(inverse(mat3(modelmatrix))) * aNormal );
+
+		gl_ClipDistance[0] = dot(modelmatrix * vec4(vert_position, 1), clipplane);
 	}
 
 

@@ -158,6 +158,8 @@ enum{
 	mdlshader_studiodecal,
 	mdlshader_decalsize,
 
+	mdlshader_clipplane,
+
 	_mdlshader_uniformsize //must be last
 }; static GLuint eModel_ShaderLocs[_mdlshader_uniformsize];
 
@@ -306,6 +308,7 @@ void CStudioModelRenderer::Init(void)
 
 	eModel_ShaderLocs[mdlshader_studiodecal] = s_MDLShader.GetUniformLoc("studiodecal");
 	eModel_ShaderLocs[mdlshader_decalsize] = s_MDLShader.GetUniformLoc("decalsize");
+	eModel_ShaderLocs[mdlshader_clipplane] = s_MDLShader.GetUniformLoc("clipplane");
 
 	eModel_ShaderSolidLocs[mdlshadersolid_sunshadow] = s_MDLSolidShader.GetUniformLoc("bSunShadowMapPass");
 	eModel_ShaderSolidLocs[mdlshadersolid_texture_flags] = s_MDLSolidShader.GetUniformLoc("texture_flags");
@@ -1995,6 +1998,12 @@ void CStudioModelRenderer::StudioProcessGait(entity_state_t* pplayer)
 	pPlayerInfo->gaitframe = pPlayerInfo->gaitframe - (int)(pPlayerInfo->gaitframe / pseqdesc->numframes) * pseqdesc->numframes;
 	if (pPlayerInfo->gaitframe < 0)
 		pPlayerInfo->gaitframe += pseqdesc->numframes;
+}
+
+void CStudioModelRenderer::SetClippingPlane(const mplane_t& plane)
+{
+	s_MDLShader.Bind();
+	s_MDLShader.Uniform4fv(eModel_ShaderLocs[mdlshader_clipplane], 1, glm::value_ptr(glm::vec4(plane.normal.x, plane.normal.y, plane.normal.z, plane.dist)));
 }
 
 /*

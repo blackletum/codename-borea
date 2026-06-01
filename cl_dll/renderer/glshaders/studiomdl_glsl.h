@@ -65,6 +65,8 @@ char glsl330_studiomdl_vert[] = R"(
 	uniform bool studiodecal;
 	uniform vec2 decalsize;
 
+	uniform vec4 clipplane;
+
 	
 	out vec4 vertexdiffusecolor;
 	out vec4 vertexspecularcolor;
@@ -255,6 +257,7 @@ char glsl330_studiomdl_vert[] = R"(
 		CalcTexCoords(normbone);
 
 		fragPos = translated_vertpos;
+		gl_ClipDistance[0] = dot(vec4(translated_vertpos, 1.0), clipplane);
 	}
 
 

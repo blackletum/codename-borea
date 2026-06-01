@@ -1166,3 +1166,14 @@ void R_Shutdown(void)
 
 	GL_ShutdownAllShaders();
 }
+
+void R_SetClippingPlane(const mplane_t& plane)
+{
+	glEnable(GL_CLIP_DISTANCE0);
+	gBSPRenderer.SetClippingPlane(plane);
+	g_StudioRenderer.SetClippingPlane(plane);
+}
+void R_DisableClippingPlane()
+{
+	glDisable(GL_CLIP_DISTANCE0);
+}

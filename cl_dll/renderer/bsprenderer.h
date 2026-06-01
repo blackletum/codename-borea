@@ -310,6 +310,8 @@ public:
 	void RenderWireframe(void);
 	void DrawWorld(bool m_bSkyBox = false);
 
+	void SetClippingPlane(const mplane_t& plane);
+
 	void RenderSunShadow(void);
 
 	void LoadWADDecals(void);
@@ -541,8 +543,6 @@ public:
 	int m_iNumTextures;
 
 
-	GL_ShaderProgram *m_WorldShader;
-	GL_ShaderProgram *m_WorldSolidShader;
 	GL_ShaderProgram *m_DecalShader;
 	GL_ShaderProgram *m_SimpleSkyboxShader;
 	static GL_ShaderProgram m_FilterShader;
