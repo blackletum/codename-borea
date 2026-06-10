@@ -71,7 +71,7 @@ void CTempBloodPuddle::Spawn()
 void CTempBloodPuddle::Think()
 {
 	StudioFrameAdvance();
-	gEngfuncs.Con_Printf( "skin %i\n", (int)m_pTempEnt->entity.curstate.skin );
+//	gEngfuncs.Con_Printf( "skin %i\n", (int)m_pTempEnt->entity.curstate.skin );
 	if (engine_cl->time >= m_fBleedStartTime && m_pTempEnt->entity.curstate.sequence == LookupSequence("getbiggur") && m_fSequenceFinished)
 		SetSequence("idle");
 

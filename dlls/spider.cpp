@@ -22,8 +22,6 @@
 #include	"monsters.h"
 #include	"schedule.h"
 #include	"nodes.h"
-#include	"effects.h"
-#include	"decals.h"
 #include	"soundent.h"
 #include	"scripted.h"
 #include	"game.h"
@@ -274,18 +272,22 @@ public:
 	float m_flNextSpitTime;// last time the bullsquid used the spit attack.
 
 	float m_painTime;
+	bool bChild;
+	bool BabyFindCover( void );
 
 	void EXPORT LeapTouch( CBaseEntity *pOther );
 };
 LINK_ENTITY_TO_CLASS( monster_bullchicken, CBullsquid );
 LINK_ENTITY_TO_CLASS( monster_bullsquid, CBullsquid ); //LRC - let's get the right name...
 LINK_ENTITY_TO_CLASS( monster_arachnoid, CBullsquid ); // Aynekko: I'm editing base class, so I'm reusing it
+LINK_ENTITY_TO_CLASS( monster_arachnoid_baby, CBullsquid );
 
 TYPEDESCRIPTION	CBullsquid::m_SaveData[] = 
 {
 	DEFINE_FIELD( CBullsquid, m_fCanThreatDisplay, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBullsquid, m_flLastHurtTime, FIELD_TIME ),
 	DEFINE_FIELD( CBullsquid, m_flNextSpitTime, FIELD_TIME ),
+	DEFINE_FIELD( CBullsquid, bChild, FIELD_BOOLEAN ),
 };
 
 IMPLEMENT_SAVERESTORE( CBullsquid, CBaseMonster );
@@ -305,7 +307,9 @@ void CBullsquid::LeapTouch( CBaseEntity *pOther )
 	// Don't hit if back on ground
 	if( !FBitSet( pev->flags, FL_ONGROUND ) )
 	{
-		EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "arachnoid/spider_bite.wav", 1, ATTN_NORM, 0, RANDOM_LONG( 90, 110 ) );
+		float snd_mult = bChild ? 1.5f : 1.0f;
+
+		EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "arachnoid/spider_bite.wav", 1, ATTN_NORM, 0, RANDOM_LONG( 90, 110 ) * snd_mult );
 
 		bool bBlocked = false;
 		if( pOther->IsPlayer() )
@@ -315,7 +319,7 @@ void CBullsquid::LeapTouch( CBaseEntity *pOther )
 				bBlocked = true;
 
 			if( bBlocked )
-				EMIT_SOUND_DYN( pOther->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+				EMIT_SOUND_DYN( pOther->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) * snd_mult );
 
 			UTIL_MakeVectors( pev->angles );
 			pOther->pev->punchangle.x = bBlocked ? 5 : 15;
@@ -324,7 +328,13 @@ void CBullsquid::LeapTouch( CBaseEntity *pOther )
 				ChangeSchedule( GetScheduleOfType( SCHED_SMALL_FLINCH ) );
 		}
 
-		float dmg = bBlocked ? gSkillData.spiderDmgJump * 0.5f : gSkillData.spiderDmgJump;
+		float dmg = 0;
+
+		if( bChild )
+			dmg = bBlocked ? gSkillData.bspiderDmgJump * 0.5f : gSkillData.bspiderDmgJump;
+		else
+			dmg = bBlocked ? gSkillData.spiderDmgJump * 0.5f : gSkillData.spiderDmgJump;
+
 		pOther->TakeDamage( pev, pev, dmg, DMG_CLUB );
 		UTIL_ScreenShake( pOther->pev->origin, bBlocked ? 7.0 : 15.0, 1.5, 0.7, 2 );
 	}
@@ -456,6 +466,9 @@ int CBullsquid :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, f
 //=========================================================
 BOOL CBullsquid :: CheckRangeAttack1 ( float flDot, float flDist )
 {
+	if( bChild )
+		return FALSE;
+
 	if ( IsMoving() && flDist >= 512 )
 	{
 		// squid will far too far behind if he stops running to spit at this distance from the enemy.
@@ -584,16 +597,18 @@ int	CBullsquid :: Classify ()
 #define SQUID_ATTN_IDLE	(float)1.5
 void CBullsquid :: IdleSound ()
 {
+	float snd_mult = bChild ? 1.5f : 1.0f;
+
 	switch ( RANDOM_LONG(0,2) )
 	{
 	case 0:	
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle1.wav", 1, SQUID_ATTN_IDLE );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle1.wav", 1, SQUID_ATTN_IDLE, 0, PITCH_NORM * snd_mult );	
 		break;
 	case 1:	
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle2.wav", 1, SQUID_ATTN_IDLE );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle2.wav", 1, SQUID_ATTN_IDLE, 0, PITCH_NORM * snd_mult );
 		break;
 	case 2:	
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle3.wav", 1, SQUID_ATTN_IDLE );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle3.wav", 1, SQUID_ATTN_IDLE, 0, PITCH_NORM * snd_mult );
 		break;
 	}
 }
@@ -608,7 +623,9 @@ void CBullsquid :: PainSound ()
 
 	m_painTime = gpGlobals->time + RANDOM_FLOAT( 0.5, 1.0 );
 	
-	int iPitch = RANDOM_LONG( 85, 120 );
+	int iPitch = RANDOM_LONG( 90, 110 );
+
+	if( bChild ) iPitch *= 1.5f;
 
 	switch ( RANDOM_LONG(0,3) )
 	{
@@ -632,7 +649,8 @@ void CBullsquid :: PainSound ()
 //=========================================================
 void CBullsquid :: AlertSound ()
 {
-	int iPitch = RANDOM_LONG( 140, 160 );
+	int iPitch = RANDOM_LONG( 120, 140 );
+	if( bChild ) iPitch *= 1.5f;
 
 	switch ( RANDOM_LONG ( 0, 1  ) )
 	{
@@ -675,6 +693,8 @@ void CBullsquid :: SetYawSpeed ()
 //=========================================================
 void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 {
+	float snd_mult = bChild ? 1.5f : 1.0f;
+
 	switch( pEvent->event )
 	{
 		case SPIDER_LEAP:
@@ -719,7 +739,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				vecJumpDir = Vector( gpGlobals->v_forward.x, gpGlobals->v_forward.y, gpGlobals->v_up.z ) * 350;
 			}
 
-			EMIT_SOUND_DYN( edict(), CHAN_VOICE, "arachnoid/spider_attack1.wav", 1.0, ATTN_IDLE, 0, RANDOM_LONG( 95, 105 ) );
+			EMIT_SOUND_DYN( edict(), CHAN_VOICE, "arachnoid/spider_attack1.wav", 1.0, ATTN_IDLE, 0, RANDOM_LONG( 95, 105 ) * snd_mult );
 
 			pev->velocity = vecJumpDir;
 			m_flNextAttack = gpGlobals->time + 7; // Aynekko: don't jump too often
@@ -780,8 +800,8 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case BSQUID_AE_BITE:
 		{
-			EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "zombie/claw_strike3.wav", 1, ATTN_NORM, 0, RANDOM_LONG( 90, 110 ) );
-			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.spiderDmgBite, DMG_CLUB );
+			EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "zombie/claw_strike3.wav", 1, ATTN_NORM, 0, RANDOM_LONG( 90, 110 ) * snd_mult );
+			CBaseEntity *pHurt = CheckTraceHullAttack( 70, !bChild ? gSkillData.spiderDmgBite : gSkillData.bspiderDmgBite, DMG_CLUB );
 			
 			if( pHurt )
 			{
@@ -793,7 +813,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 						bBlocked = true;
 				}
 				if( bBlocked )
-					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) * snd_mult );
 
 				UTIL_MakeVectors( pev->angles );
 				pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
@@ -808,7 +828,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case BSQUID_AE_TAILWHIP:
 		{
-			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.spiderDmgBite, DMG_CLUB | DMG_ALWAYSGIB );
+			CBaseEntity *pHurt = CheckTraceHullAttack( 70, !bChild ? gSkillData.spiderDmgBite : gSkillData.bspiderDmgBite, DMG_CLUB | DMG_ALWAYSGIB );
 			if( pHurt )
 			{
 				bool bBlocked = false;
@@ -819,7 +839,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 						bBlocked = true;
 				}
 				if( bBlocked )
-					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+					EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) * snd_mult );
 
 				UTIL_MakeVectors( pev->angles );
 				pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
@@ -857,10 +877,8 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case BSQUID_AE_THROW:
 			{
-				int iPitch;
-
 				// squid throws its prey IF the prey is a client. 
-				CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.spiderDmgJump, DMG_CLUB | DMG_ALWAYSGIB );
+				CBaseEntity *pHurt = CheckTraceHullAttack( 70, !bChild ? gSkillData.spiderDmgJump : gSkillData.bspiderDmgJump, DMG_CLUB | DMG_ALWAYSGIB );
 
 				if( pHurt )
 				{
@@ -874,7 +892,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 					}
 
 					if( bBlocked )
-						EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) );
+						EMIT_SOUND_DYN( pHurt->edict(), CHAN_AUTO, "weapons/melee_block.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 98, 103 ) * snd_mult );
 
 					pHurt->pev->punchangle.x = bBlocked ? 5 : 15;
 					UTIL_MakeVectors( pev->angles );
@@ -898,18 +916,36 @@ void CBullsquid :: Spawn()
 {
 	Precache( );
 
-	if (pev->model)
-		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC
-	else
-		SET_MODEL(ENT(pev), "models/arachnoid.mdl");
-	UTIL_SetSize( pev, Vector( -32, -32, 0 ), Vector( 32, 32, 64 ) );
+	if( FClassnameIs( pev, "monster_arachnoid_baby" ) ) // Aynekko: just in case
+		bChild = true;
+
+	if( !bChild )
+	{
+		if( pev->model )
+			SET_MODEL( ENT( pev ), STRING( pev->model ) ); //LRC
+		else
+			SET_MODEL( ENT( pev ), "models/arachnoid.mdl" );
+
+		UTIL_SetSize( pev, Vector( -32, -32, 0 ), Vector( 32, 32, 64 ) );
+	}
+	else // child
+	{
+		if( pev->model )
+			SET_MODEL( ENT( pev ), STRING( pev->model ) ); //LRC
+		else
+			SET_MODEL( ENT( pev ), "models/arachnoid_baby.mdl" );
+
+		UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 32 ) );
+	}
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	m_bloodColor		= BLOOD_COLOR_YELLOW;
 	pev->effects		= 0;
-	if (pev->health == 0)
-		pev->health			= gSkillData.spiderHealth;
+	if( pev->health == 0 )
+	{
+		pev->health = !bChild ? gSkillData.spiderHealth : gSkillData.bspiderHealth;
+	}
 	m_flFieldOfView		= 0.2;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
 
@@ -925,10 +961,23 @@ void CBullsquid :: Spawn()
 //=========================================================
 void CBullsquid :: Precache()
 {
-	if (pev->model)
-		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC
+	if( FClassnameIs( pev, "monster_arachnoid_baby" ) )
+		bChild = true;
+
+	if( !bChild )
+	{
+		if( pev->model )
+			PRECACHE_MODEL( (char *)STRING( pev->model ) ); //LRC
+		else
+			PRECACHE_MODEL( "models/arachnoid.mdl" );
+	}
 	else
-		PRECACHE_MODEL("models/arachnoid.mdl");
+	{
+		if( pev->model )
+			PRECACHE_MODEL( (char *)STRING( pev->model ) ); //LRC
+		else
+			PRECACHE_MODEL( "models/arachnoid_baby.mdl" );
+	}
 	
 	PRECACHE_MODEL("sprites/bigspit.spr");// spit projectile.
 	m_iTrail = PRECACHE_MODEL( "sprites/smoke.spr" );
@@ -969,19 +1018,21 @@ void CBullsquid :: Precache()
 //=========================================================
 void CBullsquid :: DeathSound ()
 {
+	float snd_mult = bChild ? 1.5f : 1.0f;
+
 	switch ( RANDOM_LONG(0,3) )
 	{
 	case 0:	
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_death1.wav", 1, ATTN_NORM );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_death1.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );
 		break;
 	case 1:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_death2.wav", 1, ATTN_NORM );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_death2.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );
 		break;
 	case 2:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_death3.wav", 1, ATTN_NORM );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_death3.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );
 		break;
 	case 3:
-		EMIT_SOUND( ENT( pev ), CHAN_VOICE, "arachnoid/spider_death4.wav", 1, ATTN_NORM );
+		EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "arachnoid/spider_death4.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );
 		break;
 	}
 }
@@ -991,13 +1042,15 @@ void CBullsquid :: DeathSound ()
 //=========================================================
 void CBullsquid :: AttackSound ()
 {
+	float snd_mult = bChild ? 1.5f : 1.0f;
+
 	switch ( RANDOM_LONG(0,1) )
 	{
 	case 0:
-		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "arachnoid/spider_attack1.wav", 1, ATTN_NORM );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "arachnoid/spider_attack1.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );
 		break;
 	case 1:
-		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "arachnoid/spider_attack2.wav", 1, ATTN_NORM );	
+		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "arachnoid/spider_attack2.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );
 		break;
 	}
 }
@@ -1248,6 +1301,33 @@ DEFINE_CUSTOM_SCHEDULES( CBullsquid )
 
 IMPLEMENT_CUSTOM_SCHEDULES( CBullsquid, CBaseMonster );
 
+// Aynekko - ripped code from TASK_FIND_COVER_FROM_ENEMY, used by baby spiders to perform a check before deciding on the attack
+bool CBullsquid::BabyFindCover( void )
+{
+	if( m_hEnemy == nullptr )
+		return false;
+	
+	entvars_t *pevCover = m_hEnemy->pev;
+
+	if ( FindLateralCover( pevCover->origin, pevCover->view_ofs ) )
+	{
+		// try lateral first
+		m_flMoveWaitFinished = gpGlobals->time;
+		return true;
+	}
+	else if ( FindCover( pevCover->origin, pevCover->view_ofs, 0, CoverRadius() ) )
+	{
+		// then try for plain ole cover
+		m_flMoveWaitFinished = gpGlobals->time;
+		return true;
+	}
+	else
+	{
+		// no cover whatsoever.
+		return false;
+	}
+}
+
 //=========================================================
 // GetSchedule 
 //=========================================================
@@ -1345,24 +1425,39 @@ Schedule_t *CBullsquid :: GetSchedule()
 			// Aynekko: jump takes priority
 			if( HasConditions( bits_COND_CAN_RANGE_ATTACK2 ) )
 			{
+				if( bChild && BabyFindCover() )
+					return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+
 				return GetScheduleOfType( SCHED_RANGE_ATTACK2 );
 			}
 
 			if ( HasConditions( bits_COND_CAN_RANGE_ATTACK1 ) )
 			{
+				if( bChild && BabyFindCover() )
+					return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+
 				return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 			}
 
 			if ( HasConditions( bits_COND_CAN_MELEE_ATTACK1 ) )
 			{
+				if( bChild && BabyFindCover() )
+					return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+
 				return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
 			}
 
 			if ( HasConditions( bits_COND_CAN_MELEE_ATTACK2 ) )
 			{
+				if( bChild && BabyFindCover() )
+					return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+
 				return GetScheduleOfType ( SCHED_MELEE_ATTACK2 );
 			}
 			
+			if( bChild && BabyFindCover() )
+				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+
 			return GetScheduleOfType ( SCHED_CHASE_ENEMY );
 
 			break;
@@ -1415,6 +1510,7 @@ Schedule_t* CBullsquid :: GetScheduleOfType ( int Type )
 void CBullsquid :: StartTask ( Task_t *pTask )
 {
 	m_iTaskStatus = TASKSTATUS_RUNNING;
+	float snd_mult = bChild ? 1.5f : 1.0f;
 
 	switch ( pTask->iTask )
 	{
@@ -1429,10 +1525,10 @@ void CBullsquid :: StartTask ( Task_t *pTask )
 			switch ( RANDOM_LONG ( 0, 1 ) )
 			{
 			case 0:	
-				EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_attackl.wav", 1, ATTN_NORM );		
+				EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_attackl.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );		
 				break;
 			case 1:	
-				EMIT_SOUND( ENT(pev), CHAN_VOICE, "arachnoid/spider_attack2.wav", 1, ATTN_NORM );	
+				EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_attack2.wav", 1, ATTN_NORM, 0, PITCH_NORM * snd_mult );
 				break;
 			}
 

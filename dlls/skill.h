@@ -171,7 +171,10 @@ struct skilldata_t
 	float spiderDmgJump;
 	float spiderDmgSpit;
 	float spiderDmgBite;
+	float bspiderDmgJump;
+	float bspiderDmgBite;
 	float spiderHealth;
+	float bspiderHealth;
 	float firepersecDmg;
 	float kickDmg;
 	float punchDmg;
