@@ -101,7 +101,11 @@ struct cl_dlight_t;
 //========================================
 struct particle_system_t
 {
+	//id points to a server entity
+	//>= 0 means this system needs to follow this server entity. 
+	// if entity not found in our dictionary then dont render, just run logic
 	unsigned int id;
+
 	byte shapetype;
 	bool randomdir;
 

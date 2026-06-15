@@ -4167,6 +4167,7 @@ class CEnvParticle : public CPointEntity
 {
 public:
 	void Spawn( ) override;
+	void Precache() override;
 	void KeyValue( KeyValueData *pkvd ) override;
 	void SendInitMessage( CBasePlayer *player ) override;
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value ) override;
@@ -4187,11 +4188,17 @@ IMPLEMENT_SAVERESTORE( CEnvParticle, CBaseEntity );
 
 LINK_ENTITY_TO_CLASS( env_particle_system, CEnvParticle );
 
+void CEnvParticle::Precache()
+{
+	PRECACHE_MODEL("sprites/null.spr");
+}
+
 void CEnvParticle::Spawn( )
 {
 	pev->solid = SOLID_NOT;
 	pev->movetype = MOVETYPE_NONE;
-	pev->effects = EF_NODRAW;
+	pev->effects = FL_NOMODEL;
+	SET_MODEL(ENT(pev), "sprites/null.spr"); // so this entity gets sent to client and particles can follow it
 
 	if(FStringNull(pev->targetname) || pev->spawnflags & SF_PARTICLE_STARTON)
 		m_bActive = TRUE;
