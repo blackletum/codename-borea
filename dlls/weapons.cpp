@@ -601,6 +601,20 @@ void CBasePlayerItem :: FallInit()
 //=========================================================
 void CBasePlayerItem::FallThink ()
 {
+	if( pev->flags & FL_ONGROUND )
+	{
+		// clatter if we have an owner (i.e., dropped by someone)
+		// don't clatter if the gun is waiting to respawn (if it's waiting, it is invisible!)
+		if( !FNullEnt( pev->owner ) )
+		{
+			int pitch = 95 + RANDOM_LONG( 0, 29 );
+			EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "items/weapondrop1.wav", 1, ATTN_NORM, 0, pitch );
+		}
+
+		pev->nextthink = 0;
+		return;
+	}
+
 
 	// HACKHACK - On ground isn't always set, so look for ground underneath
 	TraceResult tr;
