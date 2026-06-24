@@ -938,7 +938,7 @@ void CBullsquid :: Spawn()
 		else
 			SET_MODEL( ENT( pev ), "models/arachnoid_baby.mdl" );
 
-		UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 32 ) );
+		UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 36 ) );
 	}
 
 	pev->solid			= SOLID_SLIDEBOX;
@@ -981,7 +981,7 @@ void CBullsquid :: Precache()
 		else
 			PRECACHE_MODEL( "models/arachnoid_baby.mdl" );
 	}
-	
+
 	PRECACHE_MODEL("sprites/bigspit.spr");// spit projectile.
 	m_iTrail = PRECACHE_MODEL( "sprites/smoke.spr" );
 	

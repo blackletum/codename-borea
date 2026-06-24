@@ -331,8 +331,8 @@ void CGameRules::RefreshSkillData ()
 	gSkillData.spiderDmgJump = GetSkillCvar( "sk_spider_dmg_jump" );
 	gSkillData.spiderDmgSpit = GetSkillCvar( "sk_spider_dmg_spit" );
 	gSkillData.spiderDmgBite = GetSkillCvar( "sk_spider_dmg_bite" );
-	gSkillData.bspiderDmgJump = GetSkillCvar( "sk_spider_dmg_jump" );
-	gSkillData.bspiderDmgBite = GetSkillCvar( "sk_spider_dmg_bite" );
+	gSkillData.bspiderDmgJump = GetSkillCvar( "sk_bspider_dmg_jump" );
+	gSkillData.bspiderDmgBite = GetSkillCvar( "sk_bspider_dmg_bite" );
 	gSkillData.bspiderHealth = GetSkillCvar( "sk_bspider_health" );
 	gSkillData.firepersecDmg = CVAR_GET_FLOAT( "sk_fire_dmg_per_second" );
 	gSkillData.kickDmg = CVAR_GET_FLOAT( "sk_kick_dmg" );
