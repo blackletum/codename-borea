@@ -1791,6 +1791,11 @@ void CEnvModel :: Spawn()
 		pev->solid = SOLID_SLIDEBOX;
 		UTIL_SetSize(pev, Vector(-10, -10, -10), Vector(10, 10, 10));	//LRCT
 	}
+	else
+	{
+		pev->movetype = MOVETYPE_NONE;
+		pev->solid = SOLID_NOT;
+	}
 
 	if (pev->spawnflags & SF_ENVMODEL_DROPTOFLOOR)
 	{
