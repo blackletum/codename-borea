@@ -929,7 +929,7 @@ Schedule_t *CScientist :: GetSchedule ()
 		pSound = PBestSound();
 
 		ASSERT( pSound != nullptr );
-		if ( pSound && (pSound->m_iType & bits_SOUND_DANGER) )
+		if ( pSound && (pSound->m_iType & bits_SOUND_CARCASS) ) // Aynekko - changed from danger. Run away from dead people
 			return GetScheduleOfType( SCHED_TAKE_COVER_FROM_BEST_SOUND );
 	}
 
