@@ -952,8 +952,6 @@ void CBaseButton:: ButtonTouch( CBaseEntity *pOther )
 //
 void CBaseButton::ButtonActivate( )
 {
-	EMIT_SOUND(ENT(pev), CHAN_VOICE, (char*)STRING(pev->noise), 1, ATTN_NORM);
-	
 	if (!UTIL_IsMasterTriggered(m_sMaster, m_hActivator))
 	{
 		// button is locked, play locked sound
@@ -965,6 +963,8 @@ void CBaseButton::ButtonActivate( )
 		// button is unlocked, play unlocked sound
 		PlayLockSounds(pev, &m_ls, FALSE, TRUE);
 	}
+
+	EMIT_SOUND(ENT(pev), CHAN_VOICE, (char*)STRING(pev->noise), 1, ATTN_NORM);
 
 	ASSERT(m_toggle_state == TS_AT_BOTTOM);
 	m_toggle_state = TS_GOING_UP;
@@ -1152,6 +1152,8 @@ void CRotButton::Spawn()
 	pszSound = ButtonSound( m_sounds );
 	PRECACHE_SOUND(pszSound);
 	pev->noise = ALLOC_STRING(pszSound);
+
+	Precache(); //salsa: why didnt this get called before?????
 
 	// set the axis of rotation
 	CBaseToggle::AxisDir( pev );
