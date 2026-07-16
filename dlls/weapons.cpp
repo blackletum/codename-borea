@@ -601,7 +601,7 @@ void CBasePlayerItem :: FallInit()
 //=========================================================
 void CBasePlayerItem::FallThink ()
 {
-	if( pev->flags & FL_ONGROUND )
+	if( pev->flags & FL_ONGROUND && !(pev->effects & EF_NODRAW) )
 	{
 		// clatter if we have an owner (i.e., dropped by someone)
 		// don't clatter if the gun is waiting to respawn (if it's waiting, it is invisible!)
@@ -612,6 +612,7 @@ void CBasePlayerItem::FallThink ()
 		}
 
 		pev->nextthink = 0;
+		SetThink( NULL );
 		return;
 	}
 
