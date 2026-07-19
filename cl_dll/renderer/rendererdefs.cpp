@@ -49,6 +49,7 @@ Written by Andrew Lucas, Richard Rohac, BUzer, Laurie, Botman and Id Software
 #include "opengl_utils/GL_ShadowMap.h"
 #include "opengl_utils/GL_StateHandler.h"
 #include "opengl_utils/GL_Mesh.h"
+#include "glshaders/debug_glsl.h"
 
 #include "BSPModel_Gen.h"
 
@@ -79,6 +80,30 @@ model_t* cl_sprite_ricochet;
 model_t* cl_sprite_shell;
 
 extern std::vector<std::unique_ptr<TEMPENTITY>> gpTempEnts;
+
+struct gldebug_line_t
+{
+	Vector p1;
+	Vector p2;
+	Vector color;
+};
+struct gldebug_vert_t
+{
+	Vector pos;
+	Vector color;
+
+	GL_DECLARE_ATTRIBLIST();
+};
+
+GL_BEGIN_ATTRIBLIST(gldebug_vert_t)
+GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::VertexPos, 3, GL_FLOAT, pos)
+GL_DEFINE_ATTRIB(GL_ShaderProgram::ShaderAttribs::Color, 3, GL_FLOAT, color)
+GL_END_ATTRIBLIST()
+
+static GL_ShaderProgram s_debugshader(glsl_debug_vp, glsl_debug_fp);
+
+static std::vector<gldebug_line_t> s_queuedlines;
+static GL_Mesh* s_lines_box;
 
 double sqrt(double x);
 
@@ -714,6 +739,8 @@ void R_DrawMainView()
 	// Render particles
 	gParticleEngine.DrawParticles();
 
+	R_DrawDebugLines();
+
 	g_StudioRenderer.StudioDrawViewmodel();
 
 	gBSPRenderer.m_bMainPass = false;
@@ -1116,6 +1143,9 @@ void R_Init(void)
 	g_LegacySpriteRenderer.Init();
 	gHUD.gBloomRenderer.Init();
 	gBlur.InitScreen();
+
+	s_lines_box = new GL_Mesh(sizeof(gldebug_vert_t) * 2 * 2048, gldebug_vert_t::GetAttribLayout(), false);
+	s_lines_box->SetDrawMode(GL_LINES);
 }
 
 extern viewinfo_s g_viewinfo;
@@ -1133,6 +1163,7 @@ void R_VidInit(void)
 	GL_FBOHandler::SetMainGameFBO(0);
 
 	gpTempEnts.clear();
+	s_queuedlines.clear();
 
 	memset(&g_viewinfo, 0, sizeof(g_viewinfo));
 
@@ -1164,6 +1195,8 @@ void R_Shutdown(void)
 	gWaterShader.Shutdown();
 	gParticleEngine.Shutdown();
 
+	delete	s_lines_box;
+
 	GL_ShutdownAllShaders();
 }
 
@@ -1176,4 +1209,45 @@ void R_SetClippingPlane(const mplane_t& plane)
 void R_DisableClippingPlane()
 {
 	glDisable(GL_CLIP_DISTANCE0);
+}
+
+
+void R_QueueDebugLine(const Vector& p1, const Vector& p2, const Vector& color)
+{
+	s_queuedlines.push_back({ p1, p2, color });
+}
+
+void R_DrawDebugLines()
+{
+	if (s_queuedlines.size() == 0)
+		return;
+
+	std::vector<gldebug_vert_t> vertlist(s_queuedlines.size() * 2);
+	int i = 0;
+	for (auto line : s_queuedlines)
+	{
+		vertlist[i].color = vertlist[i + 1].color = line.color;
+		vertlist[i].pos = line.p1;
+		vertlist[i + 1].pos = line.p2;
+		i += 2;
+	}
+	s_lines_box->BindMesh();
+
+	s_lines_box->ModifyMesh(vertlist.data(), vertlist.size(), 0);
+	vertlist.clear();
+
+	s_debugshader.Bind();
+	s_debugshader.UniformMatrix4fv(s_debugshader.GetUniformLoc("projviewmatrix"), 1, false, glm::value_ptr(gBSPRenderer.m_ProjectionMatrix * gBSPRenderer.m_ViewMatrix));
+
+	g_GlobalGLState.SetBlend(false);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	g_GlobalGLState.SetCullFace(false);
+
+	s_lines_box->DrawArrays(0, s_queuedlines.size() * 2);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	g_GlobalGLState.SetCullFace(true);
+
+	s_queuedlines.clear();
 }

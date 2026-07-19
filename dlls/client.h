@@ -61,5 +61,6 @@ extern void	CreateInstancedBaselines ();
 extern int	InconsistentFile( const edict_t *player, const char *filename, char *disconnect_message );
 
 extern int AllowLagCompensation();
+extern void Debug_DrawLine(const Vector& p1, const Vector& p2, Vector color);
 
 #endif		// CLIENT_H

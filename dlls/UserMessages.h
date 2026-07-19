@@ -82,6 +82,9 @@ extern int gmsgGetLight;
 inline int gmsgSendAnim = 0;
 extern int gmsgWaterInfo;
 extern int gmsgPlayVideo;
+
+extern int gmsgDebugLine;
+
 //RENDERERS END
 
 extern int gmsgSpectator;

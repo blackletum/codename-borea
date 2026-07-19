@@ -84,8 +84,11 @@ int gmsgPPGray = 0;
 int gmsgViewmodelSkin	= 0; // Weapon Model Skinfamilies
 int gmsgLensFlare = 0;
 int gmsgUseEnt = 0;
-int gmsgChapterName;
-int gmsgWaterInfo;
+int gmsgChapterName = 0;
+int gmsgWaterInfo = 0;
+
+int gmsgDebugLine = 0;
+
 //RENDERERS END
 
 int gmsgSpectator = 0;
@@ -193,6 +196,9 @@ void LinkUserMessages()
 	gmsgChapterName = REG_USER_MSG("ChapterName", -1);
 	gmsgSendAnim = REG_USER_MSG("SendAnim", -1);
 	gmsgWaterInfo = REG_USER_MSG("WaterInfo", -1);
+
+	gmsgDebugLine = REG_USER_MSG("DebugLine", -1);
+
 	//RENDERERS END
 
 	gmsgSpectator = g_engfuncs.pfnRegUserMsg("Spectator", 2);

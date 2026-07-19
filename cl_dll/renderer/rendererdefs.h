@@ -234,6 +234,9 @@ extern void R_Shutdown(void);
 extern void R_SetClippingPlane(const mplane_t& plane);
 extern void R_DisableClippingPlane();
 
+extern void R_QueueDebugLine(const Vector& p1, const Vector& p2, const Vector& color);
+extern void R_DrawDebugLines();
+
 __forceinline glm::vec3 Vector_GLMvec3(const Vector& vec) { return glm::vec3(vec.x, vec.y, vec.z); }
 
 

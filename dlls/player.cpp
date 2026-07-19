@@ -3552,6 +3552,7 @@ void CBasePlayer::Spawn()
 	m_afPhysicsFlags	= 0;
 	m_fLongJump			= FALSE;// no longjump module.
 	playerStamina		= CVAR_GET_FLOAT("sv_sprintdur");
+	letGoOfJump = true;
 /*	Rain_dripsPerSecond = 0;
 	Rain_windX = 0;
 	Rain_windY = 0;
@@ -6688,38 +6689,52 @@ void CBasePlayer::ClimbingPhysics()
 {
 	UTIL_MakeVectors(pev->angles);
 
+	Vector realUp(0, 0, 1);
+	// angle filtering
+	Vector realForward;
+	VectorCopy(gpGlobals->v_forward, realForward);
+	realForward.z = 0; // ignore this axis
+	VectorNormalize(realForward);
+
+	const float min_platdist = 20;
+
+	if (!letGoOfJump && (m_afButtonReleased & IN_JUMP))
+		letGoOfJump = true;
+
 	// trace starts
-	Vector headSrc = pev->origin + gpGlobals->v_up * 30;
-	Vector vecSrc2 = pev->origin + gpGlobals->v_up * 60 + Vector(gpGlobals->v_forward.x * 40, gpGlobals->v_forward.y * 40, 0);
+	Vector headSrc = pev->origin + realUp * 30;
+	Vector vecSrc2 = pev->origin + realUp * 60 + Vector(realForward.x * min_platdist, realForward.y * min_platdist, 0);
 
 	// trace ends
-	Vector headEnd = headSrc + Vector(gpGlobals->v_forward.x * 40, gpGlobals->v_forward.y * 40, 0);
-	Vector vecEnd2 = vecSrc2 - gpGlobals->v_up * 60;
+	Vector headEnd = headSrc + Vector(realForward.x * min_platdist, realForward.y * min_platdist, 0);
+	Vector headEnd2 = headSrc + Vector(0, 0, 32);
+	Vector vecEnd2 = vecSrc2 - realUp * 60;
 
 
 	// detect if we can actually climb something
 	if (!isClimbing)
 	{
-		//UTIL_TraceLine(headSrc, headEnd, ignore_monsters, ENT(pev), &headTr);
-		//UTIL_TraceLine(vecSrc2, vecEnd2, ignore_monsters, ENT(pev), &climbTr2);
 		UTIL_TraceHull(headSrc, headEnd, ignore_monsters, head_hull, ENT(pev), &headTr);
 		UTIL_TraceHull(vecSrc2, vecEnd2, ignore_monsters, head_hull, ENT(pev), &climbTr2);
 
+
 		Vector vecSrc1 = Vector(pev->origin.x, pev->origin.y, climbTr2.vecEndPos.z);
+		Vector vecEnd1 = vecSrc1 + realForward * min_platdist;
 
-		// angle filtering
-		Vector realForward;
-		VectorCopy(gpGlobals->v_forward, realForward);
-		realForward.z = 0; // ignore this axis
-		VectorNormalize(realForward);
-
-		Vector vecEnd1 = vecSrc1 + realForward * 40;
-
-		//UTIL_TraceLine(vecSrc1, vecEnd1, ignore_monsters, ENT(pev), &climbTr1);
 		UTIL_TraceHull(vecSrc1, vecEnd1, ignore_monsters, head_hull, ENT(pev), &climbTr1);
+
+		if (climbTr1.flFraction != 1)
+			Debug_DrawLine(vecSrc1, climbTr1.vecEndPos, Vector(1, 0, 0));
+		else
+			Debug_DrawLine(vecSrc1, climbTr1.vecEndPos, Vector(1, 1, 1));
+
+		if (climbTr2.flFraction != 1)
+			Debug_DrawLine(vecSrc1, climbTr2.vecEndPos, Vector(1, 0, 0));
+		else
+			Debug_DrawLine(vecSrc1, climbTr2.vecEndPos, Vector(1, 1, 1));
 	}
 
-	if (headTr.flFraction != 1 && climbTr1.flFraction == 1 && climbTr2.flFraction != 1)
+	if (headTr.flFraction != 1 && climbTr1.flFraction == 1 && climbTr2.flFraction != 1 && letGoOfJump)
 	{
 		canClimb = true;
 	}
@@ -6728,11 +6743,16 @@ void CBasePlayer::ClimbingPhysics()
 		canClimb = false;
 	}
 
+	if(headTr.flFraction != 1)
+		Debug_DrawLine(headSrc, headTr.vecEndPos, Vector(1, 0, 0));
+	else
+		Debug_DrawLine(headSrc, headTr.vecEndPos, Vector(1, 1, 1));
+
 	// detect jump button
 	if (pev->button & IN_JUMP && canClimb && !isClimbing && !(pev->button & IN_BACK) && !this->IsOnLadder())
 	{
 		isClimbing = true;
-
+		letGoOfJump = false;
 	}
 
 	// cancel climbing
@@ -6792,8 +6812,8 @@ void CBasePlayer::ClimbingPhysics()
 
 		// trace until infront of player is clear, and under the player is filled
 		TraceResult under, forward;
-		UTIL_TraceHull(pev->origin, pev->origin + gpGlobals->v_forward * 40, ignore_monsters, head_hull, ENT(pev), &forward);
-		UTIL_TraceHull(pev->origin, pev->origin - gpGlobals->v_up * 40, ignore_monsters, head_hull, ENT(pev), &under);
+		UTIL_TraceHull(pev->origin, pev->origin + realForward * 40, ignore_monsters, head_hull, ENT(pev), &forward);
+		UTIL_TraceHull(pev->origin, pev->origin - realUp * 40, ignore_monsters, head_hull, ENT(pev), &under);
 
 
 		if (under.flFraction != 1 && forward.flFraction == 1)

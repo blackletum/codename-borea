@@ -484,6 +484,25 @@ int __MsgFunc_WaterInfo(const char* pszName, int iSize, void* pbuf)
 {
 	return gWaterShader.MsgWaterInfo(pszName, iSize, pbuf);
 }
+int __MsgFunc_DebugLine(const char* pszName, int iSize, void* pbuf)
+{
+	BEGIN_READ(pbuf, iSize);
+	Vector p1, p2, color;
+	p1.x = READ_COORD();
+	p1.y = READ_COORD();
+	p1.z = READ_COORD();
+
+	p2.x = READ_COORD();
+	p2.y = READ_COORD();
+	p2.z = READ_COORD();
+
+	color.x = READ_FLOAT();
+	color.y = READ_FLOAT();
+	color.z = READ_FLOAT();
+
+	R_QueueDebugLine(p1, p2, color);
+	return 1;
+}
 int __MsgFunc_WpnSkn(const char* pszName, int iSize, void* pbuf)
 {
 	gHUD.MsgFunc_WpnSkn(pszName, iSize, pbuf);
@@ -715,6 +734,7 @@ void CHud :: Init()
 	HOOK_MESSAGE( DynLight );
 	HOOK_MESSAGE( FreeEnt );
 	HOOK_MESSAGE( Particle );
+	HOOK_MESSAGE( DebugLine );
 	HOOK_MESSAGE( WaterInfo );
 	HOOK_MESSAGE( WpnSkn );
 	HOOK_MESSAGE(UseEnt);

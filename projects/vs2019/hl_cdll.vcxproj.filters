@@ -1130,6 +1130,9 @@
     <ClInclude Include="..\..\cl_dll\tmessage.h">
       <Filter>Header Files\cl_dll</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\debug_glsl.h">
+      <Filter>Header Files\cl_dll\renderer\glshaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\lib\public\game_controls.lib" />

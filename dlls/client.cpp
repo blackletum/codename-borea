@@ -2399,3 +2399,17 @@ int AllowLagCompensation()
 {
 	return 1;
 }
+
+
+
+
+void Debug_DrawLine(const Vector& p1, const Vector& p2, Vector color)
+{
+#ifdef _DEBUG
+	MESSAGE_BEGIN(MSG_ALL, gmsgDebugLine, nullptr);
+		WRITE_COORD(p1.x);  WRITE_COORD(p1.y);	WRITE_COORD(p1.z);
+		WRITE_COORD(p2.x);  WRITE_COORD(p2.y);	WRITE_COORD(p2.z);
+		WRITE_FLOAT(color.x);  WRITE_FLOAT(color.y);	WRITE_FLOAT(color.z);
+	MESSAGE_END();
+#endif
+}

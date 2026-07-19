@@ -69,29 +69,29 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\</OutDir>
+    <OutDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls</OutDir>
     <TargetName>client</TargetName>
-    <IntDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\int\</IntDir>
+    <IntDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls\int</IntDir>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug (pre_hl25)|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\</OutDir>
+    <OutDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls</OutDir>
     <TargetName>client</TargetName>
-    <IntDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\int\</IntDir>
+    <IntDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls\int</IntDir>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\</OutDir>
+    <OutDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls</OutDir>
     <TargetName>client</TargetName>
-    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\int\</IntDir>
+    <IntDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls\int</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release (pre_hl25)|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>C:\Program Files (x86)\Steam\steamapps\common\Half-Life\prava\cl_dlls\</OutDir>
+    <OutDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls</OutDir>
     <TargetName>client</TargetName>
-    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\int\</IntDir>
+    <IntDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls\int</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -407,6 +407,7 @@ EXIT /B 0</Command>
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\blacknwhite_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\bsp_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\cable_glsl.h" />
+    <ClInclude Include="..\..\cl_dll\renderer\glshaders\debug_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\decal_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\gaussianblur_glsl.h" />
     <ClInclude Include="..\..\cl_dll\renderer\glshaders\mirror_glsl.h" />
