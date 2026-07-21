@@ -210,9 +210,10 @@ public:
 	
 	// climbing
 	bool canClimb;
-	bool letGoOfJump;
 	bool isClimbing;
 	TraceResult climbTr1, climbTr2, headTr;
+	float climbTime;
+	Vector climbLedgeNormal;
 	void ClimbingPhysics();
 	float runningSpeed;
 

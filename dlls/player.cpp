@@ -3552,7 +3552,6 @@ void CBasePlayer::Spawn()
 	m_afPhysicsFlags	= 0;
 	m_fLongJump			= FALSE;// no longjump module.
 	playerStamina		= CVAR_GET_FLOAT("sv_sprintdur");
-	letGoOfJump = true;
 /*	Rain_dripsPerSecond = 0;
 	Rain_windX = 0;
 	Rain_windY = 0;
@@ -6696,19 +6695,19 @@ void CBasePlayer::ClimbingPhysics()
 	realForward.z = 0; // ignore this axis
 	VectorNormalize(realForward);
 
-	const float min_platdist = 20;
-
-	if (!letGoOfJump && (m_afButtonReleased & IN_JUMP))
-		letGoOfJump = true;
+	const float min_platdist = 46;
+	const float climb_threshold = 32; //only climb if ledge is higher than this
+	const float max_ledgeheight = 80;
 
 	// trace starts
-	Vector headSrc = pev->origin + realUp * 30;
-	Vector vecSrc2 = pev->origin + realUp * 60 + Vector(realForward.x * min_platdist, realForward.y * min_platdist, 0);
+	Vector headSrc = pev->origin + realUp * climb_threshold - realForward * 16;
+
+	Vector vecSrc2 = pev->origin + realUp * max_ledgeheight + Vector(realForward.x * min_platdist, realForward.y * min_platdist, 0) - realForward * 16;
 
 	// trace ends
 	Vector headEnd = headSrc + Vector(realForward.x * min_platdist, realForward.y * min_platdist, 0);
 	Vector headEnd2 = headSrc + Vector(0, 0, 32);
-	Vector vecEnd2 = vecSrc2 - realUp * 60;
+	Vector vecEnd2 = vecSrc2 - realUp * max_ledgeheight;
 
 
 	// detect if we can actually climb something
@@ -6718,25 +6717,28 @@ void CBasePlayer::ClimbingPhysics()
 		UTIL_TraceHull(vecSrc2, vecEnd2, ignore_monsters, head_hull, ENT(pev), &climbTr2);
 
 
-		Vector vecSrc1 = Vector(pev->origin.x, pev->origin.y, climbTr2.vecEndPos.z);
+		Vector vecSrc1 = Vector(pev->origin.x, pev->origin.y, climbTr2.vecEndPos.z) - realForward * 16;
 		Vector vecEnd1 = vecSrc1 + realForward * min_platdist;
 
-		UTIL_TraceHull(vecSrc1, vecEnd1, ignore_monsters, head_hull, ENT(pev), &climbTr1);
+		UTIL_TraceHull(vecSrc1, vecEnd1, ignore_monsters, point_hull, ENT(pev), &climbTr1);
 
 		if (climbTr1.flFraction != 1)
 			Debug_DrawLine(vecSrc1, climbTr1.vecEndPos, Vector(1, 0, 0));
 		else
-			Debug_DrawLine(vecSrc1, climbTr1.vecEndPos, Vector(1, 1, 1));
+			Debug_DrawLine(vecSrc1, climbTr1.vecEndPos, Vector(0, 1, 0)); //green
 
 		if (climbTr2.flFraction != 1)
-			Debug_DrawLine(vecSrc1, climbTr2.vecEndPos, Vector(1, 0, 0));
+			Debug_DrawLine(vecSrc2, climbTr2.vecEndPos, Vector(1, 0, 0));
 		else
-			Debug_DrawLine(vecSrc1, climbTr2.vecEndPos, Vector(1, 1, 1));
+			Debug_DrawLine(vecSrc2, climbTr2.vecEndPos, Vector(0, 0, 1)); //blue
 	}
 
-	if (headTr.flFraction != 1 && climbTr1.flFraction == 1 && climbTr2.flFraction != 1 && letGoOfJump)
+	if (!(pev->flags & FL_ONGROUND) && headTr.flFraction != 1 && climbTr1.flFraction == 1 && climbTr2.flFraction != 1)
 	{
 		canClimb = true;
+		climbLedgeNormal = headTr.vecPlaneNormal;
+		climbLedgeNormal.z = 0;
+		VectorNormalize(climbLedgeNormal);
 	}
 	else
 	{
@@ -6746,22 +6748,23 @@ void CBasePlayer::ClimbingPhysics()
 	if(headTr.flFraction != 1)
 		Debug_DrawLine(headSrc, headTr.vecEndPos, Vector(1, 0, 0));
 	else
-		Debug_DrawLine(headSrc, headTr.vecEndPos, Vector(1, 1, 1));
+		Debug_DrawLine(headSrc, headTr.vecEndPos, Vector(1, 0, 1)); //pink
 
 	// detect jump button
 	if (pev->button & IN_JUMP && canClimb && !isClimbing && !(pev->button & IN_BACK) && !this->IsOnLadder())
 	{
-		isClimbing = true;
-		letGoOfJump = false;
+ 		isClimbing = true;
+		climbTime = gpGlobals->time + 1.0;
 	}
 
 	// cancel climbing
-	if ((pev->button & IN_BACK && isClimbing) || (pev->button & IN_MOVELEFT && isClimbing) || (pev->button & IN_MOVERIGHT && isClimbing))
-	{
-		// climbing is canceled
-		pev->movetype = MOVETYPE_WALK;
-		isClimbing = false;
-	}
+	// salsatobias: dont, actually. players can strafe to jump to ledges
+	//if ((pev->button & IN_BACK && isClimbing) || (pev->button & IN_MOVELEFT && isClimbing) || (pev->button & IN_MOVERIGHT && isClimbing))
+	//{
+	//	// climbing is canceled
+ 	//	pev->movetype = MOVETYPE_WALK;
+	//	isClimbing = false;
+	//}
 
 	// climbing stage 1
 	if (isClimbing)
@@ -6775,7 +6778,7 @@ void CBasePlayer::ClimbingPhysics()
 			case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_climb3.wav", 1, ATTN_NORM ); break;
 			case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_climb4.wav", 1, ATTN_NORM ); break;
 			}
-			next_voice_time = gpGlobals->time + 1.0f;
+			next_voice_time = gpGlobals->time + 1.4f;
 		}
 		
 		pev->movetype = MOVETYPE_FLY;
@@ -6785,7 +6788,7 @@ void CBasePlayer::ClimbingPhysics()
 
 		endTarget.x = climbTr1.vecEndPos.x;
 		endTarget.y = climbTr1.vecEndPos.y;
-		endTarget.z = climbTr2.vecEndPos.z + 20;
+		endTarget.z = climbTr2.vecEndPos.z + 64;
 
 		// player location
 		float distanceX = climbTr1.vecEndPos.x - pev->origin.x;
@@ -6802,6 +6805,7 @@ void CBasePlayer::ClimbingPhysics()
 		}
 
 		pev->velocity = pev->velocity + (endTarget - pev->origin) * (300 / (1 / gpGlobals->frametime)) / 7;
+		pev->velocity = pev->velocity - climbLedgeNormal * 36;
 		// pev->punchangle.x = lerp(pev->punchangle.x, 15, gpGlobals->frametime * 17); // sway camera
 
 		// cap player climbing speed
@@ -6812,11 +6816,21 @@ void CBasePlayer::ClimbingPhysics()
 
 		// trace until infront of player is clear, and under the player is filled
 		TraceResult under, forward;
-		UTIL_TraceHull(pev->origin, pev->origin + realForward * 40, ignore_monsters, head_hull, ENT(pev), &forward);
-		UTIL_TraceHull(pev->origin, pev->origin - realUp * 40, ignore_monsters, head_hull, ENT(pev), &under);
+		UTIL_TraceHull(headSrc, headSrc + realForward * 40, ignore_monsters, head_hull, ENT(pev), &forward);
+		UTIL_TraceHull(pev->origin, pev->origin - realUp * 36, ignore_monsters, human_hull, ENT(pev), &under);
+
+		if (forward.flFraction != 1)
+			Debug_DrawLine(headSrc, forward.vecEndPos, Vector(1, 0, 0));
+		else
+			Debug_DrawLine(headSrc, forward.vecEndPos, Vector(1, 1, 1));
+
+		if (under.flFraction != 1)
+			Debug_DrawLine(pev->origin, under.vecEndPos, Vector(1, 0, 0));
+		else
+			Debug_DrawLine(pev->origin, under.vecEndPos, Vector(1, 1, 1));
 
 
-		if (under.flFraction != 1 && forward.flFraction == 1)
+		if ( (under.flFraction != 1 && forward.flFraction == 1) || (pev->origin.z + 16 > endTarget.z))
 		{
 			// climbing is finished
 			pev->movetype = MOVETYPE_WALK;
@@ -6824,23 +6838,29 @@ void CBasePlayer::ClimbingPhysics()
 		}
 
 		// cancel climbing when player looks away >= 90 degree
-		Vector angDiff;
-		Vector vecDiff = endTarget - pev->origin;
-		vecDiff.z = 0; // ignore this axis
-		VectorNormalize(vecDiff);
-		VectorAngles(vecDiff, angDiff);
-
-		float finalAngle;
-
-		if (angDiff[YAW] > 180)
-			finalAngle = angDiff[YAW] - 360.0f;
-		else
-			finalAngle = angDiff[YAW];
-
-		if (pev->v_angle[YAW] < 0 && finalAngle == 180)
-			finalAngle *= -1;
-
-		if (fabs(finalAngle - pev->v_angle[YAW]) >= 90.0f)
+		//Vector angDiff;
+		//Vector vecDiff = endTarget - pev->origin;
+		//vecDiff.z = 0; // ignore this axis
+		//VectorNormalize(vecDiff);
+		//VectorAngles(vecDiff, angDiff);
+		//
+		//float finalAngle;
+		//
+		//if (angDiff[YAW] > 180)
+		//	finalAngle = angDiff[YAW] - 360.0f;
+		//else
+		//	finalAngle = angDiff[YAW];
+		//
+		//if (pev->v_angle[YAW] < 0 && finalAngle == 180)
+		//	finalAngle *= -1;
+		//
+		//if (fabs(finalAngle - pev->v_angle[YAW]) >= 90.0f)
+		//{
+		//	// climbing is finished
+		//	pev->movetype = MOVETYPE_WALK;
+		//	isClimbing = false;
+		//}
+		if (DotProduct(realForward, climbLedgeNormal) > 0.0 || climbTime - gpGlobals->time <= 0.0)
 		{
 			// climbing is finished
 			pev->movetype = MOVETYPE_WALK;
