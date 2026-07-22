@@ -741,8 +741,11 @@ void CBaseDoor::DoorTouch( CBaseEntity *pOther )
 	// If door has master, and it's not ready to trigger, 
 	// play 'locked' sound
 
-	if (m_sMaster && !UTIL_IsMasterTriggered(m_sMaster, pOther))
-		PlayLockSounds(pev, &m_ls, TRUE, FALSE);
+	if( m_sMaster && !UTIL_IsMasterTriggered( m_sMaster, pOther ) )
+	{
+		if( m_toggle_state != TS_GOING_UP && m_toggle_state != TS_GOING_DOWN ) // Aynekko - don't play when door is moving
+			PlayLockSounds( pev, &m_ls, TRUE, FALSE );
+	}
 	
 	// If door is somebody's target, then touching does nothing.
 	// You have to activate the owner (e.g. button).
@@ -750,7 +753,9 @@ void CBaseDoor::DoorTouch( CBaseEntity *pOther )
 	if (!FStringNull(pev->targetname) && !FBitSet(pev->spawnflags,SF_DOOR_FORCETOUCHABLE))
 	{
 		// play locked sound
-		PlayLockSounds(pev, &m_ls, TRUE, FALSE);
+		if( m_toggle_state != TS_GOING_UP && m_toggle_state != TS_GOING_DOWN ) // Aynekko - don't play when door is moving
+			PlayLockSounds(pev, &m_ls, TRUE, FALSE);
+
 		return; 
 	}
 	
