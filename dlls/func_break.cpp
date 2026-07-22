@@ -648,6 +648,9 @@ void CBreakable::RespawnFadeThink ()
 
 void CBreakable::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType )
 {
+	if( pev->spawnflags & SF_BREAK_PLAYERKICK && !(bitsDamageType & DMG_KICK) )
+		return;
+	
 	// random spark if this is a 'computer' object
 	if (RANDOM_LONG(0,1) )
 	{
@@ -703,6 +706,9 @@ void CBreakable::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vec
 //=========================================================
 int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
 {
+	if( pev->spawnflags & SF_BREAK_PLAYERKICK && !(bitsDamageType & DMG_KICK) )
+		return 0;
+
 	Vector	vecTemp;
 
 	// if Attacker == Inflictor, the attack was a melee or other instant-hit attack.

@@ -83,8 +83,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\dlls</OutDir>
-    <IntDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\int</IntDir>
+    <OutDir>C:\Steam\steamapps\common\Half-Life\Prava\dlls</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\int\</IntDir>
     <TargetName>opfor</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release (pre_hl25)|Win32'">

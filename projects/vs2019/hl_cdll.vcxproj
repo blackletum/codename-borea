@@ -83,7 +83,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls</OutDir>
+    <OutDir>C:\Steam\steamapps\common\Half-Life\Prava\cl_dlls\</OutDir>
     <TargetName>client</TargetName>
     <IntDir>D:\SteamLibrary\steamapps\common\Half-Life\Prava\cl_dlls\int</IntDir>
   </PropertyGroup>

@@ -4868,7 +4868,7 @@ void CBasePlayer::ItemPostFrame()
 				if( pEntity )
 				{
 					ClearMultiDamage();
-					pEntity->TraceAttack( pev, gSkillData.kickDmg, gpGlobals->v_forward, &tr, DMG_CLUB | DMG_NEVERGIB );
+					pEntity->TraceAttack( pev, gSkillData.kickDmg, gpGlobals->v_forward, &tr, DMG_CLUB | DMG_NEVERGIB | DMG_KICK );
 					ApplyMultiDamage( pev, pev );
 					if( pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE ) // hit an NPC
 					{
