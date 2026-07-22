@@ -930,7 +930,9 @@ void CBaseButton:: ButtonTouch( CBaseEntity *pOther )
 	if (!UTIL_IsMasterTriggered(m_sMaster, pOther))
 	{
 		// play button locked sound
-		PlayLockSounds(pev, &m_ls, TRUE, TRUE);
+		if( m_toggle_state != TS_GOING_UP && m_toggle_state != TS_GOING_DOWN ) // Aynekko - don't play when button is moving
+			PlayLockSounds(pev, &m_ls, TRUE, TRUE);
+
 		return;
 	}
 
