@@ -495,8 +495,6 @@ void CGrenade::BounceTouch( CBaseEntity *pOther )
 
 }
 
-
-
 void CGrenade::SlideTouch( CBaseEntity *pOther )
 {
 	// don't hit the guy that launched this grenade
@@ -651,7 +649,101 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 	return pGrenade;
 }
 
+//======================================================================
+// Aynekko: The Rock
+//======================================================================
+CGrenade *CGrenade::ThrowRock( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time )
+{
+	CGrenade *pGrenade = GetClassPtr( (CGrenade *)nullptr );
+	pGrenade->Spawn();
+	UTIL_SetOrigin( pGrenade, vecStart );
+	pGrenade->pev->velocity = vecVelocity;
+	pGrenade->pev->angles = UTIL_VecToAngles( pGrenade->pev->velocity );
+	pGrenade->pev->owner = ENT( pevOwner );
+	pGrenade->SetTouch( &CGrenade::RockTouch );	// Bounce if touched
 
+	// Take one second off of the desired detonation time and set the think to PreDetonate. PreDetonate
+	// will insert a DANGER sound into the world sound list and delay detonation for one second so that 
+	// the grenade explodes after the exact amount of time specified in the call to ShootTimed(). 
+
+	pGrenade->pev->dmgtime = gpGlobals->time + time;
+	pGrenade->SetThink( &CGrenade::RockTumbleThink );
+	pGrenade->SetNextThink( 0.1 );
+	if( time < 0.1 )
+	{
+		pGrenade->SetNextThink( 0 );
+		pGrenade->pev->velocity = Vector( 0, 0, 0 );
+	}
+
+	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
+	pGrenade->pev->framerate = 1.0;
+//	pGrenade->pev->scale = 10.0; // just for testing
+
+	pGrenade->pev->gravity = 1.0;
+	pGrenade->pev->friction = 1.0;
+
+	SET_MODEL( ENT( pGrenade->pev ), "models/thug_rock.mdl" );
+	pGrenade->pev->dmg = gSkillData.thugRockDmg;
+
+	return pGrenade;
+}
+
+//========================================================================
+// Aynekko: rotate in air
+//========================================================================
+void CGrenade::RockTumbleThink( void )
+{
+	const float speed = pev->velocity.Length();
+
+	pev->avelocity.x = speed;
+
+	if( pev->flags & FL_ONGROUND && speed < 0.5f )
+	{
+		// full stop
+		pev->velocity = g_vecZero;
+		pev->avelocity = g_vecZero;
+		SetThink( &CBaseEntity::SUB_FadeOut );
+		pev->nextthink = gpGlobals->time + 30;
+	}
+}
+
+//========================================================================
+// Aynekko: what happens when a rock touches a living being
+//========================================================================
+void CGrenade::RockTouch( CBaseEntity *pOther )
+{
+	// don't hit the guy that launched this rock
+	if( pOther->edict() == pev->owner )
+		return;
+
+	// thump sound (hit something)
+	if( m_flNextAttack < gpGlobals->time )
+		EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "weapons/melee_hit.wav", 0.75, ATTN_NORM, 0, RANDOM_LONG( 95, 105 ) );
+
+	if( pev->flags & FL_ONGROUND )
+	{
+		// add a bit of static friction
+		pev->velocity = pev->velocity * 0.8;
+	}
+
+	// only interested in hurting living beings
+	if( !pOther->IsPlayer() && !(pOther->pev->flags & FL_MONSTER) )
+		return;
+
+	// only do damage if we're moving fairly fast
+	if( m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 100 )
+	{
+		entvars_t *pevOwner = VARS( pev->owner );
+		if( pevOwner )
+		{
+			TraceResult tr = UTIL_GetGlobalTrace();
+			ClearMultiDamage();
+			pOther->TraceAttack( pevOwner, pev->dmg, gpGlobals->v_forward, &tr, DMG_CLUB );
+			ApplyMultiDamage( pev, pevOwner );
+		}
+		m_flNextAttack = gpGlobals->time + 1.0; // debounce
+	}
+}
 
 
 

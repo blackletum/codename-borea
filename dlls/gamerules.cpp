@@ -314,6 +314,7 @@ void CGameRules::RefreshSkillData ()
 	// Aynekko: The Last Goodbye stuff
 	gSkillData.thugHealth = GetSkillCvar( "sk_thug_health" );
 	gSkillData.thugDmg = GetSkillCvar( "sk_thug_dmg" );
+	gSkillData.thugRockDmg = GetSkillCvar( "sk_thug_rock_dmg" );
 	gSkillData.gangHealth = GetSkillCvar( "sk_gang_health" );
 	gSkillData.gangDmgSmg = GetSkillCvar( "sk_gang_dmg_smg" );
 	gSkillData.gangDmgShotgun = GetSkillCvar( "sk_gang_dmg_shotgun" );

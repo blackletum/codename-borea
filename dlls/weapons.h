@@ -55,6 +55,7 @@ public:
 	typedef enum { SATCHEL_DETONATE = 0, SATCHEL_RELEASE } SATCHELCODE;
 
 	static CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
+	static CGrenade *ThrowRock( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
@@ -73,11 +74,13 @@ public:
 	void EXPORT BounceTouch( CBaseEntity *pOther );
 	void EXPORT SlideTouch( CBaseEntity *pOther );
 	void EXPORT ExplodeTouch( CBaseEntity *pOther );
+	void EXPORT RockTouch( CBaseEntity *pOther );
 	void EXPORT DangerSoundThink();
 	void EXPORT PreDetonate();
 	void EXPORT Detonate();
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink();
+	void EXPORT RockTumbleThink();
 
 	// Aynekko
 	static CGrenade *ShootMolotov( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );

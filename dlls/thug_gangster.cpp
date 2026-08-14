@@ -93,6 +93,9 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 #define		HGRUNT_AE_DROP_GUN		( 11) // grunt (probably dead) is dropping his mp5.
 #define		HGRUNT_AE_VICTORYDANCE (12)
 
+#define ROCK_THROW_SPEED 800
+#define ROCK_THROW_GRAVITY 0.8
+
 //=========================================================
 // monster-specific schedule types
 //=========================================================
@@ -2117,7 +2120,8 @@ void CHGrunt :: SetActivity ( Activity NewActivity )
 		}
 		else
 		{
-			ALERT( at_debug, "No grenades available. "); // flow into the error message we get at the end...
+			// rock
+			iSequence = LookupActivity( ACT_RANGE_ATTACK2 );
 		}
 		break;
 	case ACT_RUN:
@@ -2773,6 +2777,7 @@ public:
 	void CheckAmmo() override; // thugs don't use ammo
 	Schedule_t *GetSchedule() override;
 	Schedule_t *GetScheduleOfType( int Type ) override;
+	void HandleAnimEvent( MonsterEvent_t *pEvent ) override;
 	float	CoverRadius() override { return 1500; }
 
 	void StartTask( Task_t *pTask ) override;
@@ -2907,13 +2912,15 @@ void CMonsterThug::Precache()
 	else
 	{
 		if( FClassnameIs( pev, "monster_thug_pipe") )
-			PRECACHE_MODEL( "models/thug01a.mdl" );
+			PRECACHE_MODEL( "models/thug01.mdl" );
 		else if( FClassnameIs( pev, "monster_thug_crowbar" ) )
-			PRECACHE_MODEL( "models/thug02a.mdl" );
+			PRECACHE_MODEL( "models/thug02.mdl" );
 		else if( FClassnameIs( pev, "monster_thug_wrench" ) )
-			PRECACHE_MODEL( "models/thug03a.mdl" );
+			PRECACHE_MODEL( "models/thug03.mdl" );
 
 	}
+
+	PRECACHE_MODEL( "models/thug_rock.mdl" );
 
 	PRECACHE_SOUND("weapons/cbar_hitbod1.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod2.wav");
@@ -2967,11 +2974,11 @@ void CMonsterThug::Spawn()
 	else
 	{
 		if( FClassnameIs( pev, "monster_thug_pipe" ) )
-			SET_MODEL( ENT( pev ), "models/thug01a.mdl" );
+			SET_MODEL( ENT( pev ), "models/thug01.mdl" );
 		else if( FClassnameIs( pev, "monster_thug_crowbar" ) )
-			SET_MODEL( ENT( pev ), "models/thug02a.mdl" );
+			SET_MODEL( ENT( pev ), "models/thug02.mdl" );
 		else if( FClassnameIs( pev, "monster_thug_wrench" ) )
-			SET_MODEL( ENT( pev ), "models/thug03a.mdl" );
+			SET_MODEL( ENT( pev ), "models/thug03.mdl" );
 	}
 
 	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
@@ -3039,9 +3046,85 @@ BOOL CMonsterThug::CheckRangeAttack1( float flDot, float flDist )
 	return FALSE;
 }
 
+// Aynekko: throwing a rock
 BOOL CMonsterThug::CheckRangeAttack2( float flDot, float flDist )
 {
-	return FALSE;
+	// Chief Smokey: should only use throw beyond 128 units from player
+	if( flDist <= 128 )
+		return FALSE;
+
+	// Chief Smokey: only when the player is visible
+	if( !HasConditions( bits_COND_SEE_ENEMY ) )
+		return FALSE;
+	
+	// too early to check
+	if( gpGlobals->time < m_flNextGrenadeCheck ) // it's actually "next rock throw"
+		return FALSE;
+
+	// aim around the player's neck
+	Vector vecTarget = Vector( m_hEnemy->pev->origin.x, m_hEnemy->pev->origin.y, m_hEnemy->pev->origin.z + 12 );
+	Vector vecToss = VecCheckThrow( pev, GetGunPosition(), vecTarget, ROCK_THROW_SPEED, ROCK_THROW_GRAVITY );
+
+	if( vecToss != g_vecZero )
+	{
+		m_vecTossVelocity = vecToss;
+
+		// throw the rock
+		// don't check again for a while
+		m_flNextGrenadeCheck = gpGlobals->time + 5;
+		return TRUE;
+	}
+	else
+	{
+		// don't throw, something went wrong
+		m_flNextGrenadeCheck = gpGlobals->time + 1; // one full second.
+		return FALSE;
+	}
+}
+
+void CMonsterThug::HandleAnimEvent( MonsterEvent_t *pEvent )
+{
+	Vector	vecShootDir;
+	Vector	vecShootOrigin;
+
+	switch( pEvent->event )
+	{
+	case HGRUNT_AE_GREN_LAUNCH:
+	{
+		UTIL_MakeVectors( pev->angles );
+		// CGrenade::ShootTimed( pev, pev->origin + gpGlobals->v_forward * 34 + Vector (0, 0, 32), m_vecTossVelocity, 3.5 );
+		//LRC - a bit of a hack. Ideally the grunts would work out in advance whether it's ok to throw.
+		if( m_pCine )
+		{
+			Vector vecToss = g_vecZero;
+			if( m_hTargetEnt != nullptr && m_pCine->PreciseAttack() )
+			{
+				vecToss = VecCheckToss( pev, GetGunPosition(), m_hTargetEnt->pev->origin, 0.5 );
+			}
+			if( vecToss == g_vecZero )
+			{
+				vecToss = (gpGlobals->v_forward * 0.5 + gpGlobals->v_up * 0.5).Normalize() * gSkillData.hgruntGrenadeSpeed;
+			}
+			CGrenade *pRock = CGrenade::ThrowRock( pev, GetGunPosition(), vecToss, 3.5 );
+			if( pRock )
+				pRock->pev->gravity = ROCK_THROW_GRAVITY;
+		}
+		else
+		{
+			CGrenade *pRock = CGrenade::ThrowRock( pev, GetGunPosition(), m_vecTossVelocity, 3.5 );
+			if( pRock )
+				pRock->pev->gravity = ROCK_THROW_GRAVITY;
+		}
+
+		m_fThrowGrenade = FALSE;
+		m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
+		// !!!LATER - when in a group, only try to throw grenade if ordered.
+	}
+	break;
+	default:
+		CHGrunt::HandleAnimEvent( pEvent );
+		break;
+	}
 }
 
 void CMonsterThug::CheckAmmo()
@@ -3493,6 +3576,11 @@ Schedule_t *CMonsterThug::GetSchedule()
 		{
 		//	ALERT( at_console, "FLINCHED %s\n", STRING(pev->classname) );
 				return GetScheduleOfType( SCHED_SMALL_FLINCH );
+		}
+		// can throw a rock!
+		else if( HasConditions( bits_COND_CAN_RANGE_ATTACK2 ) )
+		{
+			return GetScheduleOfType( SCHED_RANGE_ATTACK2 );
 		}
 		// can kick
 		else if( HasConditions( bits_COND_CAN_MELEE_ATTACK1 ) )

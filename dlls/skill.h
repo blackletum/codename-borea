@@ -155,6 +155,7 @@ struct skilldata_t
 	// Aynekko: The Last Goodbye stuff
 	float thugHealth;
 	float thugDmg;
+	float thugRockDmg;
 	float gangHealth;
 	float gangDmgSmg;
 	float gangDmgShotgun;
