@@ -26,10 +26,11 @@
 #include	"scripted.h"
 #include	"game.h"
 #include	"player.h"
+#include	"customentity.h"
 
-#define		SQUID_SPRINT_DIST	256 // how close the squid has to get before starting to sprint and refusing to swerve
+#define		SPIDER_SPRINT_DIST	256 // how close the squid has to get before starting to sprint and refusing to swerve
 
-int			   iSquidSpitSprite;
+int			   iSpiderSpitSprite;
 int m_iTrail;
 
 //=========================================================
@@ -37,12 +38,15 @@ int m_iTrail;
 //=========================================================
 enum
 {
-	SCHED_SQUID_HURTHOP = LAST_COMMON_SCHEDULE + 1,
-	SCHED_SQUID_SMELLFOOD,
-	SCHED_SQUID_SEECRAB,
-	SCHED_SQUID_EAT,
-	SCHED_SQUID_SNIFF_AND_EAT,
-	SCHED_SQUID_WALLOW,
+	SCHED_SPIDER_HURTHOP = LAST_COMMON_SCHEDULE + 1,
+	SCHED_SPIDER_SMELLFOOD,
+	SCHED_SPIDER_SEECRAB,
+	SCHED_SPIDER_EAT,
+	SCHED_SPIDER_SNIFF_AND_EAT,
+	SCHED_SPIDER_WALLOW,
+	SCHED_SPIDER_REPEL,
+	SCHED_SPIDER_REPEL_ATTACK,
+	SCHED_SPIDER_REPEL_LAND,
 };
 
 //=========================================================
@@ -50,13 +54,13 @@ enum
 //=========================================================
 enum 
 {
-	TASK_SQUID_HOPTURN = LAST_COMMON_TASK + 1,
+	TASK_SPIDER_HOPTURN = LAST_COMMON_TASK + 1,
 };
 
 //=========================================================
 // Bullsquid's spit projectile
 //=========================================================
-class CSquidSpit : public CBaseEntity
+class CSpiderSpit : public CBaseEntity
 {
 public:
 	void Precache() override;
@@ -76,21 +80,21 @@ public:
 	
 };
 
-LINK_ENTITY_TO_CLASS( squidspit, CSquidSpit );
+LINK_ENTITY_TO_CLASS( squidspit, CSpiderSpit );
 
-TYPEDESCRIPTION	CSquidSpit::m_SaveData[] = 
+TYPEDESCRIPTION	CSpiderSpit::m_SaveData[] = 
 {
-	DEFINE_FIELD( CSquidSpit, m_maxFrame, FIELD_INTEGER ),
+	DEFINE_FIELD( CSpiderSpit, m_maxFrame, FIELD_INTEGER ),
 };
 
-IMPLEMENT_SAVERESTORE( CSquidSpit, CBaseEntity );
+IMPLEMENT_SAVERESTORE( CSpiderSpit, CBaseEntity );
 
-void CSquidSpit::Precache()
+void CSpiderSpit::Precache()
 {
 	m_iTrail = PRECACHE_MODEL( "sprites/smoke.spr" );
 }
 
-void CSquidSpit:: Spawn()
+void CSpiderSpit:: Spawn()
 {
 	Precache();
 
@@ -124,7 +128,7 @@ void CSquidSpit:: Spawn()
 	MESSAGE_END();
 }
 
-void CSquidSpit::Animate()
+void CSpiderSpit::Animate()
 {
 	SetNextThink( 0.1 );
 
@@ -137,22 +141,22 @@ void CSquidSpit::Animate()
 	}
 }
 
-void CSquidSpit::Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity )
+void CSpiderSpit::Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity )
 {
-	CSquidSpit *pSpit = GetClassPtr( (CSquidSpit *)nullptr );
+	CSpiderSpit *pSpit = GetClassPtr( (CSpiderSpit *)nullptr );
 	pSpit->Spawn();
 	
 	UTIL_SetOrigin( pSpit, vecStart );
 	pSpit->pev->velocity = vecVelocity;
 	pSpit->pev->owner = ENT(pevOwner);
 
-	pSpit->SetThink ( &CSquidSpit::Animate );
+	pSpit->SetThink ( &CSpiderSpit::Animate );
 	pSpit->SetNextThink( 0.1 );
 }
 
-void CSquidSpit::Toss( entvars_t *pevOwner, Vector vecStart, Vector vecEnemyOrigin, float speed )
+void CSpiderSpit::Toss( entvars_t *pevOwner, Vector vecStart, Vector vecEnemyOrigin, float speed )
 {	
-	CSquidSpit *pSpit = GetClassPtr( (CSquidSpit *)nullptr );
+	CSpiderSpit *pSpit = GetClassPtr( (CSpiderSpit *)nullptr );
 	pSpit->Spawn();
 	pSpit->pev->movetype = MOVETYPE_TOSS;
 	pSpit->pev->gravity = 0.5;
@@ -161,11 +165,11 @@ void CSquidSpit::Toss( entvars_t *pevOwner, Vector vecStart, Vector vecEnemyOrig
 	pSpit->pev->velocity = VecCheckThrow( pevOwner, vecStart, vecEnemyOrigin, speed, 0.5 );
 	pSpit->pev->owner = ENT( pevOwner );
 
-	pSpit->SetThink( &CSquidSpit::Animate );
+	pSpit->SetThink( &CSpiderSpit::Animate );
 	pSpit->SetNextThink( 0.1 );
 }
 
-void CSquidSpit :: Touch ( CBaseEntity *pOther )
+void CSpiderSpit :: Touch ( CBaseEntity *pOther )
 {
 	TraceResult tr;
 	int		iPitch;
@@ -204,7 +208,7 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 			WRITE_COORD( tr.vecPlaneNormal.x);	// dir
 			WRITE_COORD( tr.vecPlaneNormal.y);	
 			WRITE_COORD( tr.vecPlaneNormal.z);	
-			WRITE_SHORT( iSquidSpitSprite );	// model
+			WRITE_SHORT( iSpiderSpitSprite );	// model
 			WRITE_BYTE ( 5 );			// count
 			WRITE_BYTE ( 30 );			// speed
 			WRITE_BYTE ( 80 );			// noise ( client will divide by 100 )
@@ -215,19 +219,19 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 		pOther->TakeDamage ( pev, pev->owner ? VARS(pev->owner) : pev, gSkillData.spiderDmgSpit, DMG_POISON );
 	}
 
-	SetThink ( &CSquidSpit::SUB_Remove );
+	SetThink ( &CSpiderSpit::SUB_Remove );
 	SetNextThink( 0 );
 }
 
 //=========================================================
 // Monster's Anim Events Go Here
 //=========================================================
-#define		BSQUID_AE_SPIT		( 1 )
-#define		BSQUID_AE_BITE		( 2 )
-#define		BSQUID_AE_BLINK		( 3 )
-#define		BSQUID_AE_TAILWHIP	( 4 )
-#define		BSQUID_AE_HOP		( 5 )
-#define		BSQUID_AE_THROW		( 6 )
+#define		BSPIDER_AE_SPIT		( 1 )
+#define		BSPIDER_AE_BITE		( 2 )
+#define		BSPIDER_AE_BLINK		( 3 )
+#define		BSPIDER_AE_TAILWHIP	( 4 )
+#define		BSPIDER_AE_HOP		( 5 )
+#define		BSPIDER_AE_THROW		( 6 )
 #define SPIDER_LEAP ( 7 )
 
 class CBullsquid : public CBaseMonster
@@ -441,7 +445,7 @@ int CBullsquid :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, f
 	{
 		flDist = ( pev->origin - m_hEnemy->pev->origin ).Length2D();
 		
-		if ( flDist > SQUID_SPRINT_DIST )
+		if ( flDist > SPIDER_SPRINT_DIST )
 		{
 			flDist = ( pev->origin - m_Route[ m_iRouteIndex ].vecLocation ).Length2D();// reusing flDist. 
 
@@ -552,14 +556,14 @@ BOOL CBullsquid :: FValidateHintType ( short sHint )
 {
 	int i;
 
-	static short sSquidHints[] =
+	static short sSpiderHints[] =
 	{
 		HINT_WORLD_HUMAN_BLOOD,
 	};
 
-	for ( i = 0 ; i < ARRAYSIZE ( sSquidHints ) ; i++ )
+	for ( i = 0 ; i < ARRAYSIZE ( sSpiderHints ) ; i++ )
 	{
-		if ( sSquidHints[ i ] == sHint )
+		if ( sSpiderHints[ i ] == sHint )
 		{
 			return TRUE;
 		}
@@ -597,7 +601,7 @@ int	CBullsquid :: Classify ()
 //=========================================================
 // IdleSound 
 //=========================================================
-#define SQUID_ATTN_IDLE	(float)1.5
+#define SPIDER_ATTN_IDLE	(float)1.5
 void CBullsquid :: IdleSound ()
 {
 	float snd_mult = bChild ? 1.5f : 1.0f;
@@ -605,13 +609,13 @@ void CBullsquid :: IdleSound ()
 	switch ( RANDOM_LONG(0,2) )
 	{
 	case 0:	
-		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle1.wav", 1, SQUID_ATTN_IDLE, SND_CHANGE_PITCH, PITCH_NORM * snd_mult );
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle1.wav", 1, SPIDER_ATTN_IDLE, SND_CHANGE_PITCH, PITCH_NORM * snd_mult );
 		break;
 	case 1:	
-		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle2.wav", 1, SQUID_ATTN_IDLE, SND_CHANGE_PITCH, PITCH_NORM * snd_mult );
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle2.wav", 1, SPIDER_ATTN_IDLE, SND_CHANGE_PITCH, PITCH_NORM * snd_mult );
 		break;
 	case 2:	
-		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle3.wav", 1, SQUID_ATTN_IDLE, SND_CHANGE_PITCH, PITCH_NORM * snd_mult );
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "arachnoid/spider_idle3.wav", 1, SPIDER_ATTN_IDLE, SND_CHANGE_PITCH, PITCH_NORM * snd_mult );
 		break;
 	}
 }
@@ -747,7 +751,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			pev->velocity = vecJumpDir;
 			m_flNextAttack = gpGlobals->time + 7; // Aynekko: don't jump too often
 		}
-		case BSQUID_AE_SPIT:
+		case BSPIDER_AE_SPIT:
 		{
 			if (m_hEnemy)
 			{
@@ -789,19 +793,19 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 					WRITE_COORD( vecSpitDir.x);	// dir
 					WRITE_COORD( vecSpitDir.y);	
 					WRITE_COORD( vecSpitDir.z);	
-					WRITE_SHORT( iSquidSpitSprite );	// model
+					WRITE_SHORT( iSpiderSpitSprite );	// model
 					WRITE_BYTE ( 15 );			// count
 					WRITE_BYTE ( 210 );			// speed
 					WRITE_BYTE ( 25 );			// noise ( client will divide by 100 )
 				MESSAGE_END();
 
-			//	CSquidSpit::Shoot( pev, vecSpitOffset, vecSpitDir * 900 );
-				CSquidSpit::Toss( pev, vecSpitOffset, m_hEnemy->pev->origin, 900 );
+			//	CSpiderSpit::Shoot( pev, vecSpitOffset, vecSpitDir * 900 );
+				CSpiderSpit::Toss( pev, vecSpitOffset, m_hEnemy->pev->origin, 900 );
 			}
 		}
 		break;
 
-		case BSQUID_AE_BITE:
+		case BSPIDER_AE_BITE:
 		{
 			EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "zombie/claw_strike3.wav", 1, ATTN_NORM, SND_CHANGE_PITCH, RANDOM_LONG( 90, 110 ) * snd_mult );
 			CBaseEntity *pHurt = CheckTraceHullAttack( 70, !bChild ? gSkillData.spiderDmgBite : gSkillData.bspiderDmgBite, DMG_CLUB );
@@ -829,7 +833,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		}
 		break;
 
-		case BSQUID_AE_TAILWHIP:
+		case BSPIDER_AE_TAILWHIP:
 		{
 			CBaseEntity *pHurt = CheckTraceHullAttack( 70, !bChild ? gSkillData.spiderDmgBite : gSkillData.bspiderDmgBite, DMG_CLUB | DMG_ALWAYSGIB );
 			if( pHurt )
@@ -855,14 +859,14 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		}
 		break;
 
-		case BSQUID_AE_BLINK:
+		case BSPIDER_AE_BLINK:
 		{
 			// close eye. 
 			pev->skin = 1;
 		}
 		break;
 
-		case BSQUID_AE_HOP:
+		case BSPIDER_AE_HOP:
 		{
 			float flGravity = g_psv_gravity->value;
 
@@ -878,7 +882,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		}
 		break;
 
-		case BSQUID_AE_THROW:
+		case BSPIDER_AE_THROW:
 			{
 				// squid throws its prey IF the prey is a client. 
 				CBaseEntity *pHurt = CheckTraceHullAttack( 70, !bChild ? gSkillData.spiderDmgJump : gSkillData.bspiderDmgJump, DMG_CLUB | DMG_ALWAYSGIB );
@@ -985,7 +989,7 @@ void CBullsquid :: Precache()
 	PRECACHE_MODEL("sprites/bigspit.spr");// spit projectile.
 	m_iTrail = PRECACHE_MODEL( "sprites/smoke.spr" );
 	
-	iSquidSpitSprite = PRECACHE_MODEL("sprites/tinyspit.spr");// client side spittle.
+	iSpiderSpitSprite = PRECACHE_MODEL("sprites/tinyspit.spr");// client side spittle.
 
 	PRECACHE_SOUND("zombie/claw_miss2.wav");// because we use the basemonster SWIPE animation event
 
@@ -1071,7 +1075,7 @@ void CBullsquid :: RunAI ()
 	if ( m_hEnemy != nullptr && m_Activity == ACT_RUN )
 	{
 		// chasing enemy. Sprint for last bit
-		if ( (pev->origin - m_hEnemy->pev->origin).Length2D() < SQUID_SPRINT_DIST )
+		if ( (pev->origin - m_hEnemy->pev->origin).Length2D() < SPIDER_SPRINT_DIST )
 		{
 			pev->framerate = 1.25;
 		}
@@ -1084,7 +1088,7 @@ void CBullsquid :: RunAI ()
 //=========================================================
 
 // primary range attack
-Task_t	tlSquidRangeAttack1[] =
+Task_t	tlSpiderRangeAttack1[] =
 {
 	{ TASK_STOP_MOVING,			0				},
 	{ TASK_FACE_IDEAL,			(float)0		},
@@ -1092,11 +1096,11 @@ Task_t	tlSquidRangeAttack1[] =
 	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE	},
 };
 
-Schedule_t	slSquidRangeAttack1[] =
+Schedule_t	slSpiderRangeAttack1[] =
 {
 	{ 
-		tlSquidRangeAttack1,
-		ARRAYSIZE ( tlSquidRangeAttack1 ), 
+		tlSpiderRangeAttack1,
+		ARRAYSIZE ( tlSpiderRangeAttack1 ), 
 		bits_COND_NEW_ENEMY			|
 		bits_COND_ENEMY_DEAD		|
 		bits_COND_HEAVY_DAMAGE		|
@@ -1104,12 +1108,12 @@ Schedule_t	slSquidRangeAttack1[] =
 		bits_COND_HEAR_SOUND		|
 		bits_COND_NO_AMMO_LOADED,
 		bits_SOUND_FIRE,
-		"Squid Range Attack1"
+		"Spider Range Attack1"
 	},
 };
 
 // Chase enemy schedule
-Task_t tlSquidChaseEnemy1[] = 
+Task_t tlSpiderChaseEnemy1[] = 
 {
 	{ TASK_SET_FAIL_SCHEDULE,	(float)SCHED_RANGE_ATTACK1	},// !!!OEM - this will stop nasty squid oscillation.
 	{ TASK_GET_PATH_TO_ENEMY,	(float)0					},
@@ -1117,11 +1121,11 @@ Task_t tlSquidChaseEnemy1[] =
 	{ TASK_WAIT_FOR_MOVEMENT,	(float)0					},
 };
 
-Schedule_t slSquidChaseEnemy[] =
+Schedule_t slSpiderChaseEnemy[] =
 {
 	{ 
-		tlSquidChaseEnemy1,
-		ARRAYSIZE ( tlSquidChaseEnemy1 ),
+		tlSpiderChaseEnemy1,
+		ARRAYSIZE ( tlSpiderChaseEnemy1 ),
 		bits_COND_NEW_ENEMY			|
 		bits_COND_ENEMY_DEAD		|
 		bits_COND_SMELL_FOOD		|
@@ -1134,12 +1138,12 @@ Schedule_t slSquidChaseEnemy[] =
 		bits_SOUND_DANGER			|
 	bits_SOUND_FIRE |
 		bits_SOUND_MEAT,
-		"Squid Chase Enemy"
+		"Spider Chase Enemy"
 	},
 };
 
 // Aynekko: baby spiders should always try to cover
-Task_t tlbSquidChaseEnemy1[] =
+Task_t tlbSpiderChaseEnemy1[] =
 {
 	{ TASK_SET_FAIL_SCHEDULE,	(float)SCHED_TAKE_COVER_FROM_ENEMY	},// !!!OEM - this will stop nasty squid oscillation.
 	{ TASK_GET_PATH_TO_ENEMY,	(float)0					},
@@ -1147,11 +1151,11 @@ Task_t tlbSquidChaseEnemy1[] =
 	{ TASK_WAIT_FOR_MOVEMENT,	(float)0					},
 };
 
-Schedule_t slbSquidChaseEnemy[] =
+Schedule_t slbSpiderChaseEnemy[] =
 {
 	{
-		tlbSquidChaseEnemy1,
-		ARRAYSIZE( tlbSquidChaseEnemy1 ),
+		tlbSpiderChaseEnemy1,
+		ARRAYSIZE( tlbSpiderChaseEnemy1 ),
 		bits_COND_NEW_ENEMY |
 		bits_COND_ENEMY_DEAD |
 		bits_COND_SMELL_FOOD |
@@ -1168,26 +1172,26 @@ Schedule_t slbSquidChaseEnemy[] =
 	},
 };
 
-Task_t tlSquidHurtHop[] =
+Task_t tlSpiderHurtHop[] =
 {
 	{ TASK_STOP_MOVING,			(float)0		},
 	{ TASK_SOUND_WAKE,			(float)0		},
-	{ TASK_SQUID_HOPTURN,		(float)0		},
+	{ TASK_SPIDER_HOPTURN,		(float)0		},
 	{ TASK_FACE_ENEMY,			(float)0		},// in case squid didn't turn all the way in the air.
 };
 
-Schedule_t slSquidHurtHop[] =
+Schedule_t slSpiderHurtHop[] =
 {
 	{
-		tlSquidHurtHop,
-		ARRAYSIZE ( tlSquidHurtHop ),
+		tlSpiderHurtHop,
+		ARRAYSIZE ( tlSpiderHurtHop ),
 		0,
 		0,
-		"SquidHurtHop"
+		"SpiderHurtHop"
 	}
 };
 
-Task_t tlSquidSeeCrab[] =
+Task_t tlSpiderSeeCrab[] =
 {
 	{ TASK_STOP_MOVING,			(float)0		},
 	{ TASK_SOUND_WAKE,			(float)0			},
@@ -1195,21 +1199,21 @@ Task_t tlSquidSeeCrab[] =
 	{ TASK_FACE_ENEMY,			(float)0			},
 };
 
-Schedule_t slSquidSeeCrab[] =
+Schedule_t slSpiderSeeCrab[] =
 {
 	{
-		tlSquidSeeCrab,
-		ARRAYSIZE ( tlSquidSeeCrab ),
+		tlSpiderSeeCrab,
+		ARRAYSIZE ( tlSpiderSeeCrab ),
 		bits_COND_LIGHT_DAMAGE		|
 		bits_COND_HEAR_SOUND |
 		bits_COND_HEAVY_DAMAGE,
 		bits_SOUND_FIRE,
-		"SquidSeeCrab"
+		"SpiderSeeCrab"
 	}
 };
 
 // squid walks to something tasty and eats it.
-Task_t tlSquidEat[] =
+Task_t tlSpiderEat[] =
 {
 	{ TASK_STOP_MOVING,				(float)0				},
 	{ TASK_EAT,						(float)10				},// this is in case the squid can't get to the food
@@ -1227,11 +1231,11 @@ Task_t tlSquidEat[] =
 	{ TASK_CLEAR_LASTPOSITION,		(float)0				},
 };
 
-Schedule_t slSquidEat[] =
+Schedule_t slSpiderEat[] =
 {
 	{
-		tlSquidEat,
-		ARRAYSIZE( tlSquidEat ),
+		tlSpiderEat,
+		ARRAYSIZE( tlSpiderEat ),
 		bits_COND_LIGHT_DAMAGE	|
 		bits_COND_HEAVY_DAMAGE	|
 	bits_COND_HEAR_SOUND |
@@ -1242,13 +1246,13 @@ Schedule_t slSquidEat[] =
 		bits_SOUND_MEAT			|
 	bits_SOUND_FIRE |
 		bits_SOUND_CARCASS,
-		"SquidEat"
+		"SpiderEat"
 	}
 };
 
 // this is a bit different than just Eat. We use this schedule when the food is far away, occluded, or behind
 // the squid. This schedule plays a sniff animation before going to the source of food.
-Task_t tlSquidSniffAndEat[] =
+Task_t tlSpiderSniffAndEat[] =
 {
 	{ TASK_STOP_MOVING,				(float)0				},
 	{ TASK_EAT,						(float)10				},// this is in case the squid can't get to the food
@@ -1267,11 +1271,11 @@ Task_t tlSquidSniffAndEat[] =
 	{ TASK_CLEAR_LASTPOSITION,		(float)0				},
 };
 
-Schedule_t slSquidSniffAndEat[] =
+Schedule_t slSpiderSniffAndEat[] =
 {
 	{
-		tlSquidSniffAndEat,
-		ARRAYSIZE( tlSquidSniffAndEat ),
+		tlSpiderSniffAndEat,
+		ARRAYSIZE( tlSpiderSniffAndEat ),
 		bits_COND_LIGHT_DAMAGE	|
 		bits_COND_HEAVY_DAMAGE	|
 	bits_COND_HEAR_SOUND |
@@ -1282,12 +1286,12 @@ Schedule_t slSquidSniffAndEat[] =
 		bits_SOUND_MEAT			|
 	bits_SOUND_FIRE |
 		bits_SOUND_CARCASS,
-		"SquidSniffAndEat"
+		"SpiderSniffAndEat"
 	}
 };
 
 // squid does this to stinky things. 
-Task_t tlSquidWallow[] =
+Task_t tlSpiderWallow[] =
 {
 	{ TASK_STOP_MOVING,				(float)0				},
 	{ TASK_EAT,						(float)10				},// this is in case the squid can't get to the stinkiness
@@ -1303,11 +1307,11 @@ Task_t tlSquidWallow[] =
 	{ TASK_CLEAR_LASTPOSITION,		(float)0				},
 };
 
-Schedule_t slSquidWallow[] =
+Schedule_t slSpiderWallow[] =
 {
 	{
-		tlSquidWallow,
-		ARRAYSIZE( tlSquidWallow ),
+		tlSpiderWallow,
+		ARRAYSIZE( tlSpiderWallow ),
 		bits_COND_LIGHT_DAMAGE	|
 		bits_COND_HEAVY_DAMAGE	|
 	bits_COND_HEAR_SOUND |
@@ -1317,20 +1321,105 @@ Schedule_t slSquidWallow[] =
 		// here or the monster won't detect these sounds at ALL while running this schedule.
 		bits_SOUND_GARBAGE | bits_SOUND_FIRE,
 
-		"SquidWallow"
+		"SpiderWallow"
 	}
+};
+
+// Aynekko: repel behavior copy-paste from grunt
+//=========================================================
+// repel 
+//=========================================================
+Task_t	tlSpiderRepel[] =
+{
+	{ TASK_STOP_MOVING,			(float)0		},
+	{ TASK_FACE_IDEAL,			(float)0		},
+	{ TASK_PLAY_SEQUENCE,		(float)ACT_GLIDE 	},
+};
+
+Schedule_t	slSpiderRepel[] =
+{
+	{
+		tlSpiderRepel,
+		ARRAYSIZE( tlSpiderRepel ),
+		bits_COND_SEE_ENEMY |
+		bits_COND_NEW_ENEMY |
+		bits_COND_LIGHT_DAMAGE |
+		bits_COND_HEAVY_DAMAGE |
+		bits_COND_HEAR_SOUND,
+
+		bits_SOUND_DANGER |
+		bits_SOUND_COMBAT |
+		bits_SOUND_PLAYER,
+		"Spider Repel"
+	},
+};
+
+
+//=========================================================
+// repel 
+//=========================================================
+Task_t	tlSpiderRepelAttack[] =
+{
+	{ TASK_STOP_MOVING,			(float)0		},
+	{ TASK_FACE_ENEMY,			(float)0		},
+	{ TASK_PLAY_SEQUENCE,		(float)ACT_FLY 	},
+};
+
+Schedule_t	slSpiderRepelAttack[] =
+{
+	{
+		tlSpiderRepelAttack,
+		ARRAYSIZE( tlSpiderRepelAttack ),
+		bits_COND_ENEMY_OCCLUDED,
+		0,
+		"Spider Repel Attack"
+	},
+};
+
+//=========================================================
+// repel land
+//=========================================================
+Task_t	tlSpiderRepelLand[] =
+{
+	{ TASK_STOP_MOVING,			(float)0		},
+	{ TASK_PLAY_SEQUENCE,		(float)ACT_LAND	},
+	{ TASK_GET_PATH_TO_LASTPOSITION,(float)0				},
+	{ TASK_RUN_PATH,				(float)0				},
+	{ TASK_WAIT_FOR_MOVEMENT,		(float)0				},
+	{ TASK_CLEAR_LASTPOSITION,		(float)0				},
+};
+
+Schedule_t	slSpiderRepelLand[] =
+{
+	{
+		tlSpiderRepelLand,
+		ARRAYSIZE( tlSpiderRepelLand ),
+		bits_COND_SEE_ENEMY |
+		bits_COND_NEW_ENEMY |
+		bits_COND_LIGHT_DAMAGE |
+		bits_COND_HEAVY_DAMAGE |
+		bits_COND_HEAR_SOUND,
+
+		bits_SOUND_DANGER |
+		bits_SOUND_COMBAT |
+		bits_SOUND_PLAYER,
+		"Spider Repel Land"
+	},
 };
 
 DEFINE_CUSTOM_SCHEDULES( CBullsquid ) 
 {
-	slSquidRangeAttack1,
-	slSquidChaseEnemy,
-	slbSquidChaseEnemy,
-	slSquidHurtHop,
-	slSquidSeeCrab,
-	slSquidEat,
-	slSquidSniffAndEat,
-	slSquidWallow
+	slSpiderRangeAttack1,
+	slSpiderChaseEnemy,
+	slbSpiderChaseEnemy,
+	slSpiderHurtHop,
+	slSpiderSeeCrab,
+	slSpiderEat,
+	slSpiderSniffAndEat,
+	slSpiderWallow,
+	slSpiderRepel,
+	slSpiderRepelAttack, // unused
+	slSpiderRepelLand // unused
 };
 
 IMPLEMENT_CUSTOM_SCHEDULES( CBullsquid, CBaseMonster );
@@ -1367,6 +1456,25 @@ bool CBullsquid::BabyFindCover( void )
 //=========================================================
 Schedule_t *CBullsquid :: GetSchedule()
 {
+	// flying? If PRONE, barnacle has me. IF not, it's assumed I am rapelling. 
+	if( pev->movetype == MOVETYPE_FLY && m_MonsterState != MONSTERSTATE_PRONE )
+	{
+		if( pev->flags & FL_ONGROUND )
+		{
+			// just landedm
+			pev->movetype = MOVETYPE_STEP;
+			return GetScheduleOfType( SCHED_SPIDER_REPEL_LAND );
+		}
+		else
+		{
+			// repel down a rope, 
+		//	if( m_MonsterState == MONSTERSTATE_COMBAT )
+		//		return GetScheduleOfType( SCHED_GRUNT_REPEL_ATTACK );
+		//	else
+				return GetScheduleOfType( SCHED_SPIDER_REPEL );
+		}
+	}
+
 	// Is easily scared away by fire - Chief Smokey
 	if( HasConditions( bits_COND_HEAR_SOUND ) )
 	{
@@ -1386,7 +1494,7 @@ Schedule_t *CBullsquid :: GetSchedule()
 		{
 		//	if ( HasConditions(bits_COND_LIGHT_DAMAGE | bits_COND_HEAVY_DAMAGE) )
 		//	{
-		//		return GetScheduleOfType ( SCHED_SQUID_HURTHOP );
+		//		return GetScheduleOfType ( SCHED_SPIDER_HURTHOP );
 		//	}
 
 			if ( HasConditions(bits_COND_SMELL_FOOD) )
@@ -1398,11 +1506,11 @@ Schedule_t *CBullsquid :: GetSchedule()
 				if ( pSound && (!FInViewCone ( &pSound->m_vecOrigin ) || !FVisible ( pSound->m_vecOrigin )) )
 				{
 					// scent is behind or occluded
-					return GetScheduleOfType( SCHED_SQUID_SNIFF_AND_EAT );
+					return GetScheduleOfType( SCHED_SPIDER_SNIFF_AND_EAT );
 				}
 
 				// food is right out in the open. Just go get it.
-				return GetScheduleOfType( SCHED_SQUID_EAT );
+				return GetScheduleOfType( SCHED_SPIDER_EAT );
 			}
 
 			if ( HasConditions(bits_COND_SMELL) )
@@ -1412,7 +1520,7 @@ Schedule_t *CBullsquid :: GetSchedule()
 
 				pSound = PBestScent();
 				if ( pSound )
-					return GetScheduleOfType( SCHED_SQUID_WALLOW);
+					return GetScheduleOfType( SCHED_SPIDER_WALLOW);
 			}
 
 			break;
@@ -1432,7 +1540,7 @@ Schedule_t *CBullsquid :: GetSchedule()
 				{
 					// this means squid sees a headcrab!
 					m_fCanThreatDisplay = FALSE;// only do the headcrab dance once per lifetime.
-					return GetScheduleOfType ( SCHED_SQUID_SEECRAB );
+					return GetScheduleOfType ( SCHED_SPIDER_SEECRAB );
 				}
 				else
 				{
@@ -1449,11 +1557,11 @@ Schedule_t *CBullsquid :: GetSchedule()
 				if ( pSound && (!FInViewCone ( &pSound->m_vecOrigin ) || !FVisible ( pSound->m_vecOrigin )) )
 				{
 					// scent is behind or occluded
-					return GetScheduleOfType( SCHED_SQUID_SNIFF_AND_EAT );
+					return GetScheduleOfType( SCHED_SPIDER_SNIFF_AND_EAT );
 				}
 
 				// food is right out in the open. Just go get it.
-				return GetScheduleOfType( SCHED_SQUID_EAT );
+				return GetScheduleOfType( SCHED_SPIDER_EAT );
 			}
 
 			// Aynekko: jump takes priority
@@ -1509,26 +1617,40 @@ Schedule_t* CBullsquid :: GetScheduleOfType ( int Type )
 	switch	( Type )
 	{
 	case SCHED_RANGE_ATTACK1:
-		return &slSquidRangeAttack1[ 0 ];
+		return &slSpiderRangeAttack1[ 0 ];
 		break;
-	case SCHED_SQUID_HURTHOP:
-		return &slSquidHurtHop[ 0 ];
+	case SCHED_SPIDER_HURTHOP:
+		return &slSpiderHurtHop[ 0 ];
 		break;
-	case SCHED_SQUID_SEECRAB:
-		return &slSquidSeeCrab[ 0 ];
+	case SCHED_SPIDER_SEECRAB:
+		return &slSpiderSeeCrab[ 0 ];
 		break;
-	case SCHED_SQUID_EAT:
-		return &slSquidEat[ 0 ];
+	case SCHED_SPIDER_EAT:
+		return &slSpiderEat[ 0 ];
 		break;
-	case SCHED_SQUID_SNIFF_AND_EAT:
-		return &slSquidSniffAndEat[ 0 ];
+	case SCHED_SPIDER_SNIFF_AND_EAT:
+		return &slSpiderSniffAndEat[ 0 ];
 		break;
-	case SCHED_SQUID_WALLOW:
-		return &slSquidWallow[ 0 ];
+	case SCHED_SPIDER_WALLOW:
+		return &slSpiderWallow[ 0 ];
 		break;
 	case SCHED_CHASE_ENEMY:
-		return !bChild ? &slSquidChaseEnemy[ 0 ] : &slbSquidChaseEnemy[0];
+		return !bChild ? &slSpiderChaseEnemy[ 0 ] : &slbSpiderChaseEnemy[0];
 		break;
+	case SCHED_SPIDER_REPEL:
+	{
+		if( pev->velocity.z > -128 )
+			pev->velocity.z -= 32;
+		return &slSpiderRepel[0];
+	}
+	case SCHED_SPIDER_REPEL_ATTACK:
+	{
+		if( pev->velocity.z > -128 )
+			pev->velocity.z -= 32;
+		return &slSpiderRepelAttack[0];
+	}
+	case SCHED_SPIDER_REPEL_LAND:
+		return &slSpiderRepelLand[0];
 	}
 
 	return CBaseMonster :: GetScheduleOfType ( Type );
@@ -1569,7 +1691,7 @@ void CBullsquid :: StartTask ( Task_t *pTask )
 			CBaseMonster :: StartTask ( pTask );
 			break;
 		}
-	case TASK_SQUID_HOPTURN:
+	case TASK_SPIDER_HOPTURN:
 		{
 			SetActivity ( ACT_HOP );
 			MakeIdealYaw ( m_vecEnemyLKP );
@@ -1603,7 +1725,7 @@ void CBullsquid :: RunTask ( Task_t *pTask )
 {
 	switch ( pTask->iTask )
 	{
-	case TASK_SQUID_HOPTURN:
+	case TASK_SPIDER_HOPTURN:
 		{
 			MakeIdealYaw( m_vecEnemyLKP );
 			ChangeYaw( pev->yaw_speed );
@@ -1657,3 +1779,59 @@ MONSTERSTATE CBullsquid :: GetIdealState ()
 	return m_IdealMonsterState;
 }
 
+//=========================================================
+// CSpiderRepel - when triggered, spawns a monster_arachnoid
+// repelling down a line.
+//=========================================================
+
+class CSpiderRepel : public CBaseMonster
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	void EXPORT RepelUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int m_iSpriteTexture;	// Don't save, precache
+};
+
+LINK_ENTITY_TO_CLASS( monster_arachnoid_repel, CSpiderRepel );
+
+void CSpiderRepel::Spawn()
+{
+	Precache();
+	pev->solid = SOLID_NOT;
+
+	SetUse( &CSpiderRepel::RepelUse );
+}
+
+void CSpiderRepel::Precache()
+{
+	UTIL_PrecacheOther( "monster_arachnoid" );
+	m_iSpriteTexture = PRECACHE_MODEL( "sprites/spidersilk.spr" );
+}
+
+void CSpiderRepel::RepelUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	TraceResult tr;
+	UTIL_TraceLine( pev->origin, pev->origin + Vector( 0, 0, -4096.0 ), dont_ignore_monsters, ENT( pev ), &tr );
+	/*
+	if ( tr.pHit && Instance( tr.pHit )->pev->solid != SOLID_BSP)
+		return NULL;
+	*/
+
+	CBaseEntity *pEntity = Create( "monster_arachnoid", pev->origin, pev->angles );
+	CBaseMonster *pGrunt = pEntity->MyMonsterPointer();
+	pGrunt->pev->movetype = MOVETYPE_FLY;
+	pGrunt->pev->velocity = Vector( 0, 0, RANDOM_FLOAT( -196, -128 ) );
+	pGrunt->SetActivity( ACT_GLIDE );
+	// UNDONE: position?
+	pGrunt->m_vecLastPosition = tr.vecEndPos;
+
+	CBeam *pBeam = CBeam::BeamCreate( "sprites/spidersilk.spr", 10 );
+	pBeam->PointEntInit( pev->origin + Vector( 0, 0, 112 ), pGrunt->entindex() );
+	pBeam->SetFlags( BEAM_FSOLID );
+	pBeam->SetColor( 255, 255, 255 );
+	pBeam->SetThink( &CBeam::SUB_Remove );
+	pBeam->SetNextThink( -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5 );
+
+	UTIL_Remove( this );
+}
