@@ -2762,7 +2762,7 @@ void CDeadHGrunt :: Spawn()
 // Aynekko: monster_thug_pipe
 //====================================================================================
 
-class CMonsterThugPipe : public CHGrunt
+class CMonsterThug : public CHGrunt
 {
 public:
 	void Spawn() override;
@@ -2793,11 +2793,11 @@ public:
 	static const char *pThugSentences[];
 };
 
-LINK_ENTITY_TO_CLASS( monster_thug_pipe, CMonsterThugPipe );
-LINK_ENTITY_TO_CLASS( monster_thug_wrench, CMonsterThugPipe );
-LINK_ENTITY_TO_CLASS( monster_thug_crowbar, CMonsterThugPipe );
+LINK_ENTITY_TO_CLASS( monster_thug_pipe, CMonsterThug );
+LINK_ENTITY_TO_CLASS( monster_thug_wrench, CMonsterThug );
+LINK_ENTITY_TO_CLASS( monster_thug_crowbar, CMonsterThug );
 
-const char *CMonsterThugPipe::pThugSentences[] =
+const char *CMonsterThug::pThugSentences[] =
 {
 	"THU_FLEE", // grenade scared grunt
 	"THU_ALERT", // sees player
@@ -2808,7 +2808,7 @@ const char *CMonsterThugPipe::pThugSentences[] =
 	"THU_TAUNT", // say rude things
 };
 
-BOOL CMonsterThugPipe::CheckMeleeAttack1(float flDot, float flDist)
+BOOL CMonsterThug::CheckMeleeAttack1(float flDot, float flDist)
 {
 	if (!m_hEnemy)
 		return false;
@@ -2825,7 +2825,7 @@ BOOL CMonsterThugPipe::CheckMeleeAttack1(float flDot, float flDist)
 	return true;
 }
 
-int CMonsterThugPipe::IgnoreConditions()
+int CMonsterThug::IgnoreConditions()
 {
 	int iIgnoreConditions = 0;
 
@@ -2835,7 +2835,7 @@ int CMonsterThugPipe::IgnoreConditions()
 	return iIgnoreConditions | CHGrunt::IgnoreConditions();
 }
 
-void CMonsterThugPipe::MonsterThink()
+void CMonsterThug::MonsterThink()
 {
 	if (HasConditions(bits_COND_LIGHT_DAMAGE))
 	{
@@ -2900,7 +2900,7 @@ void CMonsterThugPipe::MonsterThink()
 	}
 }
 
-void CMonsterThugPipe::Precache()
+void CMonsterThug::Precache()
 {
 	if( pev->model )
 		PRECACHE_MODEL( (char *)STRING( pev->model ) ); //LRC
@@ -2958,7 +2958,7 @@ void CMonsterThugPipe::Precache()
 	next_idle_sentence_time = gpGlobals->time + RANDOM_FLOAT( 0.5, 6.5 );
 }
 
-void CMonsterThugPipe::Spawn()
+void CMonsterThug::Spawn()
 {
 	Precache();
 
@@ -3011,7 +3011,7 @@ void CMonsterThugPipe::Spawn()
 	pev->spawnflags |= SF_MONSTER_NO_WPN_DROP; // don't drop any guns
 }
 
-void CMonsterThugPipe::SpeakSentence()
+void CMonsterThug::SpeakSentence()
 {
 	// custom sentences for the thug
 	if( m_iSentence == HGRUNT_SENT_NONE )
@@ -3027,29 +3027,29 @@ void CMonsterThugPipe::SpeakSentence()
 	}
 }
 
-void CMonsterThugPipe::OnCatchFire( void )
+void CMonsterThug::OnCatchFire( void )
 {
 	if( !(pev->spawnflags & SF_MONSTER_GAG) )
 		PlaySentence( "THU_BURN", 7, VOL_NORM, ATTN_NORM );
 	m_flNextPainTime = gpGlobals->time + 7; // don't play regular pain sounds
 }
 
-BOOL CMonsterThugPipe::CheckRangeAttack1( float flDot, float flDist )
+BOOL CMonsterThug::CheckRangeAttack1( float flDot, float flDist )
 {
 	return FALSE;
 }
 
-BOOL CMonsterThugPipe::CheckRangeAttack2( float flDot, float flDist )
+BOOL CMonsterThug::CheckRangeAttack2( float flDot, float flDist )
 {
 	return FALSE;
 }
 
-void CMonsterThugPipe::CheckAmmo()
+void CMonsterThug::CheckAmmo()
 {
 	// do nothing - not using ammo
 }
 
-void CMonsterThugPipe::StartTask( Task_t *pTask )
+void CMonsterThug::StartTask( Task_t *pTask )
 {
 	m_iTaskStatus = TASKSTATUS_RUNNING;
 
@@ -3111,7 +3111,7 @@ void CMonsterThugPipe::StartTask( Task_t *pTask )
 //=========================================================
 // RunTask
 //=========================================================
-void CMonsterThugPipe::RunTask( Task_t *pTask )
+void CMonsterThug::RunTask( Task_t *pTask )
 {
 	switch( pTask->iTask )
 	{
@@ -3138,7 +3138,7 @@ void CMonsterThugPipe::RunTask( Task_t *pTask )
 //=========================================================
 // PainSound
 //=========================================================
-void CMonsterThugPipe::PainSound()
+void CMonsterThug::PainSound()
 {
 	if( pev->spawnflags & SF_MONSTER_GAG )
 		return;
@@ -3173,7 +3173,7 @@ void CMonsterThugPipe::PainSound()
 	}
 }
 
-void CMonsterThugPipe::Killed( entvars_t *pevAttacker, int iGib )
+void CMonsterThug::Killed( entvars_t *pevAttacker, int iGib )
 {
 	// notify my squad about my death
 	if( InSquad() )
@@ -3196,7 +3196,7 @@ void CMonsterThugPipe::Killed( entvars_t *pevAttacker, int iGib )
 //=========================================================
 // DeathSound 
 //=========================================================
-void CMonsterThugPipe::DeathSound()
+void CMonsterThug::DeathSound()
 {
 	if( pev->spawnflags & SF_MONSTER_GAG )
 		return;
@@ -3226,7 +3226,7 @@ void CMonsterThugPipe::DeathSound()
 		PlaySentence( sentence_name, 2, VOL_NORM, ATTN_NORM );
 }
 
-void CMonsterThugPipe::IdleSound()
+void CMonsterThug::IdleSound()
 {
 //	if( FOkToSpeak() )
 //	{
@@ -3235,7 +3235,7 @@ void CMonsterThugPipe::IdleSound()
 //	}
 }
 
-Schedule_t *CMonsterThugPipe::GetSchedule()
+Schedule_t *CMonsterThug::GetSchedule()
 {
 	// clear old sentence
 	m_iSentence = HGRUNT_SENT_NONE;
@@ -3542,7 +3542,7 @@ Schedule_t *CMonsterThugPipe::GetSchedule()
 
 //=========================================================
 //=========================================================
-Schedule_t *CMonsterThugPipe::GetScheduleOfType( int Type )
+Schedule_t *CMonsterThug::GetScheduleOfType( int Type )
 {
 	switch( Type )
 	{
