@@ -3049,8 +3049,8 @@ BOOL CMonsterThug::CheckRangeAttack1( float flDot, float flDist )
 // Aynekko: throwing a rock
 BOOL CMonsterThug::CheckRangeAttack2( float flDot, float flDist )
 {
-	// Chief Smokey: should only use throw beyond 128 units from player
-	if( flDist <= 128 )
+	// Chief Smokey: should only use throw beyond 64 units from player
+	if( flDist <= 64 )
 		return FALSE;
 
 	// Chief Smokey: only when the player is visible
