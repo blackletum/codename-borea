@@ -1337,8 +1337,17 @@ void CMomentaryRotButton::PlaySound()
 void CMomentaryRotButton::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if (IsLockedByMaster()) return; //LRC
+
 	// the distance between the current angle and the "base" angle.
-	pev->ideal_yaw = CBaseToggle::AxisDelta( pev->spawnflags, pev->angles, m_start ) / m_flMoveDistance;
+
+	if (useType == USE_SET)
+	{
+		pev->ideal_yaw = value;
+	}
+	else
+	{
+		pev->ideal_yaw = CBaseToggle::AxisDelta(pev->spawnflags, pev->angles, m_start) / m_flMoveDistance;
+	}
 
 	UpdateAllButtons( pev->ideal_yaw, 1 );
 
