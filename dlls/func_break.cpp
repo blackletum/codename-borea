@@ -650,6 +650,9 @@ void CBreakable::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vec
 {
 	if( pev->spawnflags & SF_BREAK_PLAYERKICK && !(bitsDamageType & DMG_KICK) )
 		return;
+
+	if (pev->spawnflags & SF_BREAK_EXPLOSION && !(bitsDamageType & DMG_BLAST))
+		return;
 	
 	// random spark if this is a 'computer' object
 	if (RANDOM_LONG(0,1) )
@@ -707,6 +710,9 @@ void CBreakable::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vec
 int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
 {
 	if( pev->spawnflags & SF_BREAK_PLAYERKICK && !(bitsDamageType & DMG_KICK) )
+		return 0;
+
+	if (pev->spawnflags & SF_BREAK_EXPLOSION && !(bitsDamageType & DMG_BLAST))
 		return 0;
 
 	Vector	vecTemp;
