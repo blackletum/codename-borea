@@ -25,6 +25,7 @@
 #include "cbase.h"
 #include "saverestore.h"
 #include "doors.h"
+#include "player.h"
 
 #if !defined ( _WIN32 )
 #include <string.h> // memset())))
@@ -1340,9 +1341,11 @@ void CMomentaryRotButton::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 
 	// the distance between the current angle and the "base" angle.
 
-	if (useType == USE_SET)
+	value = bound(0.0, value, 1.0);
+
+	if (useType == USE_SET && !dynamic_cast<CBasePlayer*>(pCaller))
 	{
-		pev->ideal_yaw = value;
+		pev->angles = pev->movedir * (fabs(CBaseToggle::AxisDelta(pev->spawnflags, m_start, m_end)) * value);
 	}
 	else
 	{
