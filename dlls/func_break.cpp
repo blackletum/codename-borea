@@ -28,6 +28,7 @@
 #include "explode.h"
 #include "player.h"
 #include "weapons.h"
+#include "movewith.h"
 
 
 extern DLL_GLOBAL Vector		g_vecAttackDir;
@@ -1346,4 +1347,8 @@ void CPushable::AddGravity(void)
 		else
 			m_pPlayer->pev->maxspeed = 70;
 	}
+
+	//update any movewiths we have
+	UTIL_SetAngles(this, pev->angles);
+	UTIL_AssignOrigin(this, pev->origin);
 }
