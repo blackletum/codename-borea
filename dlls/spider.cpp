@@ -107,7 +107,7 @@ void CSpiderSpit:: Spawn()
 
 	SET_MODEL(ENT(pev), "sprites/bigspit.spr");
 	pev->frame = 0;
-	pev->scale = 0.5;
+	pev->scale = 0.8;
 
 	UTIL_SetSize( pev, Vector( 0, 0, 0), Vector(0, 0, 0) );
 
@@ -118,8 +118,8 @@ void CSpiderSpit:: Spawn()
 	WRITE_BYTE( TE_BEAMFOLLOW );
 	WRITE_SHORT( entindex() );	// entity
 	WRITE_SHORT( m_iTrail );	// model
-	WRITE_BYTE( 6 ); // life
-	WRITE_BYTE( 2 );  // width
+	WRITE_BYTE( 9 ); // life
+	WRITE_BYTE( 3 );  // width
 	WRITE_BYTE( 140 );   // r, g, b
 	WRITE_BYTE( 170 );   // r, g, b
 	WRITE_BYTE( 88 );   // r, g, b
