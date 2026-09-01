@@ -6850,6 +6850,7 @@ void CTriggerOxygen::RechargeThink()
 void CTriggerOxygen::Spawn()
 {
 	InitTrigger();
+	Precache();
 	SetTouch(&CTriggerOxygen::OxygenTouch);
 
 	if (!FStringNull(pev->targetname))
