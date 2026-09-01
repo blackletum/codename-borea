@@ -36,6 +36,7 @@ int gmsgPlayVideo = 0;  //Salsa :: ffmpeg implementation
 int gmsgShowGameTitle = 0;
 int gmsgCurWeapon = 0;
 int gmsgHealth = 0;
+int gmsgOxygen = 0;
 int gmsgDamage = 0;
 int gmsgBattery = 0;
 int gmsgTrain = 0;
@@ -133,6 +134,7 @@ void LinkUserMessages()
 	gmsgFlashlight = REG_USER_MSG("Flashlight", 2);
 	gmsgFlashBattery = REG_USER_MSG("FlashBat", 1);
 	gmsgHealth = REG_USER_MSG("Health", 2);
+	gmsgOxygen = REG_USER_MSG("Oxygen", 2);
 	gmsgStamina = REG_USER_MSG("Stamina", -1);
 	gmsgDamage = REG_USER_MSG("Damage", 12);
 	gmsgBattery = REG_USER_MSG("Battery", 2);

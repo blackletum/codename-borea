@@ -6760,3 +6760,138 @@ void CTriggerCTFGeneric::KeyValue(KeyValueData* pkvd)
 		pkvd->fHandled = false;
 	}
 }
+
+
+
+
+#define SF_TRIGGER_OXYGEN_STARTON 64
+
+//=====================================
+//
+// trigger_oxygen - restores oxygen of any player that is inside it.
+// can be enabled, so a player can use it, or disabled, so a player can't use it
+// sounds (recharge, used by player..) dictated by key values
+//
+class CTriggerOxygen : public CBaseTrigger
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	void EXPORT OxygenTouch(CBaseEntity* pOther);
+	void EXPORT RechargeThink();
+	void EXPORT ToggleUse1(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value);
+	void KeyValue(KeyValueData* pkvd) override;
+
+private:
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	bool m_bOn;
+	float m_fRechargeTime;
+	string_t m_UseSound = iStringNull;
+	string_t m_RechargeSound = iStringNull;
+};
+
+TYPEDESCRIPTION	CTriggerOxygen::m_SaveData[] =
+{
+	DEFINE_FIELD(CTriggerOxygen, m_bOn, FIELD_BOOLEAN),
+	DEFINE_FIELD(CTriggerOxygen, m_fRechargeTime, FIELD_FLOAT),
+	DEFINE_FIELD(CTriggerOxygen, m_UseSound, FIELD_STRING),
+	DEFINE_FIELD(CTriggerOxygen, m_RechargeSound, FIELD_STRING),
+};
+
+LINK_ENTITY_TO_CLASS(trigger_oxygen, CTriggerOxygen);
+
+void CTriggerOxygen::KeyValue(KeyValueData* pkvd)
+{
+	if (FStrEq(pkvd->szKeyName, "usesound"))
+	{
+		m_UseSound = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	if (FStrEq(pkvd->szKeyName, "rechargesound"))
+	{
+		m_RechargeSound = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "rechargetime"))
+	{
+		m_fRechargeTime = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseToggle::KeyValue(pkvd);
+}
+
+void CTriggerOxygen::Precache()
+{
+	if(m_UseSound != iStringNull)
+		PRECACHE_SOUND(STRING(m_UseSound));
+
+	if(m_RechargeSound != iStringNull)
+		PRECACHE_SOUND(STRING(m_RechargeSound));
+}
+
+void CTriggerOxygen::ToggleUse1(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	m_bOn = !m_bOn;
+}
+
+void CTriggerOxygen::RechargeThink()
+{
+	m_bOn = true;
+
+	SetThink(NULL);
+
+	if (m_RechargeSound != iStringNull)
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, (char*)STRING(m_RechargeSound), 1, ATTN_NORM);
+}
+
+void CTriggerOxygen::Spawn()
+{
+	InitTrigger();
+	SetTouch(&CTriggerOxygen::OxygenTouch);
+
+	if (!FStringNull(pev->targetname))
+	{
+		SetUse(&CTriggerOxygen::ToggleUse1);
+	}
+	else
+	{
+		SetUse(nullptr);
+	}
+
+	if (pev->spawnflags & SF_TRIGGER_OXYGEN_STARTON)
+		m_bOn = true;
+	else
+		m_bOn = false;
+
+	UTIL_SetOrigin(this, pev->origin);		// Link into the list
+}
+
+void CTriggerOxygen::OxygenTouch(CBaseEntity* pOther)
+{
+	float fldmg;
+
+	if (!m_bOn)
+		return;
+
+	if (!pOther->IsPlayer())
+		return;
+
+	if (pOther->pev->waterlevel != 3)
+		return;
+
+	if (pOther->pev->air_finished >= (gpGlobals->time + 12))
+		return;
+
+	pOther->pev->air_finished = gpGlobals->time + 12;
+
+	m_bOn = false;
+
+	if(m_UseSound != iStringNull)
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, (char*)STRING(m_UseSound), 1, ATTN_NORM);
+
+	SetNextThink(m_fRechargeTime);
+	SetThink(&CTriggerOxygen::RechargeThink);
+}

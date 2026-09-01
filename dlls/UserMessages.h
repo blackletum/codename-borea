@@ -31,6 +31,7 @@ extern int gmsgPlayMP3; //Killar
 extern int gmsgShowGameTitle;
 extern int gmsgCurWeapon;
 extern int gmsgHealth;
+extern int gmsgOxygen;
 extern int gmsgDamage;
 extern int gmsgBattery;
 extern int gmsgTrain;

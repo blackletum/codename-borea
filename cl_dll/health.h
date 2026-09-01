@@ -51,7 +51,9 @@ public:
 	int MsgFunc_Health(const char *pszName,  int iSize, void *pbuf);
 	int MsgFunc_Damage(const char *pszName,  int iSize, void *pbuf);
 	int MsgFunc_Stamina(const char *pszName,  int iSize, void *pbuf);
+	int MsgFunc_Oxygen(const char* pszName, int iSize, void* pbuf);
 	int m_iHealth;
+	int m_iOxygen;
 	int m_HUD_dmg_bio;
 	int m_HUD_cross;
 	float m_fAttackFront, m_fAttackRear, m_fAttackLeft, m_fAttackRight;

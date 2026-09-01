@@ -5204,6 +5204,23 @@ void CBasePlayer :: UpdateClientData()
 		m_iClientHealth = (int)pev->health;
 	}
 
+	{
+		int oxygen; 
+		if (pev->waterlevel != 3)
+		{
+			oxygen = 100;
+		}
+		else
+		{
+			oxygen = float(pev->air_finished - gpGlobals->time) * (100.f / 12.f);
+			oxygen = oxygen > 100 ? 100 : oxygen;
+			oxygen = oxygen < 0 ? 0 : oxygen;
+		}
+		MESSAGE_BEGIN(MSG_ONE, gmsgOxygen, nullptr, pev);
+			WRITE_SHORT(oxygen);
+		MESSAGE_END();
+	}
+
 
 	if (pev->armorvalue != m_iClientBattery)
 	{

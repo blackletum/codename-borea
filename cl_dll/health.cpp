@@ -40,6 +40,7 @@
 DECLARE_MESSAGE(m_Health, Health )
 DECLARE_MESSAGE(m_Health, Damage )
 DECLARE_MESSAGE(m_Health, Stamina)
+DECLARE_MESSAGE(m_Health, Oxygen )
 
 #define PAIN_NAME "sprites/%d_pain.spr"
 #define DAMAGE_NAME "sprites/%d_dmg.spr"
@@ -67,7 +68,9 @@ int CHudHealth::Init()
 	HOOK_MESSAGE(Health);
 	HOOK_MESSAGE(Damage);
 	HOOK_MESSAGE(Stamina);
+	HOOK_MESSAGE(Oxygen);
 	m_iHealth = 100;
+	m_iOxygen = 100;
 	m_fFade = 0;
 	m_iFlags = 0;
 	m_bitsDamage = 0;
@@ -167,6 +170,14 @@ int CHudHealth::MsgFunc_Stamina(const char* pszName, int iSize, void* pbuf)
 	gHUD.m_bSliding = (bool)(int)READ_BYTE();
 	gHUD.m_fLight = READ_FLOAT();
 	gHUD.m_iScopeType = READ_BYTE();
+
+	return 1;
+}
+
+int CHudHealth::MsgFunc_Oxygen(const char* pszName, int iSize, void* pbuf)
+{
+	BEGIN_READ(pbuf, iSize);
+	m_iOxygen = lerp(m_iOxygen, READ_SHORT(), gHUD.m_flTimeDelta * 24);
 
 	return 1;
 }
@@ -416,9 +427,17 @@ int CHudHealth::Draw(float flTime)
 
 		FillRGBA(x, y, stamina, 15, 249, 111, 45, 255);
 
-		// draw flashlight bar
+		// draw Oxygen bar
 		x = 220;
 		y = ScreenHeight - 50;
+		float oxygen_dur = (float)m_iOxygen;
+
+		//if (m_iOxygen != 100)
+		FillRGBA(x, y, oxygen_dur, 5, 0, 191, 225, 140);
+
+		// draw flashlight bar
+		x = 220;
+		y = ScreenHeight - 40;
 		float flashlight_dur = 100 * gHUD.m_Flash.m_flBat;
 
 		extern int g_iFlashLight;
