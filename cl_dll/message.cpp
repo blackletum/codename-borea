@@ -249,7 +249,7 @@ void CHudMessage::MessageDrawScan( client_textmessagecustom_t *pMessage, float t
 {
 	int i, j, length, width;
 	const char *pText;
-	unsigned char line[160]; // Aynekko - buff it up from 80
+	unsigned char line[250]; // Aynekko - buff it up from 80
 
 	pText = pMessage->pMessage;
 	// Count lines
