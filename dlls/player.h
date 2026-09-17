@@ -506,6 +506,8 @@ public:
 
 	bool bBlocking; // Aynekko: both attack buttons pressed
 
+	int LastKickVoice; // Aynekko: last "ugh" we played for kicking, to prevent repetition
+
 private:
 	CRope* m_pRope;
 	float m_flLastClimbTime = 0;

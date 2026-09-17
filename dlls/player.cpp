@@ -4931,13 +4931,19 @@ void CBasePlayer::ItemPostFrame()
 				WRITE_BYTE( 1 );
 				MESSAGE_END();
 
-				switch( RANDOM_LONG( 1, 4 ) )
+				int NewKickVoice = RANDOM_LONG( 1, 4 );
+				while( NewKickVoice == LastKickVoice )
+					NewKickVoice = RANDOM_LONG( 1, 4 );
+
+				switch( NewKickVoice )
 				{
 				case 1: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick1.wav", 1, ATTN_NORM ); break;
 				case 2: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick2.wav", 1, ATTN_NORM ); break;
 				case 3: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick3.wav", 1, ATTN_NORM ); break;
 				case 4: EMIT_SOUND( ENT( pev ), CHAN_VOICE, "player/pl_kick4.wav", 1, ATTN_NORM ); break;
 				}
+
+				LastKickVoice = NewKickVoice;
 			}
 		}
 		else if( KickStage == EKickStage::_DoKick)
