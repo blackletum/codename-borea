@@ -6782,14 +6782,17 @@ public:
 	void EXPORT ToggleUse1(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value);
 	void KeyValue(KeyValueData* pkvd) override;
 
+	int		Save( CSave &save ) override;
+	int		Restore( CRestore &restore ) override;
+
 private:
 
 	static	TYPEDESCRIPTION m_SaveData[];
 
 	bool m_bOn;
 	float m_fRechargeTime;
-	string_t m_UseSound = iStringNull;
-	string_t m_RechargeSound = iStringNull;
+	string_t m_UseSound;
+	string_t m_RechargeSound;
 };
 
 TYPEDESCRIPTION	CTriggerOxygen::m_SaveData[] =
@@ -6799,6 +6802,7 @@ TYPEDESCRIPTION	CTriggerOxygen::m_SaveData[] =
 	DEFINE_FIELD(CTriggerOxygen, m_UseSound, FIELD_STRING),
 	DEFINE_FIELD(CTriggerOxygen, m_RechargeSound, FIELD_STRING),
 };
+IMPLEMENT_SAVERESTORE( CTriggerOxygen, CBaseTrigger );
 
 LINK_ENTITY_TO_CLASS(trigger_oxygen, CTriggerOxygen);
 
